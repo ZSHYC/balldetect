@@ -71,6 +71,7 @@
 - [首阶段实施设计](research/2026-09-10-implementation-plan.md)：空间读出、真实测试及后续运动架构的证据驱动顺序。
 - [DINOv3 四级空间探针实验](experiments/2026-09-10-spatial-probe.md)：实施验证、运行设置、成绩与解释边界。
 - [全量因果强基线实施](research/2026-09-10-full-baseline-plan.md)：从稀疏探针转入共同任务的完整训练；[HRNet记录](experiments/2026-09-10-full-hrnet.md)、[DINO记录](experiments/2026-09-10-full-dino.md)与[系统比较](experiments/2026-09-11-full-hrnet-dino-comparison.md)。
+- [全量窗口的搜索覆盖与空间支撑](experiments/2026-09-11-search-support.md)：同格三帧融合的实际计算路径、两档局部范围的标签覆盖，以及保存预测的域内外错误。
 
 ## 阶段进展
 

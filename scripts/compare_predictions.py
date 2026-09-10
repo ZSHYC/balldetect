@@ -47,7 +47,7 @@ def main():
     parser.add_argument("--challenger", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--correspondence-diagnostic", type=Path,
-                        help="可选：同一目标集合的GT query诊断JSON，仅用于事后位移分组")
+                        help="可选：同一目标集合的GT原生格位移JSON（对应诊断或标签几何），仅用于事后分组")
     args = parser.parse_args()
     rows_a, xy_a, prob_a = read_predictions(args.baseline)
     rows_b, xy_b, prob_b = read_predictions(args.challenger)
