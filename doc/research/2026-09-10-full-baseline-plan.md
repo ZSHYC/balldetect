@@ -21,3 +21,11 @@
 5. 正式运行30epoch seed0，保存config/history/checkpoint/train与val预测；每个epoch报告detection与PCK。独立审阅时间/标签/坐标/损失，检查失败先修正，再写入doc/experiments。实际代码先提交、正式训练后启动，配置中的revision应包含运行实现。
 
 各步只验证会改变下一步的真实失败；缓存已经通过后不反复解码核对。最后保留有复用价值的RGB、原始数据和权重。更完整的DINO共同协议、跨球种与motion新设计依据结果继续制定，不在这里预建空接口或全部模型。
+
+## 前缀三seed完成后的DINO实施补充
+
+根据[最终适配结果](../experiments/2026-09-10-prefix-adaptation.md)，全量现代对照采用官方预训练前缀与随机新head，不继承旧验证选优。具体参数已写入共同协议。
+
+复用实际已有的全量训练入口，给scripts/train_tennis_heatmap.py增加两个实际模型选项hrnet/dino（默认仍hrnet）。只用明确的模型构造、输入、损失和读出分支，复用共同的数据、训练循环、F1选优和保存，不新增trainer/factory类。HRNet路径保持不变；DINO复用BackboneProbe和SpatialProbe，不新造adapter或motion层。增加一项CPU输入/读出综合测试，覆盖两种模型的时间通道顺序和预处理边界；真实DINO入口smoke与正式运行等待当前HRNet释放GPU后顺序执行。
+
+正在运行的HRNet来自32d37d4，其Python进程已加载该版本；后续源文件修改不重新解释它的运行。DINO运行前提交新实现，再让config记录新版本。正式结果分别保存在outputs/full_heatmap/hrnet_seed0和dino_prefix_seed0，不能把两个模型的超参差异藏进共用入口。

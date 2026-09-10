@@ -1,6 +1,6 @@
 # 全量因果HRNet能否建立更强的竞争系统？
 
-日期：2026-09-10。状态：全量RGB缓存、监督单测、真实batch8预检与完整入口smoke通过；正式seed0即将启动。
+日期：2026-09-10。状态：全量RGB缓存、监督单测、真实batch8预检与完整入口smoke通过；正式seed0在运行。
 协议：[Tennis全量因果定位v1](../protocols/tennis-full-causal-v1.md)。设计：[全量强基线计划](../research/2026-09-10-full-baseline-plan.md)。
 
 ## 当前问题
@@ -54,4 +54,6 @@ python scripts/train_tennis_heatmap.py --rgb-cache data/cache/tennis/rgb_512x288
 
 一次启动因提交前格式检查发现本地配置末尾多余空行而在提交完成前误触发；已主动中断并完整保留于outputs/full_heatmap/precommit_start_aborted，没有作为正式运行或选优证据。修正格式并提交实现后从头启动正式seed0，不续用该进程参数。
 
-当前尚无正式性能结果。输出将保留完整config、history、最佳模型、train/val预测、耗时和显存。主要查看精细定位、困难/遮挡、无球误报与有球漏报是否同步改善；全量DINO共同目标对照完成前，不写架构胜负结论。
+正式运行已从提交32d37d4启动，config实际记录12,167/1,863目标、batch8、30epoch与1,481,393参数。输出保留完整config、history、最佳模型、train/val预测、耗时和显存。主要查看精细定位、困难/遮挡、无球误报与有球漏报是否同步改善；全量DINO共同目标对照完成前，不写架构胜负结论。
+
+首次训练进度记录：epoch1完成，训练loss=0.00045746，验证PCK8/16/32为59.85%/62.77%/63.80%，F1@16为51.45%；presence为TP639/FP2/FN1107。单epoch含验证701.06秒，从计时开始累计732.40秒。这是早期优化状态，正式30epoch尚未结束，不用于结构胜负或最终错误归因。后续完整history是训练过程的唯一逐epoch记录，本文不逐轮抄日志。
