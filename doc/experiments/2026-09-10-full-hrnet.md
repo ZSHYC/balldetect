@@ -124,7 +124,7 @@ RTX5070Ti Laptop、batch8、float32的实际全流程计时为21,565.21秒（约
 
 ### 完成证据
 
-一次性[结果核对脚本](../../outputs/full_heatmap/summarize_hrnet_result.py)复用既有read_predictions与evaluate_predictions，确认epoch0–30完整、30个训练loss有限、按预定F1规则选择的epoch与best.pt及results一致；12,167/1,863行预测的身份、顺序、原标签与缓存目标完全一致，重新计算的全部保存指标逐项一致。互斥错误分类及VC/clip总和也通过。脚本首次在分析阶段漏写数组float dtype，遇到VC0空坐标时报错；修正为与既有评价函数相同的float转换、继续仅在有位置掩码内统计后，完整运行通过。原始标签和模型结果没有改变。
+一次性[结果核对脚本](../../outputs/full_heatmap/summarize_saved_result.py)复用既有read_predictions与evaluate_predictions，确认epoch0–30完整、30个训练loss有限、按预定F1规则选择的epoch与best.pt及results一致；12,167/1,863行预测的身份、顺序、原标签与缓存目标完全一致，重新计算的全部保存指标逐项一致。互斥错误分类及VC/clip总和也通过。脚本首次在分析阶段漏写数组float dtype，遇到VC0空坐标时报错；修正为与既有评价函数相同的float转换、继续仅在有位置掩码内统计后，完整运行通过。原始标签和模型结果没有改变。脚本现接受实验目录参数，供DINO完成后复用；HRNet运行参数为outputs/full_heatmap/hrnet_seed0。
 
 独立只读研究审阅支持以上解释边界与继续DINO共同任务对照。此处没有新增模型训练、测试集读取、哈希、依赖或生产代码改动。
 
