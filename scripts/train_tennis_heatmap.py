@@ -40,10 +40,18 @@ def predict(model, rgb, windows, indices, batch_size, device, model_name, grid_h
     with torch.inference_mode():
         for start in range(0, len(indices), batch_size):
             ids = indices[start:start + batch_size]
-            logits = model(model_input(rgb, windows, ids, device, model_name))
             if model_name == "hrnet":
+                logits = model(model_input(rgb, windows, ids, device, model_name))
                 batch_xy, batch_confidence = heatmap_predictions(logits[0])
             else:
+                batch_windows = windows[ids]
+                unique_frames, inverse = np.unique(batch_windows, return_inverse=True)
+                features = model.encode(torch.from_numpy(rgb[unique_frames]).to(device))
+                inverse = torch.from_numpy(inverse).to(device)
+                b, t = batch_windows.shape
+                features = features[inverse].reshape(
+                    b, t * features.shape[1], *features.shape[-2:])
+                logits = model.head(features)
                 batch_xy = grid_to_original(logits[:, :-1].argmax(1).cpu().numpy(), grid_hw)
                 batch_confidence = (1 - logits.softmax(1)[:, -1]).cpu().numpy()
             xy.append(batch_xy)

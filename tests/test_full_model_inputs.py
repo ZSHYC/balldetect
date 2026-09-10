@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+torch.set_num_threads(2)
+
 SCRIPT = Path(__file__).parents[1] / "scripts/train_tennis_heatmap.py"
 spec = importlib.util.spec_from_file_location("train_tennis_heatmap", SCRIPT)
 trainer = importlib.util.module_from_spec(spec)
@@ -13,20 +15,28 @@ model_input, predict = trainer.model_input, trainer.predict
 
 
 class FakeModel(torch.nn.Module):
-    def __init__(self, model_name):
+    def forward(self, pixels):
+        assert pixels.dtype == torch.float32 and pixels.shape == (1, 9, 1, 1)
+        logits = torch.zeros((1, 1, 2, 4))
+        logits[0, 0, 1, 1] = 2
+        return {0: logits}
+
+
+class CountingPrefix(torch.nn.Module):
+    def __init__(self):
         super().__init__()
-        self.model_name = model_name
+        self.frames_seen = 0
 
     def forward(self, pixels):
-        if self.model_name == "hrnet":
-            assert pixels.dtype == torch.float32 and pixels.shape == (1, 9, 1, 1)
-            logits = torch.zeros((1, 1, 2, 4))
-            logits[0, 0, 1, 1] = 2
-            return {0: logits}
-        assert pixels.dtype == torch.uint8 and pixels.shape == (1, 3, 3, 1, 1)
-        logits = torch.full((1, 9), -torch.inf)
-        logits[0, 6] = 0
-        logits[0, -1] = torch.log(torch.tensor(3.))
+        self.frames_seen += len(pixels)
+        return pixels[:, :1, :1, :1]
+
+
+class OrderHead(torch.nn.Module):
+    def forward(self, features):
+        logits = torch.full((len(features), 9), -20., dtype=features.dtype)
+        logits[:, :3] = features[:, :, 0, 0]
+        logits[:, -1] = -1
         return logits
 
 
@@ -53,14 +63,30 @@ class FullModelInputTest(unittest.TestCase):
         self.assertTrue(torch.allclose(hrnet_input[:, :, 0, 0], expected, atol=1e-5))
 
         hrnet_xy, hrnet_presence = predict(
-            FakeModel("hrnet"), rgb, windows, ids, 1, torch.device("cpu"), "hrnet", (2, 4))
+            FakeModel(), rgb, windows, ids, 1, torch.device("cpu"), "hrnet", (2, 4))
         np.testing.assert_allclose(hrnet_xy, [[479.5, 539.5]])
         np.testing.assert_allclose(hrnet_presence, [0.880797], atol=1e-6)
 
-        dino_xy, dino_presence = predict(
-            FakeModel("dino"), rgb, windows, ids, 1, torch.device("cpu"), "dino", (2, 4))
-        np.testing.assert_allclose(dino_xy, [[799.5, 539.5]])
-        np.testing.assert_allclose(dino_presence, [.25], atol=1e-6)
+    def test_dino_predict_encodes_unique_frames_and_restores_window_order(self):
+        rgb = np.zeros((4, 3, 1, 1), dtype=np.uint8)
+        rgb[:, 0, 0, 0] = [10, 250, 100, 200]
+        windows = np.asarray([[3, 0, 2], [2, 1, 3]])
+        ids = np.asarray([0, 1])
+        prefix = CountingPrefix()
+        model = trainer.BackboneProbe(prefix, OrderHead(), train_backbone=False)
+
+        direct_logits = model(model_input(rgb, windows, ids, torch.device("cpu"), "dino"))
+        direct_xy = trainer.grid_to_original(direct_logits[:, :-1].argmax(1).numpy(), (2, 4))
+        direct_presence = (1 - direct_logits.softmax(1)[:, -1]).numpy()
+        self.assertEqual(prefix.frames_seen, 6)
+        prefix.frames_seen = 0
+
+        xy, presence = predict(
+            model, rgb, windows, ids, 2, torch.device("cpu"), "dino", (2, 4))
+        self.assertEqual(prefix.frames_seen, 4)
+        np.testing.assert_allclose(xy, direct_xy)
+        np.testing.assert_allclose(presence, direct_presence)
+        np.testing.assert_allclose(xy, [[159.5, 179.5], [479.5, 179.5]])
 
 
 if __name__ == "__main__":

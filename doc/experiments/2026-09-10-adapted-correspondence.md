@@ -1,6 +1,6 @@
 # 精细定位的适配收益是否伴随匹配排序改善？
 
-日期：2026-09-10。状态：CPU入口与真实单查询smoke通过；四个固定前缀的正式诊断尚未运行。
+日期：2026-09-10。状态：CPU入口与真实单查询smoke通过；四个固定前缀的正式诊断正在顺序运行。
 协议：[前缀适配后GT-query诊断v1](../protocols/tennis-adapted-correspondence-v1.md)。
 
 ## 问题与范围
@@ -31,7 +31,7 @@ python scripts/probe_adapted_correspondence.py --run outputs/adaptation_probe/fr
 
 ## 正式运行的固定内容
 
-正式参考为outputs/correspondence_probe/stage1_cosine.json，含215/213个Δ1/Δ2合法坐标帧对，双端VC1为199/190。顺序测量frozen_seed0、finetune_seed0、finetune_seed1、finetune_seed2；结果保存outputs/adaptation_correspondence/<run>.json。命令模板如下，当前尚未开始四组正式运行：
+正式参考为outputs/correspondence_probe/stage1_cosine.json，含215/213个Δ1/Δ2合法坐标帧对，双端VC1为199/190。已从提交711a38d顺序启动frozen_seed0、finetune_seed0、finetune_seed1、finetune_seed2；结果保存outputs/adaptation_correspondence/<run>.json，同名.log记录进度。命令模板如下：
 
 ```bash
 python scripts/probe_adapted_correspondence.py --run outputs/adaptation_probe/frozen_seed0 --reference outputs/correspondence_probe/stage1_cosine.json --output outputs/adaptation_correspondence/frozen_seed0.json

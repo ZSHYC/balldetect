@@ -29,3 +29,11 @@
 复用实际已有的全量训练入口，给scripts/train_tennis_heatmap.py增加两个实际模型选项hrnet/dino（默认仍hrnet）。只用明确的模型构造、输入、损失和读出分支，复用共同的数据、训练循环、F1选优和保存，不新增trainer/factory类。HRNet路径保持不变；DINO复用BackboneProbe和SpatialProbe，不新造adapter或motion层。增加一项CPU输入/读出综合测试，覆盖两种模型的时间通道顺序和预处理边界；真实DINO入口smoke与正式运行等待当前HRNet释放GPU后顺序执行。
 
 正在运行的HRNet来自32d37d4，其Python进程已加载该版本；后续源文件修改不重新解释它的运行。DINO运行前提交新实现，再让config记录新版本。正式结果分别保存在outputs/full_heatmap/hrnet_seed0和dino_prefix_seed0，不能把两个模型的超参差异藏进共用入口。
+
+## 全量DINO验证中的重复前缀计算
+
+全量相邻三帧窗口在同一验证batch中反复包含相同RGB帧，现有DINO predict会对每次出现都执行同一个固定前缀。按实际帧索引取unique并用inverse恢复窗口，可复用当前batch内的特征，不需持久化缓存或跨clip状态。训练保留原forward，不复用已更新参数前的特征。
+
+最小修改在BackboneProbe提取已有逐帧归一化/前缀计算为encode方法，由原forward和DINO predict两处调用。predict仅在DINO分支对索引去重，再按原时间/批次顺序拼接给原head；HRNet路径不变。CPU测试用重叠且索引顺序不平凡的窗口，对照原完整forward的输出并验证实际前缀输入帧数下降，原梯度测试仍需通过。
+
+这种数学复用不自动保证不同CUDA batch形状逐位相同。GPU释放后，正式DINO启动前，另用实际已训练前缀/头对全量验证比较直接窗口与批内复用的位置、0.5存在判断和分数误差；若关键预测改变，先定位并决定是否保留该计算改动，不直接进入正式训练。不用理论帧数减少宣称实测吞吐倍数。

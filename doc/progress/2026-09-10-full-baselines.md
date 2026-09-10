@@ -28,4 +28,4 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 两系统共享任务，但结构、输出尺度、预训练、损失和优化器不同。全量结果是强竞争系统参照，不能单独归因某个因素，也不替代最终backbone × motion的2×2。完成后先依据保存预测分析精细位置、困难条件、无球误报和有球漏报，再决定是否存在需要新motion机制解决的残留问题。
 
-同时锁定一项[前缀适配后的对应测量](../protocols/tennis-adapted-correspondence-v1.md)，用CPU对已保存的冻结及三seed微调前缀作GT-query诊断，补齐“自动精细定位提高是否伴随匹配排序改善”的未测问题。只读既有RGB与checkpoint，不训练、不改全量方案、不占用GPU；真实单查询smoke已通过，正式测量尚未运行，见[实际记录](../experiments/2026-09-10-adapted-correspondence.md)。
+同时锁定一项[前缀适配后的对应测量](../protocols/tennis-adapted-correspondence-v1.md)，用CPU对已保存的冻结及三seed微调前缀作GT-query诊断，补齐“自动精细定位提高是否伴随匹配排序改善”的未测问题。只读既有RGB与checkpoint，不训练、不改全量方案、不占用GPU；真实单查询smoke已通过，正式测量已从711a38d顺序启动，见[实际记录](../experiments/2026-09-10-adapted-correspondence.md)。
