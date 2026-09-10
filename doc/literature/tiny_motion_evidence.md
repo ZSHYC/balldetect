@@ -52,9 +52,9 @@
 
 * 论文明确针对 complex motion 与 large displacement，提出 global random large-displacement augmentation、cross-scale bidirectional shared attention、动态 receptive-field pyramid deformable convolution，以及迭代 class query memory（CQM）。出版方称其从 rigid alignment 转为 flexible matching。
 * 这直接覆盖“高分辨率 feature 上做 global dynamic query / 随后 dynamic alignment”的模块级说法。其仓库还明确警告 spatial deep supervision 和 `track_loss` 默认关闭，因为可能与深浅 query learning 冲突；这只是作者实现观察，不可泛化成理论结论。
-* **重要差别：** DQAligner 是 dense detection/segmentation 风格 IR task，类 query 不等于球赛中不依赖当前检测成功的跨帧对应。若本文的候选必须由当前帧激活，DQAligner 同样暴露“候选先漏球”的风险，但不会自动解决。
+* **2026-09-10源码补读修正：** DQAligner 的类query从可学习初态出发，在窗口内读取全空间特征，输出dense mask；公开路径没有先从当前检测器取硬候选。不能给它强加“当前候选先漏”的结构判断，也不能说query必然恢复球。窗口内GRU、跨窗口参数未实际使用以及因果采样边界见[专门审查](2026-09-10-dqaligner-query.md)；论文全文仍未取得，源码证据不替代全文。
 
-**最低反证实验：** 对比 `(i)` 当前帧高分辨率 detector，`(ii)` DQAligner 式 coarse-to-fine query，`(iii)` 你的时序候选；每一项均报告 `candidate recall@K`（真中心落入候选邻域）后再报告给定 oracle candidate 的 matching accuracy。没有前者，所有“wide search”结果都可能是 oracle 条件跟踪。
+**修正后的比较边界：** 若今后采用稀疏时序候选，报告自身candidate recall@K及条件匹配，并与自动dense系统比较共同任务的最终定位/检测。DQAligner没有必需的硬候选阶段，不要求它报告虚构的内部候选召回；从dense输出另取top-K时需明确这是额外诊断规则。GT query结果不能代替自动发现结果。
 
 ### 1.4 MIST / MISTNet — irregular fast motion 的多尺度隐式补偿和困难子集
 
@@ -209,7 +209,7 @@
 1. **把 H2 改得更难。** 由“保留少量多峰对应优于过早唯一位移”改为“在固定关系元素数、自动候选 recall 与端到端成本下，延迟压缩的 relation distribution 在高 displacement/blur/重复纹理分桶提高 true-center rank、校准与定位；其收益不由增加容量或 oracle query 解释。”
 2. **把 H4 拆为两个不可互相遮蔽的门槛。** `candidate recall@K` 是发现门槛；在正确候选已给定的 `conditional match accuracy` 是对应门槛。二者应分别测量，但不要求同时提升；需要证明覆盖与条件匹配的组合，以及完整定位表现，在同预算下改善。
 3. **不要把 global/local/camera 放到首版模型名或贡献里。** DMR/DQAligner/EgoSIS 的概念距离很近，且体育球的非共面几何让强解释不安全。先做数据分桶的诊断；没有显著收益就删。
-4. **加入四个最小强基线。** `(a)` current-frame high-res locator，`(b)` difference/MI-DETR-style motion-map + appearance，`(c)` local deformable sampling（STSN/BIRD 类），`(d)` coarse-to-fine sparse query（QueryDet/DQAligner 类）。若新方法不能超过其中最简单的一项，停止加模块。
+4. **考虑与实际机制对应的强基线。** `(a)` current-frame high-res locator，`(b)` difference/MI-DETR-style motion-map + appearance，`(c)` local deformable sampling（STSN/BIRD 类），`(d)` 稀疏候选（QueryDet）或全局动态query/dense对齐（DQAligner）。后两者不是相同候选机制；2026-09-10源码补读据此修正原归类。按当前实验问题选必要控制，不机械实现整份列表；若收益已被简单系统解释，停止加模块。
 5. **把 long-term temporal propagation 作为明确对照而非遗漏。** BIRD/DeepPro 表明“更远帧信息”和“便宜时间 profile”都可能解释收益。实验应写清 offline 还是 causal；若使用未来帧，不可把 latency 写成实时。
 6. **论文 related work 加一个“任务差异而非免引用”的段。** 红外是低纹理/低 SNR，球赛 RGB 是小尺寸、motion blur、复纹理、相机移动；这些差异说明为何不应直接迁移其结论，却不使相同机制的 prior art 消失。
 

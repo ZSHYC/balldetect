@@ -54,6 +54,7 @@
 | [WASB训练实现边界](literature/2026-09-10-wasb-implementation.md) | 作者公开训练工程的缺口、标签与未来帧语义，以及本地强基线可重建的范围 |
 | [细位置与跨帧对应](literature/2026-09-10-subpixel-correspondence.md) | RAFT、LoFTR、FeatUp、WAFT和OTHR对细化、表示分工与motion解释的限制 |
 | [拖影轴与帧间搜索](literature/2026-09-10-blur-guided-correspondence.md) | blur-aware flow、曝光轨迹和fast-moving-object先例怎样限制用拖影轴引导候选搜索 |
+| [DQAligner自动query与记忆](literature/2026-09-10-dqaligner-query.md) | 作者源码如何修正硬候选、窗口状态与因果采样的解释，全文阅读仍有何限制 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

@@ -22,6 +22,8 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 [拖影轴近邻审查](../literature/2026-09-10-blur-guided-correspondence.md)核对五项直接先例，包含较新的MoTDiff预印本。blur-aware匹配、单帧曝光轨迹及fast-moving-object拖影恢复均有前史；本地BlurBall轴相关性只支持保留候选，不能替代图像预测轴和完整自动定位的证据。
 
+[DQAligner源码补读](../literature/2026-09-10-dqaligner-query.md)修正了旧候选解释：该实现从学习初态用全局query读取窗口特征，并不先依赖当前硬候选；状态限窗口内，默认last模式也不能掩盖loader的开头回绕及训练时间反转。作者公开全文仍未找到，源码结论与论文摘要分开记录；未新增该模型训练。
+
 ## 正在执行与后续依据
 
 一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次检查DINO批内帧复用的CUDA预测等价、验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。帧复用实现来自1185875，CPU顺序/复用与梯度检查已通过，真实CUDA检查仍待执行。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
