@@ -1,6 +1,6 @@
 # 显式局部对应能否改善真实三帧定位？
 
-日期：2026-09-10。状态：三组seed0、完整固定头cost精度对照与机制诊断完成；seed1/2复核待运行。
+日期：2026-09-10。状态：seed0筛选、预定seed1/2复核、全部七个新增固定头的cost精度对照与机制诊断完成。
 协议：[Tennis dense局部对应基线](../protocols/tennis-local-cost-probe-v1.md)。
 
 ## 假设与判别依据
@@ -113,3 +113,62 @@ stack与centered选中同一native block的162个目标中，centered在8px救�
 现有证据与“native cost经共享hidden32影响四个PixelShuffle子格的选择”一致，但没有证明其因果机制；新增非线性、优化随机性和checkpoint选优同样可能参与。centered按PCK16选中的epoch9 PCK8为57.99%，而epoch3曾为62.56%，说明选优规则解释部分退步；不能在事后换成按PCK8选优再声称本轮主要比较变好。
 
 输出为`outputs/correspondence_probe/subcell_diagnostic_seed0.json`。独立只读研究审查认为当前诊断已足以区分粗块选择与块内选择，不应继续凭单seed加模块；先完成self与预固定seeds条件。
+
+## 预定三seed复核：小幅粗定位收益，持续细定位损失
+
+centered和self_centered各seed1、2均完成30epoch，使用版本`72ee2d9`。这一版本只调整前述输入传输表达式，不改变网络数值、损失或选优规则；四次运行继续复用同一冻结特征和cost缓存。已有stack三seed作为对应控制，不重复训练。以下汇总采用同一game7的230个目标，其中219个有合法位置。
+
+| 模型 | seed | 最佳epoch | PCK8 | PCK16 | PCK32 | 检测F1@16 |
+|---|---:|---:|---:|---:|---:|---:|
+| stack | 0 | 8 | 64.84% | 83.56% | 85.39% | 81.70% |
+| centered | 0 | 9 | 57.99% | 85.84% | 88.13% | 84.49% |
+| self_centered | 0 | 4 | 62.10% | 82.65% | 84.47% | 80.98% |
+| stack | 1 | 6 | 63.01% | 84.02% | 86.30% | 81.96% |
+| centered | 1 | 1 | 61.64% | 83.11% | 86.30% | 81.07% |
+| self_centered | 1 | 1 | 62.56% | 83.11% | 85.84% | 81.07% |
+| stack | 2 | 5 | 68.04% | 84.02% | 85.39% | 81.96% |
+| centered | 2 | 5 | 64.84% | 85.39% | 87.67% | 83.30% |
+| self_centered | 2 | 8 | 65.75% | 82.65% | 84.47% | 81.08% |
+
+| 模型 | PCK8，均值±样本SD | PCK16，均值±样本SD | PCK32，均值±样本SD |
+|---|---:|---:|---:|
+| stack | 65.30±2.54% | 83.87±0.26% | 85.69±0.53% |
+| centered | 61.49±3.43% | 84.78±1.47% | 87.37±0.95% |
+| self_centered | 63.47±1.99% | 82.80±0.26% | 84.93±0.79% |
+
+这里SD的数值单位是百分点，只反映同一比赛、同一目标集合下的优化随机性。不是跨比赛置信区间；也不能把三次重复的219个位置当作657个独立验证目标。raw只完成事先规定的seed0筛选，不给它拼凑多seed均值。
+
+![同一验证比赛上三seed的定位结果](../../outputs/correspondence_probe/multiseed_accuracy.png)
+
+[PDF矢量图](../../outputs/correspondence_probe/multiseed_accuracy.pdf)。点为各seed，误差线为均值±样本SD；三个面板使用各自的纵轴范围。
+
+| centered的对照 | seed | 8px救回/新错 | 16px救回/新错 | 32px救回/新错 |
+|---|---:|---:|---:|---:|
+| stack | 0 | 17 / 32 | 10 / 5 | 9 / 3 |
+| stack | 1 | 22 / 25 | 10 / 12 | 8 / 8 |
+| stack | 2 | 15 / 22 | 8 / 5 | 8 / 3 |
+| self_centered | 0 | 11 / 20 | 7 / 0 | 8 / 0 |
+| self_centered | 1 | 1 / 3 | 1 / 1 | 2 / 1 |
+| self_centered | 2 | 13 / 15 | 11 / 5 | 10 / 3 |
+
+相对stack，centered的PCK16平均增加0.91个百分点，但逐seed为+2.28、−0.91、+1.37，并未三个seed都优于简单堆叠；PCK8平均减少3.81个百分点，三个seed方向一致。相对self，PCK16为两次增加、一次持平，平均增加1.98个百分点；PCK8三次下降，平均减少1.98个百分点。PCK32比stack两次提高、一次持平，比self三次提高。这支持“跨帧cost在当前读出下有减少一部分较大错误的信号”，不支持“该设计已经稳定改善精确球定位”。
+
+困难和遮挡没有随重复实验改善：centered与self三个seed在VC2的8个目标、VC3的4个目标上PCK16均为0；stack仅seed1在VC2命中1个。新增四次运行中，centered seed1/2和self seed1均对11个无球全部误报，且没有正例存在漏判；self seed2误报10个无球，同时漏判4个有位置目标。条件PCK仍评价全部219个位置，不能用它掩盖存在判断失败。
+
+四次训练及末次评价耗时按centered seed1、self seed1、centered seed2、self seed2分别为216.20、382.76、281.11、183.98秒，峰值已分配显存均391.22MiB。优化后的传输路径没有使所有运行耗时一致；共享GPU的总时间不适合用来判断两种cost的算法复杂度。
+
+```bash
+# variant取centered/self_centered，seed取1/2；实际执行四次，全部完成。
+python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --cost-cache data/cache/tennis/local_cosine_s1_h2_r2_r4/centered --output outputs/correspondence_probe/centered_seed1 --stage 1 --output-stride 4 --hidden-channels 32 --temporal-input stack --seed 1
+python scripts/check_probe_precision.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --runs outputs/correspondence_probe/centered_seed1 outputs/correspondence_probe/self_centered_seed1 outputs/correspondence_probe/centered_seed2 outputs/correspondence_probe/self_centered_seed2 --output outputs/correspondence_probe/precision_seeds12.json
+```
+
+新增四个固定头的完整230目标精度比较仍未发现空间argmax或存在判断变化；最大cost差均为0.000244140625，最大logit差不超过0.0000200272。缓存分支逐项重现各自已保存的位置指标，重新解码/提取帧数为0。结合seed0检查，七个新增固定头均已覆盖；结论仍仅限于相同源float16 appearance上的cost存储差异。
+
+完整汇总位于`outputs/correspondence_probe/multiseed_summary.json`，包含每个运行的版本、路径、选中epoch、评价、耗时及三seed paired结果。seed1/2比较沿用已有`compare_predictions.py`和同一GT query位移分组，保存为`{stack,self_centered}_vs_centered_seed{1,2}.json`；未重新运行位置预测来计算paired统计。
+
+## 本轮研究决定
+
+不将当前dense cost拼接升为默认模型，也不据此继续叠加更远搜索、多假设或可靠性模块。保留简单三帧stack作为下一阶段控制，保留centered/self及缓存作为可复用机制基线。对应信号没有被完全否定，但当前融合同时带来更稳定的精细定位损失；需要先分辨表示、读出与训练条件，不能把冻结小头的性能当作现代backbone能力上限。
+
+单seed子格诊断仍是探索性解释，不因三seedPCK8下降就自动升级为因果证明。当前开发集合的范围外目标极少，且只有一个验证比赛；这些实验不能证明大位移问题已经解决。下一阶段优先补足对读出/训练瓶颈有区分力的受控比较，再进入完整强基线与跨球种验证，不以增加模块数量代替证据。

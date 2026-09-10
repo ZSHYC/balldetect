@@ -67,7 +67,7 @@
 
 - [2026-09-10：空间读出实现与首轮真实实验](progress/2026-09-10-spatial-implementation.md)。
 - [2026-09-10：真实时序与对应诊断](progress/2026-09-10-temporal-and-correspondence.md)：九组时序实验、GT query结果和下一基线的依据。
-- [2026-09-10：局部对应的自动定位结果](progress/2026-09-10-local-cost-implementation.md)：seed0对照、精细位置退步、数值/传输实测与复核方向。
+- [2026-09-10：局部对应的自动定位结果](progress/2026-09-10-local-cost-implementation.md)：三seed对应对照、精细位置退步、数值/传输实测及Shuttlecock开发统计。
 - [2026-09-10：研究材料、公开数据与文档准备](progress/2026-09-10-project-setup.md)。
 
 新进展按日期追加到这里。根 README 只链接本导航；无需在多处同步“最新分数”和完整 TODO。
