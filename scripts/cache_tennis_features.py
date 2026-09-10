@@ -39,10 +39,12 @@ def main():
     parser.add_argument("--height", type=int, default=288)
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--frame-step", type=int, default=8)
+    parser.add_argument("--stages", type=int, nargs="+", choices=range(4), help="只保存实际使用的层，默认四层")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--max-frames", type=int, default=0, help="仅供 smoke；0 为完整开发采样")
     args = parser.parse_args()
+    selected_stages = args.stages if args.stages is not None else list(range(4))
     if args.height % 32 or args.width % 32 or args.width / args.height != 1280 / 720:
         raise ValueError("需要保持 16:9，且 H/W 为 32 的倍数")
     torch.set_num_threads(4)
@@ -54,6 +56,8 @@ def main():
                   frame_step=args.frame_step, games=list(range(1, 8)), max_frames=args.max_frames,
                   data_root=str(args.data_root.resolve()), resize="PIL bilinear RGB",
                   normalize="ImageNet", stage_norm=False, forward_dtype="float32", storage_dtype="float16")
+    if args.stages is not None:
+        config["saved_stages"] = args.stages
     meta_path = args.output / "metadata.json"
     if meta_path.exists():
         meta = json.loads(meta_path.read_text())
@@ -79,7 +83,7 @@ def main():
                         batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
     mean = torch.tensor([.485, .456, .406], device="cuda")[None, :, None, None]
     std = torch.tensor([.229, .224, .225], device="cuda")[None, :, None, None]
-    arrays, conversion = [], []
+    arrays, conversion = {}, []
     position, forward_ms = 0, 0.
     torch.cuda.reset_peak_memory_stats()
     started = time.perf_counter()
@@ -93,29 +97,30 @@ def main():
             after.synchronize()
             forward_ms += before.elapsed_time(after)
             if not arrays:
+                shapes = [(len(rows), *f.shape[1:]) for f in features]
                 for stage, f in enumerate(features):
                     saved = f.half().float()
                     relative = float(torch.linalg.vector_norm(f - saved) / torch.linalg.vector_norm(f))
                     if not torch.isfinite(saved).all() or relative > .001:
                         raise ValueError(f"stage {stage}: float16 保存误差过大，应改用 float32")
                     conversion.append(dict(relative_l2=relative, max_abs_error=float((f - saved).abs().max())))
-                    shape = (len(rows), *f.shape[1:])
-                    arrays.append(np.lib.format.open_memmap(args.output / f"stage{stage}.npy", mode="w+",
-                                                           dtype=np.float16, shape=shape))
-                print(json.dumps({"shapes": [list(a.shape) for a in arrays],
-                                  "storage_bytes": sum(a.nbytes for a in arrays),
+                    if stage in selected_stages:
+                        arrays[stage] = np.lib.format.open_memmap(args.output / f"stage{stage}.npy", mode="w+",
+                                                                dtype=np.float16, shape=shapes[stage])
+                print(json.dumps({"shapes": shapes, "saved_stages": selected_stages,
+                                  "storage_bytes": sum(a.nbytes for a in arrays.values()),
                                   "fp16_conversion": conversion}), flush=True)
-            for array, f in zip(arrays, features):
-                values = f.half().cpu().numpy()
+            for stage, array in arrays.items():
+                values = features[stage].half().cpu().numpy()
                 if not np.isfinite(values).all():
                     raise ValueError(f"Non-finite features at frame offset {position}")
                 array[position:position + len(pixels)] = values
             position += len(pixels)
             if batch_id % 20 == 0 or position == len(rows):
                 print(f"cached {position}/{len(rows)} frames, elapsed={time.perf_counter()-started:.1f}s", flush=True)
-    for array in arrays:
+    for array in arrays.values():
         array.flush()
-    meta = dict(config=config, frames=rows, excluded=excluded, shapes=[list(a.shape) for a in arrays],
+    meta = dict(config=config, frames=rows, excluded=excluded, shapes=shapes,
                 by_game=dict(Counter(r["game"] for r in rows)), fp16_conversion=conversion,
                 device=torch.cuda.get_device_name(), torch_version=torch.__version__,
                 elapsed_seconds=time.perf_counter() - started, forward_seconds=forward_ms / 1000,
