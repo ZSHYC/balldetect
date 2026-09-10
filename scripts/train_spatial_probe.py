@@ -1,4 +1,4 @@
-"""在一次提取的特征上训练独立空间读出，不重新解码 RGB。"""
+"""在缓存特征上训练定位读出，支持当前帧和严格因果的时间拼接。"""
 import argparse
 import csv
 import json
@@ -14,15 +14,16 @@ from torch.nn import functional as F
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from ballmotion.tennis import grid_targets, grid_to_original
-from ballmotion.probe import SpatialProbe, evaluate_predictions
+from ballmotion.probe import SpatialProbe, evaluate_predictions, frame_batch
 
 
-def predict(model, array, indices, batch_size, device):
+def predict(model, array, windows, indices, batch_size, device, temporal_input):
     model.eval()
     positions, probabilities = [], []
     with torch.inference_mode():
         for start in range(0, len(indices), batch_size):
-            x = torch.from_numpy(array[indices[start:start + batch_size]]).to(device, torch.float32)
+            selected = windows[indices[start:start + batch_size]]
+            x = torch.from_numpy(frame_batch(array, selected, temporal_input)).to(device, torch.float32)
             logits = model(x)
             positions.extend(logits[:, :-1].argmax(1).cpu().tolist())
             probabilities.extend((1 - logits.softmax(1)[:, -1]).cpu().tolist())
@@ -37,6 +38,7 @@ def main():
     parser.add_argument("--stage", type=int, choices=range(4), required=True)
     parser.add_argument("--output-stride", type=int, choices=(4, 8, 16, 32), help="默认原生网格；更细网格使用子格线性读出")
     parser.add_argument("--hidden-channels", type=int, default=0, help="0 为线性头；正数使用 1x1-GELU-3x3 读出")
+    parser.add_argument("--temporal-input", choices=("current", "stack", "repeat"), default="current")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=.003)
@@ -57,9 +59,14 @@ def main():
     rng = np.random.default_rng(args.seed)
     device = torch.device("cuda")
     meta = json.loads((args.cache / "metadata.json").read_text())
-    rows = meta["frames"]
-    if set(r["game"] for r in rows) - {f"game{i}" for i in range(1, 8)}:
+    all_rows = meta["frames"]
+    if set(r["game"] for r in all_rows) - {f"game{i}" for i in range(1, 8)}:
         raise ValueError("开发探针缓存不能包含最终测试比赛")
+    windows = np.asarray(meta["windows"], dtype=np.int64) if "windows" in meta else np.arange(len(all_rows))[:, None]
+    if args.temporal_input != "current" and windows.shape[1] < 2:
+        raise ValueError("时间对照需要真实连续窗口缓存，不能把稀疏缓存相邻行充当连续帧")
+    rows = [all_rows[i] for i in windows[:, -1]]
+    num_frames = 1 if args.temporal_input == "current" else windows.shape[1]
     train_idx = np.array([i for i, r in enumerate(rows) if r["game"] != "game7"])
     val_idx = np.array([i for i, r in enumerate(rows) if r["game"] == "game7"])
     if not len(train_idx) or not len(val_idx):
@@ -71,7 +78,8 @@ def main():
     present = np.array([r["visibility_raw"] != 0 for r in rows])
     grid_hw = tuple(s * upscale for s in array.shape[-2:])
     targets = grid_targets(target_xy, present, grid_hw)
-    model = SpatialProbe(array.shape[1], upscale=upscale, hidden_channels=args.hidden_channels).to(device)
+    model = SpatialProbe(array.shape[1] * num_frames, upscale=upscale, hidden_channels=args.hidden_channels,
+                         num_frames=num_frames).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=.01)
     val_rows = [rows[i] for i in val_idx]
     code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
@@ -80,8 +88,9 @@ def main():
               "device": torch.cuda.get_device_name(), "torch_version": str(torch.__version__),
               "train_frames": len(train_idx), "val_frames": len(val_idx),
               "parameters": sum(p.numel() for p in model.parameters()),
-              "head": "GroupNorm(1,C,affine=False) + " + ("nonlinear" if args.hidden_channels else "linear") + " subcell spatial; linear absence",
-              "output_grid_hw": grid_hw, "upscale": upscale,
+              "head": "framewise GroupNorm(1,C,affine=False) + " + ("nonlinear" if args.hidden_channels else "linear") + " subcell spatial; linear absence",
+              "output_grid_hw": grid_hw, "upscale": upscale, "num_frames": num_frames,
+              "target_slot": windows.shape[1] - 1,
               "selection": "maximum val conditional PCK@16; then PCK@8; first on ties"}
     (args.output / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(config, ensure_ascii=False), flush=True)
@@ -94,7 +103,7 @@ def main():
         loss_sum = 0.
         for start in range(0, len(order), args.batch_size):
             ids = order[start:start + args.batch_size]
-            x = torch.from_numpy(array[ids]).to(device, torch.float32)
+            x = torch.from_numpy(frame_batch(array, windows[ids], args.temporal_input)).to(device, torch.float32)
             y = torch.from_numpy(targets[ids]).to(device)
             loss = F.cross_entropy(model(x), y)
             if not torch.isfinite(loss):
@@ -103,7 +112,7 @@ def main():
             loss.backward()
             optimizer.step()
             loss_sum += float(loss.detach()) * len(ids)
-        xy, prob = predict(model, array, val_idx, args.batch_size, device)
+        xy, prob = predict(model, array, windows, val_idx, args.batch_size, device, args.temporal_input)
         metrics = evaluate_predictions(val_rows, xy, prob)
         score = (metrics["location"]["pck16"], metrics["location"]["pck8"])
         record = dict(epoch=epoch, train_loss=loss_sum / len(order), val=metrics["location"],
@@ -117,7 +126,7 @@ def main():
     model.load_state_dict(torch.load(args.output / "best.pt", map_location=device, weights_only=True)["model"])
     results = {}
     for split, ids in (("train", train_idx), ("val", val_idx)):
-        xy, prob = predict(model, array, ids, args.batch_size, device)
+        xy, prob = predict(model, array, windows, ids, args.batch_size, device, args.temporal_input)
         split_rows = [rows[i] for i in ids]
         results[split] = evaluate_predictions(split_rows, xy, prob)
         oracle_idx = np.minimum(targets[ids], grid_hw[0] * grid_hw[1] - 1)

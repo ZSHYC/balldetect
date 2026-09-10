@@ -40,7 +40,7 @@
 │   └── progress/         # 按日期记录阶段变化
 ├── data/                 # 本地数据、源标注、索引和数据说明
 ├── models/               # 权重说明与本地外部预训练权重
-├── src/ballmotion/       # Tennis 数据语义、空间读出与评价
+├── src/ballmotion/       # Tennis 数据/时间语义、特征读出与评价
 ├── scripts/              # 特征提取和实验入口
 ├── tests/                # 几何、标签、评价与拟合验证
 ├── third_party/          # 上游 DINOv3 本地 checkout 与来源说明
@@ -57,13 +57,13 @@ Python 默认使用 Conda 环境 `zshihyc`：
 conda activate zshihyc
 ```
 
-后续命令均在此环境运行。用户已授权按实际需要直接安装依赖；安装到当前环境并记录用途与实际版本，不预装尚未用到的包。模型开发开始后，再根据实际依赖建立可复现的环境说明。
+后续命令均在此环境运行。用户已授权按实际需要直接安装依赖；安装到当前环境并同步更新实际依赖说明，不预装尚未用到的包。
 
 数据范围为 TrackNet Tennis、Shuttlecock Trajectory Dataset、BlurBall 和 OpenTTGames。原始副本、版本差异和使用入口以 [data/README.md](data/README.md) 为准；不要为开始阅读项目而重跑下载或全量校验。
 
 用户提供的 DINOv3 权重已整理到 `models/pretrained/dinov3/`，见 [权重说明](models/README.md)。首轮使用 ConvNeXt-Tiny，按 [上游代码说明](third_party/README.md) 准备 DINOv3；当前环境所用直接依赖见 [requirements.txt](requirements.txt)，无需重新安装已有依赖。
 
-当前实施范围是 [Tennis 单帧冻结空间探针](doc/protocols/tennis-spatial-probe-v1.md)，还不是最终运动模型。项目根目录运行：
+已实现 [Tennis 单帧冻结空间探针](doc/protocols/tennis-spatial-probe-v1.md)，正在进行[因果三帧对照](doc/protocols/tennis-temporal-probe-v1.md)，还不是最终运动模型。单帧入口在项目根目录运行：
 
 ```bash
 PYTHONPATH=src python tests/test_spatial_probe.py
@@ -72,6 +72,8 @@ python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_
 ```
 
 `--stage 0/1/2/3` 选择独立层位，每个新实验使用独立输出目录；完整缓存可以复用，不重新解码或提取特征。训练/验证为 game 1–6 / 7，最终测试 game 8–10 本阶段不运行。结果以实际实验记录为准。
+
+因果三帧使用真实 `t−2,t−1,t`，通过唯一帧缓存和窗口索引避免重复提取；当前帧、真实堆叠、重复当前帧三个对照共享目标集合。实际命令和状态见[因果对照实验记录](doc/experiments/2026-09-10-causal-stack.md)，不要用单帧缓存中相邻的稀疏行替代连续视频帧。
 
 ## 研究记录原则
 

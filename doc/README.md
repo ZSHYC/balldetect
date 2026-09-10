@@ -48,6 +48,7 @@
 | [第二轮：标签与测量](literature/second_pass_measurement.md) | 标签中心、拖影、稀疏监督与可观测量怎样限制实验解释 |
 | [第二轮：表示探针](literature/second_pass_representation.md) | 冻结特征的匹配探针到底测到什么，哪些失败不能直接归因于信息丢失 |
 | [第二轮：时序累积与搜索](literature/second_pass_search_motion.md) | 弱证据积累、track-before-detect 与稀疏全局对应如何挑战偏好的模型路线 |
+| [三帧因果基线核对](literature/2026-09-10-causal-baselines.md) | V4/V5/V6、BlurBall 的时序输出、差分非线性和前瞻边界 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

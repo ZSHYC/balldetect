@@ -69,3 +69,22 @@ def center_pairs(rows, delta):
         previous = lookup.get((current["game"], current["clip"], int(current["original_frame_id"]) - delta))
         if previous is not None and current["label_state"] == previous["label_state"] == "located":
             yield previous, current
+
+
+def causal_windows(rows, target_step, history):
+    """返回真实行索引 [t-history,...,t]；历史标签不参与窗口选择。"""
+    if target_step < 1 or history < 0:
+        raise ValueError("target_step must be positive and history nonnegative")
+    lookup = {(r["game"], r["clip"], int(r["original_frame_id"])): i for i, r in enumerate(rows)}
+    windows, skipped = [], 0
+    for row in rows:
+        frame = int(row["original_frame_id"])
+        if frame % target_step or row["label_state"] not in ("located", "absent"):
+            continue
+        indices = [lookup.get((row["game"], row["clip"], frame + offset))
+                   for offset in range(-history, 1)]
+        if any(i is None for i in indices):
+            skipped += 1
+        else:
+            windows.append(indices)
+    return np.array(windows, dtype=np.int64).reshape(-1, history + 1), skipped

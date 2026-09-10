@@ -7,10 +7,11 @@ from torch import nn
 
 
 class SpatialProbe(nn.Module):
-    def __init__(self, channels, upscale=1, hidden_channels=0):
+    def __init__(self, channels, upscale=1, hidden_channels=0, num_frames=1):
         super().__init__()
         self.upscale = upscale
-        self.norm = nn.GroupNorm(1, channels, affine=False)
+        # 拼接时一个完整帧占一组，避免历史帧尺度改变当前帧的归一化。
+        self.norm = nn.GroupNorm(num_frames, channels, affine=False)
         if hidden_channels:
             self.location = nn.Sequential(nn.Conv2d(channels, hidden_channels, 1), nn.GELU(),
                                           nn.Conv2d(hidden_channels, upscale ** 2, 3, padding=1))
@@ -23,6 +24,17 @@ class SpatialProbe(nn.Module):
         spatial = torch.nn.functional.pixel_shuffle(self.location(features), self.upscale).flatten(1)
         absent = self.absence(features.mean((-2, -1))) + math.log(spatial.shape[1])
         return torch.cat((spatial, absent), dim=1)
+
+
+def frame_batch(array, windows, mode):
+    if mode == "current":
+        return array[windows[:, -1]]
+    if mode == "repeat":
+        return np.tile(array[windows[:, -1]], (1, windows.shape[1], 1, 1))
+    if mode == "stack":
+        b, t = windows.shape
+        return array[windows].reshape(b, t * array.shape[1], *array.shape[-2:])
+    raise ValueError(f"Unknown temporal input: {mode}")
 
 
 def _location_metrics(errors):
@@ -63,4 +75,29 @@ def evaluate_predictions(rows, xy, presence_probability):
     clip_ids = np.array([r["game"] + "/" + r["clip"] for r in rows])
     result["by_clip"] = {clip: _location_metrics(error[(clip_ids == clip) & present])
                          for clip in sorted(set(clip_ids))}
+    return result
+
+
+def paired_location_changes(rows, baseline_xy, challenger_xy):
+    """共同目标上的条件定位净增益，不只统计被救回的样本。"""
+    target = np.array([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float)
+    baseline_xy, challenger_xy = np.asarray(baseline_xy), np.asarray(challenger_xy)
+    if baseline_xy.shape != target.shape or challenger_xy.shape != target.shape:
+        raise ValueError("Paired predictions must cover the same targets")
+    old_error = np.linalg.norm(baseline_xy - target, axis=1)
+    new_error = np.linalg.norm(challenger_xy - target, axis=1)
+    visibility = np.array([r["visibility_raw"] for r in rows])
+    clips = np.array([r["game"] + "/" + r["clip"] for r in rows])
+    groups = {"all": visibility != 0,
+              **{f"visibility{v}": visibility == v for v in (1, 2, 3)},
+              **{clip: (clips == clip) & (visibility != 0) for clip in sorted(set(clips))}}
+    result = {}
+    for name, mask in groups.items():
+        result[name] = {}
+        for radius in (8, 16, 32):
+            old, new = old_error[mask] <= radius, new_error[mask] <= radius
+            rescued, broken = int(np.sum(~old & new)), int(np.sum(old & ~new))
+            result[name][str(radius)] = dict(n=int(mask.sum()), rescued=rescued, broken=broken,
+                both_correct=int(np.sum(old & new)), both_wrong=int(np.sum(~old & ~new)),
+                net_pck_change=(rescued - broken) / int(mask.sum()) if mask.any() else None)
     return result
