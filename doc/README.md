@@ -51,6 +51,7 @@
 | [三帧因果基线核对](literature/2026-09-10-causal-baselines.md) | V4/V5/V6、BlurBall 的时序输出、差分非线性和前瞻边界 |
 | [局部对应的机制先例](literature/2026-09-10-local-correspondence-baselines.md) | MotionSqueeze、SELFY/STSS、TDN与2026年DMR对cost volume和背景解释的限制 |
 | [WASB训练实现边界](literature/2026-09-10-wasb-implementation.md) | 作者公开训练工程的缺口、标签与未来帧语义，以及本地强基线可重建的范围 |
+| [细位置与跨帧对应](literature/2026-09-10-subpixel-correspondence.md) | RAFT、LoFTR、FeatUp、WAFT和OTHR对细化、表示分工与motion解释的限制 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

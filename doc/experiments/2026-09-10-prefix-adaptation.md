@@ -1,6 +1,6 @@
 # 更新视觉表示能否超出继续训练读出头的收益？
 
-日期：2026-09-10。状态：输入缓存、时间/梯度单测、真实前缀/显存预检与完整epoch0入口验证完成；正式两臂待启动。
+日期：2026-09-10。状态：seed0两臂完成；通过预定条件，正在复核seed1/2。
 协议：[相同初始化下的前缀适配](../protocols/tennis-prefix-adaptation-v1.md)。
 
 ## 当前问题与控制
@@ -31,7 +31,7 @@ python scripts/cache_tennis_rgb.py --source-cache data/cache/tennis/dinov3_convn
 
 一次前反向用时0.514秒，含本次初始化/共享资源条件，不能据此宣称完整epoch或端到端视频吞吐。预检保存于`outputs/adaptation_probe/preflight.json`，作用域明确为提交前实现smoke；正式实验另记录实际代码版本。batch8实测可用后，两臂都锁定8，保留共享GPU空间，不将未测试的batch16描述成已经证实可用或不可用。
 
-## 正式实验待执行
+## 完整入口验证
 
 `scripts/train_tennis_adaptation.py`的完整入口以`--epochs 0`完成一次smoke，保存到`outputs/adaptation_probe/smoke_epoch0`。全部230个验证目标的身份顺序一致，位置错位0、0.5存在判断错位0；best_epoch为0，重新加载checkpoint后PCK8/16/32仍为64.84%/83.56%/85.39%，并保存1,503/230行训练/验证预测。该运行总计21.03秒、峰值880.63MiB，只含forward、指标与保存，不含参数更新；不能用它的显存代替此前反向的5267.99MiB。
 
@@ -41,6 +41,34 @@ python scripts/cache_tennis_rgb.py --source-cache data/cache/tennis/dinov3_convn
 python scripts/train_tennis_adaptation.py --rgb-cache data/cache/tennis/rgb_512x288_step8_h2 --init-run outputs/temporal_probe/stack_seed0 --output outputs/adaptation_probe/smoke_epoch0 --backbone-mode finetune --epochs 0
 ```
 
-之后顺序运行frozen/finetune两臂。新脚本不重复打开原图、原位置CSV或最终测试数据；每个正式运行仍会检查自己的完整epoch0起点，避免初始化或路径变化混入比较。
+新脚本不重复打开原图、原位置CSV或最终测试数据；每个正式运行检查自己的完整epoch0起点，避免初始化或路径变化混入比较。
 
 只有finetune相对frozen的PCK16严格提高且PCK8不下降，才用对应seed1/2起点复核。所有条件结果和epoch0仍完整保留；一个验证比赛的继续训练不能替代跨比赛或跨球种证据。
+
+## seed0正式结果
+
+两臂均在实现提交`b7b03a8`后运行，环境为Conda `zshihyc`、RTX 5070 Ti Laptop GPU、float32，物理batch8。共享GPU上的实际总耗时包含训练、每epoch验证、保存及最佳checkpoint重新评价，不作为纯模型吞吐。
+
+```bash
+python scripts/train_tennis_adaptation.py --rgb-cache data/cache/tennis/rgb_512x288_step8_h2 --init-run outputs/temporal_probe/stack_seed0 --output outputs/adaptation_probe/frozen_seed0 --backbone-mode frozen --epochs 15 --batch-size 8 --head-lr 0.0003 --backbone-lr 0.00001 --seed 0
+python scripts/train_tennis_adaptation.py --rgb-cache data/cache/tennis/rgb_512x288_step8_h2 --init-run outputs/temporal_probe/stack_seed0 --output outputs/adaptation_probe/finetune_seed0 --backbone-mode finetune --epochs 15 --batch-size 8 --head-lr 0.0003 --backbone-lr 0.00001 --seed 0
+```
+
+| 条件 | 选中epoch | 验证PCK8 / 16 / 32 | 误差中位数 / 均值（原像素） | 总耗时 | 峰值已分配显存 |
+|---|---:|---|---|---:|---:|
+| frozen | 0 | 64.84% / 83.56% / 85.39% | 6.04 / 55.61 | 248.32秒 | 897.85MiB |
+| finetune | 5 | 70.32% / 86.30% / 88.13% | 5.70 / 51.28 | 636.80秒 | 5278.30MiB |
+
+epoch0的230个验证身份、位置和存在判断均重现共同起点。冻结臂最终保留epoch0，不能将继续训练中较高的PCK8单独拼接成一个不存在的最优模型。两臂训练集PCK16分别为96.63%和99.66%，明显高于验证表现；训练拟合提高不等于跨比赛问题得到解决。
+
+逐帧比较保存在`outputs/adaptation_probe/frozen_vs_finetune_seed0.json`：8px救回18个、新错6个，净增12/219，即5.48个百分点；16px为9/3，32px为7/1，均净增6/219，即2.74个百分点。
+
+这些净收益全部来自VC1。VC2的8个困难目标和VC3的4个遮挡位置在两臂的8/16/32px内都没有命中；微调后的两组平均误差反而分别由408.83→419.04和280.44→321.88像素。两臂均将11个无球目标中的10个报为存在，219个有位置目标均报存在。检测F1@16从81.70%增至84.38%，改善来自定位，不能写成无球拒绝或遮挡恢复改善。
+
+完整学习曲线为[PNG](../../outputs/adaptation_probe/seed0_learning.png)与[PDF](../../outputs/adaptation_probe/seed0_learning.pdf)，包含epoch0–15，圆点标记按PCK16、再PCK8选出的同一个checkpoint。表格原始汇总为`outputs/adaptation_probe/seed0_summary.json`。
+
+## 当前判断与复核
+
+seed0通过预先固定的复核条件，因此按各自对应的旧stack初始化，顺序运行`frozen_seed1 → finetune_seed1 → frozen_seed2 → finetune_seed2`；参数、训练预算与选优规则不变。这是对同一比赛上随机初始化/训练差异的复核，不增加独立比赛数量。
+
+当前只支持一个有限判断：允许这个预训练前缀适应定位，在seed0优于只继续训练读出。它没有隔离单帧外观适配与跨帧对应改善，没有证明新的motion representation，也没有解决困难目标与存在判断。三seed结果完成后再决定这一训练条件是否进入后续控制，不根据单次正结果添加新模块。
