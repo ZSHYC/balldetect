@@ -40,3 +40,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 
 - [Tennis 空间探针 v1](tennis-spatial-probe-v1.md)：冻结单帧开发诊断，独立保留最终测试比赛。
 - [Tennis 因果三帧 v1](tennis-temporal-probe-v1.md)：真实连续上下文与统一目标集上的时间增量诊断。
+- [Tennis GT query 对应 v1](tennis-correspondence-probe-v1.md)：区分特征匹配、搜索覆盖与同格背景自相似，仅作oracle诊断。
