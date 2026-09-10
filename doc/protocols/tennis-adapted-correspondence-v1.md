@@ -1,6 +1,6 @@
 # 前缀适配后的GT-query对应诊断
 
-状态：2026-09-10锁定，真实单查询smoke后开始正式诊断。它是已完成适配实验的机制测量，不增加训练或改选checkpoint。
+状态：2026-09-10锁定，真实单查询smoke与四组正式诊断已完成；结果见[实验记录](../experiments/2026-09-10-adapted-correspondence.md)。它是已完成适配实验的机制测量，不增加训练或改选checkpoint。
 依据：[前缀适配结果](../experiments/2026-09-10-prefix-adaptation.md)、[原GT-query诊断](tennis-correspondence-probe-v1.md)与[表示解释边界](../literature/2026-09-10-subpixel-correspondence.md)。
 
 ## 问题与判别

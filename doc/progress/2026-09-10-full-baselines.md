@@ -24,8 +24,8 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 ## 正在执行与后续依据
 
-一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
+一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次检查DINO批内帧复用的CUDA预测等价、验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。帧复用实现来自1185875，CPU顺序/复用与梯度检查已通过，真实CUDA检查仍待执行。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
 
 两系统共享任务，但结构、输出尺度、预训练、损失和优化器不同。全量结果是强竞争系统参照，不能单独归因某个因素，也不替代最终backbone × motion的2×2。完成后先依据保存预测分析精细位置、困难条件、无球误报和有球漏报，再决定是否存在需要新motion机制解决的残留问题。
 
-同时锁定一项[前缀适配后的对应测量](../protocols/tennis-adapted-correspondence-v1.md)，用CPU对已保存的冻结及三seed微调前缀作GT-query诊断，补齐“自动精细定位提高是否伴随匹配排序改善”的未测问题。只读既有RGB与checkpoint，不训练、不改全量方案、不占用GPU；真实单查询smoke已通过，正式测量已从711a38d顺序启动，见[实际记录](../experiments/2026-09-10-adapted-correspondence.md)。
+[前缀适配后的对应测量](../experiments/2026-09-10-adapted-correspondence.md)现已完成。双端VC1、固定GT query下，Δ2/R4局部PCK16由70.53%升至77.89%/75.26%/74.21%，但净收益主要来自Clip4；Δ1全局精确格R@1的seed2反而下降。它补充了条件性对应变化的实际证据，没有改变原检测收益不一致的结论，也不能单独归因为motion学习。已保存同格/跨格和clip配对变化，本项诊断结束，不增加训练或重开cost搜索。
