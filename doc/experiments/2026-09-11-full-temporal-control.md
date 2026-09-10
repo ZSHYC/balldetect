@@ -1,6 +1,6 @@
 # 全量微调后，真实历史是否仍有定位增量？
 
-日期：2026-09-11。状态：实现及GPU smoke完成，正式训练待启动。
+日期：2026-09-11。状态：实现及GPU smoke完成，正式30epoch训练中。
 协议：[Tennis全量时序输入对照v1](../protocols/tennis-full-temporal-control-v1.md)。依据：[HRNet/DINO完整比较](2026-09-11-full-hrnet-dino-comparison.md)。
 
 ## 要区分的解释
@@ -41,12 +41,12 @@ smoke与CUDA诊断发生在09d7058上的本次未提交修改，不能把旧HEAD
 
 ## 正式运行与结果
 
-待启动命令：
+已从4781357启动以下命令，config与epoch0记录已落盘：
 
 ```bash
 python scripts/train_tennis_heatmap.py --model dino --temporal-input repeat_current --rgb-cache data/cache/tennis/rgb_512x288_all_h2 --output outputs/full_heatmap/dino_repeat_current_seed0 --batch-size 8 --epochs 30 --seed 0
 ```
 
-输出使用新目录；原历史组位于outputs/full_heatmap/dino_prefix_seed0。复用同一RGB缓存，无新增解码。重复组实际只需14,030个不同当前帧；源缓存仍包含14,160帧，保留真实历史及已有实验用途。
+输出使用新目录；原历史组位于outputs/full_heatmap/dino_prefix_seed0。复用同一RGB缓存，无新增解码。重复组实际只需14,030个不同当前帧；源缓存仍包含14,160帧，保留真实历史及已有实验用途。已核对正式config中的代码版本、输入槽位、目标数、参数量及训练设置；日志位于outputs/full_heatmap/dino_repeat_current.log。
 
 正式结果尚未得到。完整结束后按既定F1@16、其次F1@8选优，复用保存预测进行位置、存在、clip及历史条件配对。真实历史若未提高F1@16或降低PCK@8，暂停当前读出上的cost、门控或远搜索；另报告VC2且历史含VC1的64例是否净救回，以及VC0对应25例的误报。
