@@ -46,7 +46,7 @@
 * 主结果：game-level split，验证集从训练 games 中按 game（或至少原始视频来源）另分，绝不从 game1/4/9 拿超参；报告随机种子。
 * 辅结果：clip-level，只作为与 V4 复现可比的结果；禁止写成 domain/generalization evidence。
 * 训练 window 必须在 `game/Clip` 内；任何 `Clip` 尾部样本丢弃或 pad，但不可从下一个 clip 填帧。
-* 数字 **19,835（WASB Table 1（PDF 第 7 页） protocol）与 20,844（TrackNet 原论文主实验）** 已知为不同统计口径；下载后仍应以 manifest 的 image 数、CSV 行数、visibility 分布及 hash 固定本项目所用版本，且不能把不同协议的 F1 直接排名。
+* 数字 **19,835（WASB Table 1（PDF 第 7 页） protocol）与 20,844（TrackNet 原论文主实验）** 已知为不同统计口径；下载后仍应以 manifest 的 image 数、CSV 行数、visibility 分布等元信息记录本项目所用版本，且不能把不同协议的 F1 直接排名。
 
 ### 2. Shuttlecock Trajectory Dataset / TrackNetV2
 
@@ -125,7 +125,7 @@ window = 同一 video 内的原始连续索引；跨 event window 重叠只去�
 
 ## 未解决问题与下一轮取证清单
 
-1. 下载每个数据包后核验：实际文件/CSV 行数、split、原始 frame index、缺失标注、坐标范围、visibility code、license 文本、hash。此步骤会固定本项目的 TrackNet manifest（而非把 TrackNet 20,844 与 WASB 19,835 误当冲突），并消除 badminton 26/23/15、BlurBall 64,119 split 等不确定项。
+1. 下载每个数据包后核验：实际文件/CSV 行数、split、原始 frame index、缺失标注、坐标范围、visibility code、license 文本。此步骤会固定本项目的 TrackNet manifest（而非把 TrackNet 20,844 与 WASB 19,835 误当冲突），并消除 badminton 26/23/15、BlurBall 64,119 split 等不确定项。
 2. 取得 TrackNetV2 原始 PDF，摘录它实际使用的 match split、输入/输出帧数、visibility target；不要让当前 HackMD 新版本替代历史论文协议。
 3. 对 TTNet 的 Fig. 2/Sec. 5/5.1 已确认其 global coarse + full-HD local refinement；后续应完整摘录其 crop 尺寸、训练/推理条件和后处理，作为严格预算对照。
 4. 读 TrackNetV6 PDF/supplement 和 TrackFormer/LaTBT 原论文（若公开），区分论文贡献、demo 代码和数据可用性。

@@ -85,7 +85,7 @@ def evaluate_predictions(rows, xy, presence_probability):
 
 def paired_location_changes(rows, baseline_xy, challenger_xy):
     """共同目标上的条件定位净增益，不只统计被救回的样本。"""
-    target = np.array([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float)
+    target = np.array([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float).reshape(-1, 2)
     baseline_xy, challenger_xy = np.asarray(baseline_xy), np.asarray(challenger_xy)
     if baseline_xy.shape != target.shape or challenger_xy.shape != target.shape:
         raise ValueError("Paired predictions must cover the same targets")

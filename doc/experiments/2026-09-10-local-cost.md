@@ -1,6 +1,6 @@
 # 显式局部对应能否改善真实三帧定位？
 
-日期：2026-09-10。状态：实现和8目标集成smoke完成，完整训练尚未运行。
+日期：2026-09-10。状态：实现、集成smoke和完整cost缓存完成，seed0三组训练运行中。
 协议：[Tennis dense局部对应基线](../protocols/tennis-local-cost-probe-v1.md)。
 
 ## 假设与判别依据
@@ -34,6 +34,18 @@ python scripts/check_probe_precision.py --cache data/cache/tennis/temporal_smoke
 
 ## 正式结果与下一步
 
-完整1,733目标cost缓存和三组seed0训练尚未运行。先提交已验证实现，再生成一次共享cost并顺序训练；与既有stack seed0比较相同230目标上的救回和新增错误。centered同时超过stack及self后才扩展seed1、2；若raw更好，补匹配的raw self控制再判断跨帧贡献。
+正式实现版本为`a5a1725`，独立只读审阅未发现需阻止实验的问题；相关6项CPU测试和语法编译通过。缓存位于`data/cache/tennis/local_cosine_s1_h2_r2_r4/{raw,centered,self_centered}`。三个完整1,733×106×36×64 cost共约2.37GiB，一次生成合计60.34秒，batch4、峰值已分配显存1152.66MiB。raw/centered/self的cost_volume GPU累计计算分别4.86/4.52/4.49秒，余下端到端准备时间包含读取、传输、检查、写回与flush；不是实时视频定位计时。帧解码及backbone forward均为0。
+
+三组seed0已按raw→centered→self_centered顺序启动，每组完整30epoch，其余参数遵循协议。结果保存于`outputs/correspondence_probe/{raw,centered,self_centered}_seed0`，各有`console.log`。完整训练结果待运行完成后填写。
+
+```bash
+python scripts/cache_tennis_correlations.py --source-cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --output data/cache/tennis/local_cosine_s1_h2_r2_r4 --batch-size 4
+# 下列模板按raw、centered、self_centered依次执行，seed0，其余默认30epoch、batch16。
+python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --cost-cache data/cache/tennis/local_cosine_s1_h2_r2_r4/centered --output outputs/correspondence_probe/centered_seed0 --stage 1 --output-stride 4 --hidden-channels 32 --temporal-input stack --seed 0
+```
+
+与既有stack seed0比较相同230目标上的救回和新增错误。centered同时超过stack及self后才扩展seed1、2；若raw更好，补匹配的raw self控制再判断跨帧贡献。
 
 无球误报、8个困难/4个遮挡目标的结果独立报告，不以easy类总体改善掩盖这些问题。完整固定头的cost精度检查待正式训练完成后执行。
+
+在完整模型结果产生前，位移辅助分组已实现并用已知点覆盖救回、新错、无配对样本及空组；新增2项对应测试通过。复用旧current/stack预测的集成结果精确保持既有全集paired统计。Δ1在同格/已移动且范围内/范围外分别有57/155/3个双端合法目标，Δ2为22/187/4。因此这一开发集不能单独支持远范围搜索的收益主张。旧stack相对current在范围内移动组的16px净救回为12/155、14/187；范围外均无净变化且样本过少。证据为`outputs/correspondence_probe/current_vs_stack_motion_seed0.json`。
