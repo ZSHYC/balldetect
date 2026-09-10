@@ -7,34 +7,39 @@ from torch import nn
 
 
 class SpatialProbe(nn.Module):
-    def __init__(self, channels, upscale=1, hidden_channels=0, num_frames=1):
+    def __init__(self, channels, upscale=1, hidden_channels=0, num_frames=1, appearance_channels=None):
         super().__init__()
         self.upscale = upscale
+        self.appearance_channels = channels if appearance_channels is None else appearance_channels
         # 拼接时一个完整帧占一组，避免历史帧尺度改变当前帧的归一化。
-        self.norm = nn.GroupNorm(num_frames, channels, affine=False)
+        self.norm = nn.GroupNorm(num_frames, self.appearance_channels, affine=False)
         if hidden_channels:
             self.location = nn.Sequential(nn.Conv2d(channels, hidden_channels, 1), nn.GELU(),
                                           nn.Conv2d(hidden_channels, upscale ** 2, 3, padding=1))
         else:
             self.location = nn.Conv2d(channels, upscale ** 2, 1)
-        self.absence = nn.Linear(channels, 1)
+        self.absence = nn.Linear(self.appearance_channels, 1)
 
     def forward(self, features):
-        features = self.norm(features)
+        appearance = self.norm(features[:, :self.appearance_channels])
+        features = (torch.cat((appearance, features[:, self.appearance_channels:]), dim=1)
+                    if features.shape[1] > self.appearance_channels else appearance)
         spatial = torch.nn.functional.pixel_shuffle(self.location(features), self.upscale).flatten(1)
-        absent = self.absence(features.mean((-2, -1))) + math.log(spatial.shape[1])
+        absent = self.absence(appearance.mean((-2, -1))) + math.log(spatial.shape[1])
         return torch.cat((spatial, absent), dim=1)
 
 
-def frame_batch(array, windows, mode):
+def frame_batch(array, windows, mode, extra=None):
     if mode == "current":
-        return array[windows[:, -1]]
-    if mode == "repeat":
-        return np.tile(array[windows[:, -1]], (1, windows.shape[1], 1, 1))
-    if mode == "stack":
+        batch = array[windows[:, -1]]
+    elif mode == "repeat":
+        batch = np.tile(array[windows[:, -1]], (1, windows.shape[1], 1, 1))
+    elif mode == "stack":
         b, t = windows.shape
-        return array[windows].reshape(b, t * array.shape[1], *array.shape[-2:])
-    raise ValueError(f"Unknown temporal input: {mode}")
+        batch = array[windows].reshape(b, t * array.shape[1], *array.shape[-2:])
+    else:
+        raise ValueError(f"Unknown temporal input: {mode}")
+    return np.concatenate((batch, extra), axis=1) if extra is not None else batch
 
 
 def _location_metrics(errors):

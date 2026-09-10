@@ -9,6 +9,21 @@ from ballmotion.probe import frame_batch, SpatialProbe, paired_location_changes
 
 
 class TemporalProbeTest(unittest.TestCase):
+    def test_cost_keeps_its_scale_and_does_not_enter_absence(self):
+        head = SpatialProbe(8, num_frames=3, appearance_channels=6)
+        with torch.no_grad():
+            head.location.weight.zero_()
+            head.location.bias.zero_()
+            head.location.weight[0, -1, 0, 0] = 1
+        x = torch.arange(32, dtype=torch.float32).reshape(1, 8, 2, 2)
+        x[:, 6:] = .25
+        changed = x.clone()
+        changed[:, 6:] = -.5
+        old_logits, new_logits = head(x), head(changed)
+        torch.testing.assert_close(old_logits[:, :-1], torch.full((1, 4), .25))
+        torch.testing.assert_close(new_logits[:, :-1], torch.full((1, 4), -.5))
+        torch.testing.assert_close(old_logits[:, -1], new_logits[:, -1])
+
     def test_paired_analysis_counts_rescues_and_new_errors(self):
         rows = [dict(game="game7", clip="Clip1", original_frame_id=str(i),
                      visibility_raw=1, x_raw=0., y_raw=0.) for i in range(4)]
@@ -36,6 +51,9 @@ class TemporalProbeTest(unittest.TestCase):
         np.testing.assert_array_equal(frame_batch(array, windows, "current")[:, :, 0, 0], [[4, 5], [10, 11]])
         np.testing.assert_array_equal(frame_batch(array, windows, "stack")[:, :, 0, 0],
                                       [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]])
+        extra = np.array([100, 200]).reshape(2, 1, 1, 1)
+        np.testing.assert_array_equal(frame_batch(array, windows, "stack", extra)[:, :, 0, 0],
+                                      [[0, 1, 2, 3, 4, 5, 100], [6, 7, 8, 9, 10, 11, 200]])
         np.testing.assert_array_equal(frame_batch(array, windows, "repeat")[:, :, 0, 0],
                                       [[4, 5, 4, 5, 4, 5], [10, 11, 10, 11, 10, 11]])
 
