@@ -56,7 +56,9 @@
 - [实验协议说明](protocols/README.md)：协议文件的内容、命名和何时锁定。
 - [实验记录说明](experiments/README.md)：实验计划与实际结果的记录格式。
 
-目前没有已锁定的主实验协议，也没有完成的模型实验。两个目录的 README 定义写法，不冒充协议或实验结果。
+- [Tennis 空间探针 v1](protocols/tennis-spatial-probe-v1.md)：已锁定的开发诊断协议，最终 benchmark 尚未启动。
+- [首阶段实施设计](research/2026-09-10-implementation-plan.md)：空间读出、真实测试及后续运动架构的证据驱动顺序。
+- [DINOv3 四级空间探针实验](experiments/2026-09-10-spatial-probe.md)：实施验证、运行设置、成绩与解释边界。
 
 ## 阶段进展
 

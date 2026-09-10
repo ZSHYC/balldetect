@@ -1,0 +1,61 @@
+"""冻结空间特征的轻量读出及可复用的逐帧评价。"""
+import math
+
+import numpy as np
+import torch
+from torch import nn
+
+
+class SpatialProbe(nn.Module):
+    def __init__(self, channels):
+        super().__init__()
+        self.norm = nn.GroupNorm(1, channels, affine=False)
+        self.location = nn.Conv2d(channels, 1, 1)
+        self.absence = nn.Linear(channels, 1)
+
+    def forward(self, features):
+        features = self.norm(features)
+        spatial = self.location(features).flatten(1)
+        absent = self.absence(features.mean((-2, -1))) + math.log(spatial.shape[1])
+        return torch.cat((spatial, absent), dim=1)
+
+
+def _location_metrics(errors):
+    if not len(errors):
+        return {"n": 0, "median_px": None, "mean_px": None,
+                "pck8": None, "pck16": None, "pck32": None}
+    return {"n": len(errors), "median_px": float(np.median(errors)),
+            "mean_px": float(np.mean(errors)),
+            **{f"pck{r}": float(np.mean(errors <= r)) for r in (8, 16, 32)}}
+
+
+def _counts(tp, fp, fn):
+    return {"tp": int(tp), "fp": int(fp), "fn": int(fn),
+            "precision": float(tp / (tp + fp)) if tp + fp else 0.,
+            "recall": float(tp / (tp + fn)) if tp + fn else 0.,
+            "f1": float(2 * tp / (2 * tp + fp + fn)) if 2 * tp + fp + fn else 0.}
+
+
+def evaluate_predictions(rows, xy, presence_probability):
+    xy = np.asarray(xy)
+    visibility = np.array([r["visibility_raw"] for r in rows])
+    present = visibility != 0
+    target = np.array([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float)
+    if xy.shape != target.shape or len(presence_probability) != len(rows):
+        raise ValueError("Prediction/target frame counts differ")
+    if not np.isfinite(xy).all() or not np.isfinite(presence_probability).all():
+        raise ValueError("Non-finite prediction")
+    error = np.linalg.norm(xy - target, axis=1)
+    detected = np.asarray(presence_probability) >= .5
+    result = {"n_frames": len(rows), "location": _location_metrics(error[present]),
+              "by_visibility": {str(v): _location_metrics(error[visibility == v]) for v in (1, 2, 3)},
+              "presence": _counts(np.sum(present & detected), np.sum(~present & detected),
+                                   np.sum(present & ~detected))}
+    for radius in (8, 16, 32):
+        correct = present & detected & (error <= radius)
+        result[f"detection{radius}"] = _counts(np.sum(correct), np.sum(detected & ~correct),
+                                               np.sum(present & ~correct))
+    clip_ids = np.array([r["game"] + "/" + r["clip"] for r in rows])
+    result["by_clip"] = {clip: _location_metrics(error[(clip_ids == clip) & present])
+                         for clip in sorted(set(clip_ids))}
+    return result

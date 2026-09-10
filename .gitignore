@@ -4,4 +4,8 @@
 # 数据集
 /data/
 
-.omx
+.omx/
+/third_party/dinov3/
+/outputs/
+__pycache__/
+*.pyc

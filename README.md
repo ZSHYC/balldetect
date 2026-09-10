@@ -39,11 +39,15 @@
 │   ├── experiments/      # 实验假设、运行条件、结果及判断
 │   └── progress/         # 按日期记录阶段变化
 ├── data/                 # 本地数据、源标注、索引和数据说明
-└── models/               # 权重说明与本地外部预训练权重
-    └── pretrained/dinov3/ # lvd1689m Web 预训练权重
+├── models/               # 权重说明与本地外部预训练权重
+├── src/ballmotion/       # Tennis 数据语义、空间读出与评价
+├── scripts/              # 特征提取和实验入口
+├── tests/                # 几何、标签、评价与拟合验证
+├── third_party/          # 上游 DINOv3 本地 checkout 与来源说明
+└── outputs/              # 本地运行日志、预测、训练 checkpoint
 ```
 
-`src/`、`configs/`、`scripts/`、`tests/`、`outputs/` 在实际开发需要时创建。视频、权重、缓存和完整训练输出不放进 `doc/`，也不默认提交版本库。
+`configs/` 在实际需要配置文件时创建，目前运行参数直接保存在每次实验的 `config.json`。视频、权重、缓存和完整训练输出不放进 `doc/`，也不默认提交版本库。
 
 ## 数据与运行
 
@@ -57,9 +61,17 @@ conda activate zshihyc
 
 数据范围为 TrackNet Tennis、Shuttlecock Trajectory Dataset、BlurBall 和 OpenTTGames。原始副本、版本差异和使用入口以 [data/README.md](data/README.md) 为准；不要为开始阅读项目而重跑下载或全量校验。
 
-用户提供的 DINOv3 权重已整理到 `models/pretrained/dinov3/`，模型清单、用途与检查范围见 [models/README.md](models/README.md)。首轮所需的 ConvNeXt-Tiny/Small 和 ViT-S/16 权重已具备，尚未执行定位模型训练。
+用户提供的 DINOv3 权重已整理到 `models/pretrained/dinov3/`，见 [权重说明](models/README.md)。首轮使用 ConvNeXt-Tiny，按 [上游代码说明](third_party/README.md) 准备 DINOv3；当前环境所用直接依赖见 [requirements.txt](requirements.txt)，无需重新安装已有依赖。
 
-模型训练、评估和统一推理入口尚未实现，因此这里不提供虚构的安装或训练命令。开始实现时，再补充实际使用的环境、依赖和可运行命令。当前阶段见 [2026-09-10 项目准备记录](doc/progress/2026-09-10-project-setup.md)。
+当前实施范围是 [Tennis 单帧冻结空间探针](doc/protocols/tennis-spatial-probe-v1.md)，还不是最终运动模型。项目根目录运行：
+
+```bash
+PYTHONPATH=src python tests/test_spatial_probe.py
+python scripts/cache_tennis_features.py --output data/cache/tennis/dinov3_convnext_tiny_512x288_step8
+python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8 --output outputs/spatial_probe/linear_stage0_seed0 --stage 0
+```
+
+`--stage 0/1/2/3` 选择独立层位，每个新实验使用独立输出目录；完整缓存可以复用，不重新解码或提取特征。训练/验证为 game 1–6 / 7，最终测试 game 8–10 本阶段不运行。结果以实际实验记录为准。
 
 ## 研究记录原则
 
