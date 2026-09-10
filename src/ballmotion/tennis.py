@@ -58,3 +58,14 @@ def grid_to_original(indices, grid_hw, original_hw=(720, 1280)):
     indices = np.asarray(indices)
     return np.stack(((indices % w + .5) * ow / w - .5,
                      (indices // w + .5) * oh / h - .5), axis=-1)
+
+
+def center_pairs(rows, delta):
+    """按真实 clip 内索引取得双端有位置标签的帧对；不插补缺标。"""
+    if delta < 1:
+        raise ValueError("delta must be positive")
+    lookup = {(r["game"], r["clip"], int(r["original_frame_id"])): r for r in rows}
+    for current in rows:
+        previous = lookup.get((current["game"], current["clip"], int(current["original_frame_id"]) - delta))
+        if previous is not None and current["label_state"] == previous["label_state"] == "located":
+            yield previous, current

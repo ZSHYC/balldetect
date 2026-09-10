@@ -5,11 +5,21 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ballmotion.tennis import label_state, grid_targets, grid_to_original, read_frames
+from ballmotion.tennis import label_state, grid_targets, grid_to_original, read_frames, center_pairs
 from ballmotion.probe import SpatialProbe, evaluate_predictions
 
 
 class SpatialProbeTest(unittest.TestCase):
+    def test_center_pairs_do_not_cross_clips_or_reindex_sparse_frames(self):
+        rows = [dict(game="game1", clip=clip, original_frame_id=str(frame), label_state=state)
+                for clip, frame, state in [("Clip1", 0, "located"), ("Clip1", 2, "located"),
+                                           ("Clip2", 3, "located"), ("Clip2", 4, "absent"),
+                                           ("Clip2", 5, "located")]]
+        self.assertEqual(list(center_pairs(rows, 1)), [])
+        pairs = list(center_pairs(rows, 2))
+        self.assertEqual([(a["clip"], a["original_frame_id"], b["original_frame_id"])
+                          for a, b in pairs], [("Clip1", "0", "2"), ("Clip2", "3", "5")])
+
     def test_published_blank_absence_coordinates_and_original_frame_ids(self):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "frames.csv").write_text(
