@@ -1,0 +1,7 @@
+# 本地预训练权重；说明文档保留在 models/README.md。
+/models/pretrained/
+
+# 数据集
+/data/
+
+.omx
