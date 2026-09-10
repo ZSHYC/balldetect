@@ -1,6 +1,6 @@
 # 显式局部对应能否改善真实三帧定位？
 
-日期：2026-09-10。状态：seed0筛选、预定seed1/2复核、全部七个新增固定头的cost精度对照与机制诊断完成。
+日期：2026-09-10。状态：seed0筛选、预定seed1/2复核、hidden64控制、全部九个新增cost固定头的精度对照与机制诊断完成。
 协议：[Tennis dense局部对应基线](../protocols/tennis-local-cost-probe-v1.md)。
 
 ## 假设与判别依据
@@ -177,4 +177,24 @@ python scripts/check_probe_precision.py --cache data/cache/tennis/dinov3_convnex
 
 独立只读研究审查建议先使用已有宽度参数，检验hidden32是否限制了融合；不为这个问题先编写新的残差、门控或分支。现已在同一[协议](../protocols/tennis-local-cost-probe-v1.md)追加锁定hidden64、seed0的stack/centered/self三组控制。只有centered64在8px不损害两个同宽度对照、且16px严格优于二者时才补seed1/2。这个控制同时改变容量和优化，不足以单独证明特定神经元竞争机制。
 
-本节为运行前计划，结果待后续记录；原hidden32全部结果仍有效且保持原始选优条件。当前实验不引入新代码、依赖或特征缓存。
+以上为运行前设定；原hidden32全部结果仍有效且保持原始选优条件。当前实验不引入新代码、依赖或特征缓存。
+
+## hidden64实际结果与停止条件
+
+三组以版本`4c91997`完成30epoch，全部按原规则选中epoch4。输出为`outputs/correspondence_probe/width64_{stack,centered,self_centered}_seed0`。
+
+| 同一hidden64 | 参数 | train PCK16 | val PCK8 | val PCK16 | val PCK32 | 秒数 | 峰值已分配MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| stack | 39,813 | 91.88% | 62.10% | 82.65% | 84.47% | 79.84 | 297.86 |
+| centered | 46,597 | 92.23% | 59.82% | 85.84% | 89.04% | 113.76 | 400.58 |
+| self_centered | 46,597 | 92.92% | 62.10% | 83.56% | 85.84% | 105.39 | 400.58 |
+
+centered相对stack在8px救回15、新错20，在16px救回12、新错5；相对self在8px救回8、新错13，在16px救回6、新错1。它的PCK8仍低于两个同宽度对照各5/219，即2.28个百分点，**没有达到预定复核条件**。因此不补hidden64的seed1/2，也不继续搜索更大宽度或添加cost融合模块。
+
+centered和self在VC2均命中1/8，stack为0；三者VC3均0/4。新增困难命中同样出现在self，不能专门归因于跨帧对应。centered/self各误报10/11个无球，并漏判2个有位置目标；stack误报11个无球但没有正例漏判。
+
+`precision_width64.json`覆盖两个新增cost固定头的完整230目标。float32重算cost与实际float16缓存之间仍为0空间argmax变化、0存在判断变化，最大cost差0.000244140625；最大logit差分别0.0000257492、0.0000438690，缓存位置指标重现保存结果。未解码/重新提取图像。
+
+汇总为`width64_summary.json`，逐帧及位移条件比较为`width64_{stack,self_centered}_vs_centered_seed0.json`。时间仍仅是共享设备上的冻结读出实验，不是完整视频速度。
+
+这次负结果不能证明“读出容量与问题无关”，因为只试了一个宽度和seed；它足以否定当前这个预定的继续条件。三帧hidden32仍作为下一阶段无cost的初始化/控制。先检验相同模型初始化下冻结前缀继续训练与共同微调的区别，再建立完整系统基线；不因局部对应概念符合直觉就保留当前融合方式。
