@@ -37,3 +37,5 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 重复当前帧已保留显式`[t,t,t]`训练。单次prefix再复制特征的CUDA梯度未满足锁定容差；关闭TF32的诊断使差异缩小，但未全部通过，因此删除该训练优化，保持历史组原数值设置。最终CPU输入检查3项与GPU smoke均通过，两个smoke的70个初始参数/buffer张量完全一致，预测身份及指标也已核对。正式30epoch已从4781357启动，配置与epoch0记录已核对；失败诊断与实际命令见[控制实验记录](../experiments/2026-09-11-full-temporal-control.md)。
 
 若真实历史未提高检测F1@16，或者降低PCK@8，就暂停在当前DINO+SpatialProbe读出上增加cost、门控或远搜索，先解释读出与监督限制。即使两项均通过，也只说明真实时序输入有增量，不构成新的运动表征贡献。
+
+另已完成[位置分布集中度诊断](../experiments/2026-09-11-readout-concentration.md)的实现、CPU数学测试与[最近邻审查](../literature/2026-09-11-localization-quality.md)，等待GPU空闲后对已选DINO epoch7运行一次验证forward。它固定坐标、阈值与检查点，区分分散响应和集中但错误的背景峰；真实统计尚未得到。该诊断不改变时序对照，也不把既有分布质量读出包装成motion创新。
