@@ -87,7 +87,11 @@ def main():
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--model", choices=("hrnet", "dino"), default="hrnet")
+    parser.add_argument("--temporal-input", choices=("history", "repeat_current"),
+                        default="history")
     args = parser.parse_args()
+    if args.model == "hrnet" and args.temporal_input != "history":
+        raise ValueError("repeat_current 控制只适用于 DINO")
     if (args.output / "config.json").exists():
         raise ValueError("此目录已有实验配置；请用新目录避免覆盖")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -109,6 +113,8 @@ def main():
         raise ValueError("全量因果实验需要真实三帧窗口")
     if set(row["game"] for row in frames) - {f"game{i}" for i in range(1, 8)}:
         raise ValueError("全量因果缓存不能包含最终测试比赛")
+    if args.temporal_input == "repeat_current":
+        windows = np.repeat(windows[:, -1:], 3, axis=1)
     rows = [frames[i] for i in windows[:, -1]]
     train_idx = np.asarray([i for i, row in enumerate(rows) if row["game"] != "game7"])
     val_idx = np.asarray([i for i, row in enumerate(rows) if row["game"] == "game7"])
@@ -190,6 +196,9 @@ def main():
         "train_frames": len(train_idx),
         "val_frames": len(val_idx),
         "target_slot": 2,
+        "input_slots": (["t-2", "t-1", "t"] if args.temporal_input == "history"
+                        else ["t", "t", "t"]),
+        "unique_source_frames_used": int(len(np.unique(windows))),
         "output_grid_hw": grid_hw,
         "optimizer": optimizer_config,
         "selection": "maximum val detection F1@16; then F1@8; first on ties including epoch0",

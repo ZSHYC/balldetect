@@ -64,13 +64,14 @@
 - [实验记录说明](experiments/README.md)：实验计划与实际结果的记录格式。
 
 - [Tennis 空间探针 v1](protocols/tennis-spatial-probe-v1.md)：已锁定的开发诊断协议，最终 benchmark 尚未启动。
+- [Tennis 全量DINO时序控制 v1](protocols/tennis-full-temporal-control-v1.md)：锁定真实历史与重复当前帧重训的唯一输入差异、配对分析及停止条件。
 - [首阶段实施设计](research/2026-09-10-implementation-plan.md)：空间读出、真实测试及后续运动架构的证据驱动顺序。
 - [DINOv3 四级空间探针实验](experiments/2026-09-10-spatial-probe.md)：实施验证、运行设置、成绩与解释边界。
-- [全量因果强基线实施](research/2026-09-10-full-baseline-plan.md)：从稀疏探针转入共同任务的完整训练；[HRNet记录](experiments/2026-09-10-full-hrnet.md)、[DINO记录](experiments/2026-09-10-full-dino.md)。
+- [全量因果强基线实施](research/2026-09-10-full-baseline-plan.md)：从稀疏探针转入共同任务的完整训练；[HRNet记录](experiments/2026-09-10-full-hrnet.md)、[DINO记录](experiments/2026-09-10-full-dino.md)与[系统比较](experiments/2026-09-11-full-hrnet-dino-comparison.md)。
 
 ## 阶段进展
 
-- [2026-09-10：前缀适配结束与全量竞争系统](progress/2026-09-10-full-baselines.md)：六组适配的边界、HRNet运行、DINO控制与实证问题修订。
+- [2026-09-10：从适配诊断到全量竞争系统与时序控制](progress/2026-09-10-full-baselines.md)：六组适配的边界、两套全量系统的完成结果，以及尚未启动训练的重复当前帧控制。
 - [2026-09-10：空间读出实现与首轮真实实验](progress/2026-09-10-spatial-implementation.md)。
 - [2026-09-10：真实时序与对应诊断](progress/2026-09-10-temporal-and-correspondence.md)：九组时序实验、GT query结果和下一基线的依据。
 - [2026-09-10：局部对应的自动定位结果](progress/2026-09-10-local-cost-implementation.md)：三seed对应对照、精细位置退步、数值/传输实测及Shuttlecock开发统计。

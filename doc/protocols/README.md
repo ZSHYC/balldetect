@@ -47,3 +47,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Tennis适配后GT-query对应 v1](tennis-adapted-correspondence-v1.md)：固定已选checkpoint，以相同CPU float32输入补测双端VC1下的匹配变化。
 - [BlurBall开发轴向诊断 v1](blurball-development-axis-v1.md)：以真实过去到当前位移比较当前无向拖影轴，分别保留不可见与未定义方向。
 - [Tennis全量因果定位 v1](tennis-full-causal-v1.md)：全量合法末帧监督与检测选优，建立共同任务的HRNet竞争系统。
+- [Tennis全量DINO时序控制 v1](tennis-full-temporal-control-v1.md)：同一现代系统重新训练重复当前帧控制，区分真实历史视觉增量。

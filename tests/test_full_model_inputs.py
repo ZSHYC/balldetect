@@ -88,6 +88,24 @@ class FullModelInputTest(unittest.TestCase):
         np.testing.assert_allclose(presence, direct_presence)
         np.testing.assert_allclose(xy, [[159.5, 179.5], [479.5, 179.5]])
 
+    def test_repeat_current_predict_encodes_only_current_frame(self):
+        rgb = np.zeros((4, 3, 1, 1), dtype=np.uint8)
+        rgb[:, 0, 0, 0] = [10, 250, 100, 200]
+        windows = np.repeat(np.asarray([[3, 0, 2], [2, 1, 3]])[:, -1:], 3, axis=1)
+        ids = np.asarray([0, 1])
+        prefix = CountingPrefix()
+        model = trainer.BackboneProbe(prefix, OrderHead(), train_backbone=False)
+        current = model_input(rgb, windows, ids, torch.device("cpu"), "dino")[:, -1]
+        explicit_logits = model(current[:, None].repeat(1, 3, 1, 1, 1))
+        direct_xy = trainer.grid_to_original(explicit_logits[:, :-1].argmax(1).numpy(), (2, 4))
+        direct_presence = (1 - explicit_logits.softmax(1)[:, -1]).numpy()
+        prefix.frames_seen = 0
+
+        xy, presence = predict(model, rgb, windows, ids, 2, torch.device("cpu"), "dino", (2, 4))
+        self.assertEqual(prefix.frames_seen, 2)
+        np.testing.assert_allclose(xy, direct_xy)
+        np.testing.assert_allclose(presence, direct_presence)
+
 
 if __name__ == "__main__":
     unittest.main()
