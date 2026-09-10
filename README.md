@@ -40,12 +40,20 @@
 │   └── progress/         # 按日期记录阶段变化
 ├── data/                 # 本地数据、源标注、索引和数据说明
 └── models/               # 权重说明与本地外部预训练权重
-    └── pretrained/dinov3/ # 按 lvd1689m / sat493m 分开保存
+    └── pretrained/dinov3/ # lvd1689m Web 预训练权重
 ```
 
 `src/`、`configs/`、`scripts/`、`tests/`、`outputs/` 在实际开发需要时创建。视频、权重、缓存和完整训练输出不放进 `doc/`，也不默认提交版本库。
 
 ## 数据与运行
+
+Python 默认使用 Conda 环境 `zshihyc`：
+
+```bash
+conda activate zshihyc
+```
+
+后续命令均在此环境运行。用户已授权按实际需要直接安装依赖；安装到当前环境并记录用途与实际版本，不预装尚未用到的包。模型开发开始后，再根据实际依赖建立可复现的环境说明。
 
 数据范围为 TrackNet Tennis、Shuttlecock Trajectory Dataset、BlurBall 和 OpenTTGames。原始副本、版本差异和使用入口以 [data/README.md](data/README.md) 为准；不要为开始阅读项目而重跑下载或全量校验。
 

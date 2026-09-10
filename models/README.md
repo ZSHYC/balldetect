@@ -1,6 +1,6 @@
 # 预训练模型权重
 
-这里保存项目使用的外部预训练权重，原始文件不覆盖、不转换。当前用户提供了 10 份 DINOv3 `.pth`，合计 7,820,109,476 bytes，约 7.82 GB（7.28 GiB）。来源目录原为根目录 `DINOv3/`，现已移动到下述位置，没有复制出第二份权重。
+这里保存项目使用的外部预训练权重，原始文件不覆盖、不转换。当前保留 9 份 Web 预训练的 DINOv3 `.pth`，合计 6,607,050,241 bytes，约 6.61 GB（6.15 GiB）。来源目录原为根目录 `DINOv3/`，现已移动到下述位置，没有复制出第二份权重。
 
 ## 对本项目的用途
 
@@ -10,7 +10,7 @@
 
 ViT-S+/16 是后续可选对照，不与 S/16 混称同一模型。官方实现中两者都采用 16×16 patch、384 维表示、12 层，但 FFN 分别使用 MLP 与 SwiGLU，配置也不同。更大的 B/L/H+ 权重保留供规模或特征探针研究，不自动加入首轮实验。
 
-SAT-493M 的 ViT-L/16 是遥感预训练版本，单独保存；它可用于有明确目的的预训练域对照，不作为体育自然视频主实验的默认权重，也不能与 Web 版本混作同一预训练条件。以上是研究用途建议，不是已经测得的性能排序。
+本项目不开展遥感实验，SAT-493M 权重已按用户要求删除，不再保留遥感预训练对照。以上模型用途是研究建议，不是已经测得的性能排序。
 
 ## 文件夹与命名
 
@@ -19,13 +19,12 @@ models/
 ├── README.md
 └── pretrained/
     └── dinov3/
-        ├── lvd1689m/      # Web 预训练：9 个文件
-        └── sat493m/       # 遥感预训练：1 个文件
+        └── lvd1689m/      # Web 预训练：9 个文件
 ```
 
 以“外部预训练 / 模型家族 / 预训练数据来源”组织目录，文件名继续使用原始的 `dinov3_<架构>_pretrain_<数据来源>-<发布标识>.pth`。无需再为每个仅有一个权重的架构创建一层文件夹。
 
-**不要把这些原始文件改名为 `best.pth`、`small.pth` 或 `model.pth`。** 文件名包含架构和预训练来源；尤其官方 ViT-L 本地加载逻辑会读取文件尾部发布标识，决定 SAT 版本的 norm 结构。保留已有标识不表示本项目新增或计算哈希。[官方加载实现](https://github.com/facebookresearch/dinov3/blob/6876159a11b4df116f30f667f8c9888617df0751/dinov3/hub/backbones.py#L316-L340)
+**不要把这些原始文件改名为 `best.pth`、`small.pth` 或 `model.pth`。** 文件名包含架构和预训练来源；尤其官方 ViT-L 本地加载逻辑会读取文件尾部发布标识，选择对应模型结构。保留已有标识不表示本项目新增或计算哈希。[官方加载实现](https://github.com/facebookresearch/dinov3/blob/6876159a11b4df116f30f667f8c9888617df0751/dinov3/hub/backbones.py#L316-L340)
 
 以后本项目训练出的 checkpoint 放在实际实验输出目录，例如 `outputs/<实验主题>/<运行名>/checkpoints/`，与这里的外部预训练权重分开。只有真实运行时才创建输出目录，原始预训练权重不被训练结果覆盖。
 
@@ -44,15 +43,13 @@ models/
 | ViT-B/16 | [dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth](pretrained/dinov3/lvd1689m/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth) | 326.98 | 后续规模对照 |
 | ViT-L/16 · Web | [dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth](pretrained/dinov3/lvd1689m/dinov3_vitl16_pretrain_lvd1689m-8aa4cbdd.pth) | 1156.86 | 后续规模或探针对照 |
 | ViT-H+/16 | [dinov3_vith16plus_pretrain_lvd1689m-7c1da9a5.pth](pretrained/dinov3/lvd1689m/dinov3_vith16plus_pretrain_lvd1689m-7c1da9a5.pth) | 3207.43 | 资源允许且研究需要时使用 |
-| ViT-L/16 · SAT | [dinov3_vitl16_pretrain_sat493m-eadcf0ff.pth](pretrained/dinov3/sat493m/dinov3_vitl16_pretrain_sat493m-eadcf0ff.pth) | 1156.86 | 遥感预训练域对照 |
 
 ## 已确认的本地结构
 
-2026-09-10 使用当前环境中的 PyTorch 2.10.0，以 `torch.load(..., map_location="meta", weights_only=True, mmap=True)` 读取张量元信息。10 个文件均可解析为由张量组成的 state dict，没有将整个模型权重加载到 GPU，也没有计算哈希。
+2026-09-10 使用当前环境中的 PyTorch 2.10.0，以 `torch.load(..., map_location="meta", weights_only=True, mmap=True)` 读取张量元信息。当前保留的 9 个文件均已确认可解析为由张量组成的 state dict，没有将整个模型权重加载到 GPU，也没有计算哈希。
 
 - ConvNeXt 权重具有分层 `downsample_layers`、`stages` 和 `norms`；T/S 的 stem 权重形状为 `[96,3,4,4]`，B 为 `[128,3,4,4]`，L 为 `[192,3,4,4]`。
 - ViT 权重的 patch embedding 为 16×16；S/S+、B、L、H+ 的通道数分别为 384、768、1024、1280，并包含 4 个 storage/register tokens。
-- SAT ViT-L 比 Web ViT-L 多出独立的 `local_cls_norm` 参数；两者不能不加区分地使用同一初始化条件。
 
 这次检查确认了文件可解析以及关键张量结构与命名对应；没有执行官方模型的严格加载、forward、球定位训练或性能测试，也没有验证与发布方文件逐字节相同。后续第一次接入对应模型时，再检查严格加载和目标层输出；不要无理由反复扫描全部权重。
 
