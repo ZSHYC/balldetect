@@ -4,6 +4,8 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
+2026-09-10局部更新：MOCID已补读官方全文方法与实验；DQAligner已补读固定作者源码，全文仍不可访问。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+
 ## 0. 先给结论：哪些表述已经不能作为创新
 
 以下五种“模块级新颖性”都已有非常近的先例，不能作为本文的首要贡献：
@@ -40,11 +42,13 @@
 
 ### 1.2 MOCID — motion context 与 frame displacement 已是正式 tiny-target 检测主线
 
-**证据与状态：B。** [AAAI 2025 官方 proceedings](https://ojs.aaai.org/index.php/AAAI/article/view/33087)（发表 2025-04-11，pp.10022–10030，摘要/元数据已读）；[官方仓库](https://github.com/TanzanOY/MOCID) README 几乎没有可审计实现说明。
+**证据与状态：A，2026-09-10补读。** [AAAI 2025记录](https://ojs.aaai.org/index.php/AAAI/article/view/33087)（2025-04-11，pp.10022–10030）；[官方全文](https://ojs.aaai.org/index.php/AAAI/article/view/33087/35242)。研究代理读了方法、实验与主要消融；根代理复读pp.10024–10027的输入、公式1–13、损失与Table2。作者仓库未提供可审计的完整模型实现，本轮没有代码复现。
 
-* MOCID 从 clip level 用 Fourier-inspired spatio-temporal attention 获得 motion context，再把它写入动态卷积核；frame level 用 temporal interpolation 与 displacement-aware scan 建模帧间位移。
-* 因此“现有多帧 tiny-target detection 没有明确 motion/displacement guidance”不成立。它同时提醒：概念名为 Mamba/Fourier 并非贡献边界；必须讨论实际的候选搜索或对齐行为。
-* 其输入是红外小目标检测，通常目标/背景统计和球赛 RGB 不同；但它足以否定泛化的“motion context + displacement”的首次性。没有阅读全文/代码，不能声称它保留了多峰 correspondence 或实现了全局 query。
+* FISTA先做空间频域滤波，再沿固定空间位置的时间轴滤波，用所得上下文调制卷积核（公式1–6）。这是时空调制，未显式输出位置对应。
+* DAM用两帧的3D中心差分生成扫描参数，将池化后的target/reference同索引token交错后双向扫描（图4、公式9–13）。这里interpolation是特征序列交错，不是生成真实中间视频帧；扫描可传播跨位置上下文，但不提供明确的u→v对应地址。
+* 论文输入为过去4帧加当前帧，输出当前检测；DAM位于YOLOX头之前，无当前硬候选前提。训练描述为BCE与IoU损失，未列GT光流/位移监督。Table2支持最终检测组件收益，未测球中心对应或候选覆盖；片段边界细节未给出。[方法与实验原文](https://ojs.aaai.org/index.php/AAAI/article/view/33087/35242)
+
+**对本项目的判断。** “运动先改变空间表示”与“差异感知扫描”已有直接先例；不能把名称中的displacement当作物理位移测量，也不能把没有显式cost volume解释为不能利用运动。若采用类似机制，仍要用任务收益区分背景抑制、外观适配与对应改善。另一个工程推论是：卷积核依赖整个clip时，同一帧在不同窗口中的特征未必相同，不能照搬当前逐帧DINO前缀的验证去重；RGB仍可复用。这不要求现在增加MOCID分支。
 
 ### 1.3 DQAligner — large-motion tiny target 的 global query、跨尺度双向 attention 与 deformable alignment
 
@@ -227,7 +231,7 @@
 ## 6. 可复用引用清单
 
 1. Ji, Wang, Wang. **Optical Flow Estimation for Tiny Objects: New Problem, Specialized Benchmark, and Bioinspired Scheme**. IJCAI 2025. [Paper](https://www.ijcai.org/proceedings/2025/0136.pdf), [project code](https://github.com/JaneEliot/OTHR). A.
-2. Zhang et al. **MOCID: Motion Context and Displacement Information Learning for Moving Infrared Small Target Detection**. AAAI 2025. [Proceedings](https://ojs.aaai.org/index.php/AAAI/article/view/33087). B.
+2. Zhang et al. **MOCID: Motion Context and Displacement Information Learning for Moving Infrared Small Target Detection**. AAAI 2025. [Proceedings](https://ojs.aaai.org/index.php/AAAI/article/view/33087), [全文](https://ojs.aaai.org/index.php/AAAI/article/view/33087/35242). A（2026-09-10补读方法与实验）。
 3. Deng et al. **Learning Global Dynamic Query for Large-Motion Infrared Small Target Detection**. IEEE TGRS 2026. [IEEE record](https://ieeexplore.ieee.org/document/11363482/), [official code](https://github.com/dengfa02/DQAligner_MIRSTD). B.
 4. Gao et al. **MIST: A Benchmark and Baseline for Multi-frame Infrared Small Target Detection in Complex Motion**. IEEE TIP 2026. [IEEE record](https://ieeexplore.ieee.org/document/11511399/), [official code/data](https://github.com/ShuCvlab/MIST). B.
 5. Li et al. **Probing Deep into Temporal Profile Makes the Infrared Small Target Detector Much Better**. arXiv:2506.12766; author repository cites TPAMI 2026. [arXiv](https://arxiv.org/abs/2506.12766), [official code](https://github.com/TinaLRJ/DeepPro). B.

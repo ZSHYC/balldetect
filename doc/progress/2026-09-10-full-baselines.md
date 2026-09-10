@@ -24,10 +24,14 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 [DQAligner源码补读](../literature/2026-09-10-dqaligner-query.md)修正了旧候选解释：该实现从学习初态用全局query读取窗口特征，并不先依赖当前硬候选；状态限窗口内，默认last模式也不能掩盖loader的开头回绕及训练时间反转。作者公开全文仍未找到，源码结论与论文摘要分开记录；未新增该模型训练。
 
+[MOCID条目](../literature/tiny_motion_evidence.md)已从摘要级补到官方全文方法与实验。需要保留的区别是频域调制、差异扫描与显式位置对应各自代表什么，以及依赖clip的空间特征不能按唯一帧直接缓存；未据此新增Mamba或频域模块。
+
 ## 正在执行与后续依据
 
 一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次检查DINO批内帧复用的CUDA预测等价、验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。帧复用实现来自1185875，CPU顺序/复用与梯度检查已通过，真实CUDA检查仍待执行。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
 
 两系统共享任务，但结构、输出尺度、预训练、损失和优化器不同。全量结果是强竞争系统参照，不能单独归因某个因素，也不替代最终backbone × motion的2×2。完成后先依据保存预测分析精细位置、困难条件、无球误报和有球漏报，再决定是否存在需要新motion机制解决的残留问题。
+
+固定visibility上下文的后续只读汇总已准备于outputs/full_heatmap/summarize_visibility_predictions.py，复用现有预测读取、evaluate_predictions与配对位置指标。它等待两组完整val_predictions.csv，要求两模型身份/标签及上下文覆盖同一1,863目标，再按当前VC与历史VC1分组。当前仅通过语法编译，尚未执行真实结果汇总；不把准备脚本写成已得到分组性能。
 
 [前缀适配后的对应测量](../experiments/2026-09-10-adapted-correspondence.md)现已完成。双端VC1、固定GT query下，Δ2/R4局部PCK16由70.53%升至77.89%/75.26%/74.21%，但净收益主要来自Clip4；Δ1全局精确格R@1的seed2反而下降。它补充了条件性对应变化的实际证据，没有改变原检测收益不一致的结论，也不能单独归因为motion学习。已保存同格/跨格和clip配对变化，本项诊断结束，不增加训练或重开cost搜索。
