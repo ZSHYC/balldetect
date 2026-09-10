@@ -1,6 +1,6 @@
 # DINOv3 四级冻结特征的球位置读出
 
-日期：2026-09-10。状态：运行中。
+日期：2026-09-10。状态：首轮四层比较已完成。
 协议：[Tennis 空间探针 v1](../protocols/tennis-spatial-probe-v1.md)。
 
 ## 问题与判别
@@ -27,7 +27,43 @@ stage 1/2/3 使用相同参数与对应输出名。每个运行的 `config.json`
 
 ## 首轮结果
 
-尚未完成四层训练，不报告虚构分数。
+缓存共 1,798 帧：1,559 train、239 val；其中定位分母为 1,509 train、224 val，val 的 visibility 1/2/3 分别为 210/9/5。总缓存 5,965,332,480 bytes（约 5.56 GiB），一次提取 33.42 秒，其中 GPU backbone forward 9.50 秒；峰值已分配显存 457 MiB。缓存训练耗时不计作端到端速度。
+
+下表 PCK 均为**不依赖存在阈值的条件定位**，单位为原图像素；模型输出原生 cell 中心。
+
+| stage / stride | 头参数 | 最佳 epoch | train PCK@16 | val PCK@8 | val PCK@16 | val PCK@32 | val 中位误差 | 训练及末次评价秒数 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 / 4 | 194 | 9 | 51.89% | 45.09% | 49.55% | 50.89% | 16.90 | 252.37 |
+| 1 / 8 | 386 | 18 | 63.75% | 33.93% | 61.61% | 63.39% | 10.12 | 77.76 |
+| 2 / 16 | 770 | 20 | 35.65% | 8.48% | 40.18% | 73.66% | 18.43 | 47.13 |
+| 3 / 32 | 1,538 | 11 | 7.02% | 1.79% | 6.70% | 26.79% | 53.62 | 27.79 |
+
+**网格上限改变解释。** GT 总能选对 cell 的 oracle 中，四层 val PCK@8 上限分别为 100%、52.23%、10.71%、3.13%；PCK@16 上限分别为 100%、100%、53.13%、13.84%。因此不能拿上表直接断言“stage 0/1 的表示比 stage 2 好”。stage 2 的 PCK@32 和平均误差反而更好，值得检验细网格读出。
+
+**存在分类尚未有效。** 四个头均对全部 239 验证帧预测有球，存在 F1 均为 96.76%，正好是始终预测有球的结果。带 16 px 定位条件的检测 F1 分别只有 47.95%、59.61%、38.88%、6.48%。现阶段不能把存在 F1 当作模型成功证据，最终定位系统仍需解决无球判别。
+
+**困难标签仍差。** 四个头在 9 个 visibility=2 验证目标上 PCK@16 均为 0；visibility=3 只有 5 个样本，不据此比较细小差异。stage 1 在 visibility=1 上 PCK@16 为 65.71%。这些结果提示时序潜力，但尚不能证明加入时序能救回。
+
+**失败不是只有量化。** stage 0 最佳 epoch=9 时 train/val PCK@16 也仅为 51.89%/49.55%；之后训练损失继续下降但验证退化，30 epoch val PCK@16=43.75%。固定规则抽取的最差可见球样例中，模型落到记分牌星点和背景反光，而 GT 附近仍能看见拖影。[样例图](../../outputs/spatial_probe/linear_stage0_seed0/error_examples.png)展示两个最小误差和四个最大误差例子，不能据此估计错误类型总体比例。
+
+训练位置中位数 `(641,196)` 的固定坐标基线在 val PCK@8/@16 均为 0，@32 为 0.89%；这只能排除这个极弱位置基线，不能排除所有场景先验。诊断数字保存在 `outputs/spatial_probe/data_diagnostics.json`。
+
+## 精度复核与审查处理
+
+代码审查指出：首 batch 全图 L2 小不能证明 tiny-ball 预测不受量化影响。已在全部 239 验证帧上重新取得 float32 特征，对同一组已训练头分别输入原值与 float16 往返值。四层各自 **0 个空间 argmax 改变、0 个 0.5 存在判断改变**，PCK/位置误差完全相同；最大存在概率差为 0.0000641。见 `outputs/spatial_probe/precision_check.json`。
+
+这支持本轮固定头推理结论不由缓存量化翻转；没有比较从 float32 缓存重新训练后的优化轨迹，不外推为所有后续模型都可无差异压缩。
+
+```bash
+python scripts/check_probe_precision.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8 --runs outputs/spatial_probe/linear_stage0_seed0 outputs/spatial_probe/linear_stage1_seed0 outputs/spatial_probe/linear_stage2_seed0 outputs/spatial_probe/linear_stage3_seed0 --output outputs/spatial_probe/precision_check.json
+python scripts/plot_spatial_errors.py --run outputs/spatial_probe/linear_stage0_seed0
+```
+
+主训练源自 `ad38982`；新增位移辅助分析提交 `fd5e664` 不改变训练逻辑，实际各 run 版本保存在 config。本节精度与绘图脚本在后续读出修订提交中保存。
+
+## 下一轮决定
+
+先将 stage 1/2 的线性输出改为每个原生 cell 输出多个子格类别，统一到 stride-4 网格；不加入 RGB 分支或时序，保留同一缓存与交叉熵。这样可以测量更细位置是否能从已有通道读出。参数量会增加，必须报告，不能把收益归因于新增视觉证据。若仍不足，再做固定宽度非线性头及更高输入分辨率对照。具体设置见[子格读出实验](2026-09-10-subcell-readout.md)。
 
 ## 判断边界
 

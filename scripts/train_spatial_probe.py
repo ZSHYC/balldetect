@@ -22,11 +22,12 @@ def predict(model, array, indices, batch_size, device):
     positions, probabilities = [], []
     with torch.inference_mode():
         for start in range(0, len(indices), batch_size):
-            x = torch.from_numpy(array[indices[start:start + batch_size]].copy()).to(device, torch.float32)
+            x = torch.from_numpy(array[indices[start:start + batch_size]]).to(device, torch.float32)
             logits = model(x)
             positions.extend(logits[:, :-1].argmax(1).cpu().tolist())
             probabilities.extend((1 - logits.softmax(1)[:, -1]).cpu().tolist())
-    return grid_to_original(positions, array.shape[-2:]), np.array(probabilities)
+    grid_hw = tuple(s * model.upscale for s in array.shape[-2:])
+    return grid_to_original(positions, grid_hw), np.array(probabilities)
 
 
 def main():
@@ -34,11 +35,17 @@ def main():
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--stage", type=int, choices=range(4), required=True)
+    parser.add_argument("--output-stride", type=int, choices=(4, 8, 16, 32), help="默认原生网格；更细网格使用子格线性读出")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=.003)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
+    native_stride = 4 * 2 ** args.stage
+    output_stride = args.output_stride or native_stride
+    if output_stride > native_stride:
+        raise ValueError("此读出仅支持原生或更细网格")
+    upscale = native_stride // output_stride
     args.output.mkdir(parents=True, exist_ok=True)
     if (args.output / "history.jsonl").exists():
         raise ValueError("此运行目录已有实验；新实验请用新目录，避免覆盖旧结果")
@@ -59,8 +66,9 @@ def main():
         raise ValueError("特征 shape 与帧元信息不匹配")
     target_xy = np.array([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float)
     present = np.array([r["visibility_raw"] != 0 for r in rows])
-    targets = grid_targets(target_xy, present, array.shape[-2:])
-    model = SpatialProbe(array.shape[1]).to(device)
+    grid_hw = tuple(s * upscale for s in array.shape[-2:])
+    targets = grid_targets(target_xy, present, grid_hw)
+    model = SpatialProbe(array.shape[1], upscale=upscale).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=.01)
     val_rows = [rows[i] for i in val_idx]
     code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
@@ -69,7 +77,8 @@ def main():
               "device": torch.cuda.get_device_name(), "torch_version": str(torch.__version__),
               "train_frames": len(train_idx), "val_frames": len(val_idx),
               "parameters": sum(p.numel() for p in model.parameters()),
-              "head": "GroupNorm(1,C,affine=False) + linear spatial/absence",
+              "head": "GroupNorm(1,C,affine=False) + linear subcell spatial/absence",
+              "output_grid_hw": grid_hw, "upscale": upscale,
               "selection": "maximum val conditional PCK@16; then PCK@8; first on ties"}
     (args.output / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(config, ensure_ascii=False), flush=True)
@@ -82,7 +91,7 @@ def main():
         loss_sum = 0.
         for start in range(0, len(order), args.batch_size):
             ids = order[start:start + args.batch_size]
-            x = torch.from_numpy(array[ids].copy()).to(device, torch.float32)
+            x = torch.from_numpy(array[ids]).to(device, torch.float32)
             y = torch.from_numpy(targets[ids]).to(device)
             loss = F.cross_entropy(model(x), y)
             if not torch.isfinite(loss):
@@ -108,8 +117,8 @@ def main():
         xy, prob = predict(model, array, ids, args.batch_size, device)
         split_rows = [rows[i] for i in ids]
         results[split] = evaluate_predictions(split_rows, xy, prob)
-        oracle_idx = np.minimum(targets[ids], array.shape[-2] * array.shape[-1] - 1)
-        oracle_xy = grid_to_original(oracle_idx, array.shape[-2:])
+        oracle_idx = np.minimum(targets[ids], grid_hw[0] * grid_hw[1] - 1)
+        oracle_xy = grid_to_original(oracle_idx, grid_hw)
         results[split]["grid_oracle"] = evaluate_predictions(split_rows, oracle_xy, present[ids].astype(float))["location"]
         with (args.output / f"{split}_predictions.csv").open("w", newline="") as f:
             writer = csv.writer(f)

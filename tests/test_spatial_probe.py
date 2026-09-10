@@ -82,6 +82,21 @@ class SpatialProbeTest(unittest.TestCase):
         self.assertTrue(torch.equal(model(x).argmax(1), targets))
         self.assertLess(float(loss.detach()), .05)
 
+    def test_subcell_readout_can_separate_positions_inside_one_native_cell(self):
+        torch.manual_seed(0)
+        # 相同原生 cell，通道内容不同；应能读出不同的 2x2 子格。
+        x = torch.eye(4).reshape(4, 4, 1, 1)
+        model = SpatialProbe(4, upscale=2)
+        targets = torch.arange(4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=.1)
+        for _ in range(60):
+            loss = torch.nn.functional.cross_entropy(model(x), targets)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        self.assertEqual(model(x).shape, (4, 5))
+        self.assertTrue(torch.equal(model(x).argmax(1), targets))
+
 
 if __name__ == "__main__":
     torch.set_num_threads(1)

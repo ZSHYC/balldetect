@@ -7,15 +7,16 @@ from torch import nn
 
 
 class SpatialProbe(nn.Module):
-    def __init__(self, channels):
+    def __init__(self, channels, upscale=1):
         super().__init__()
+        self.upscale = upscale
         self.norm = nn.GroupNorm(1, channels, affine=False)
-        self.location = nn.Conv2d(channels, 1, 1)
+        self.location = nn.Conv2d(channels, upscale ** 2, 1)
         self.absence = nn.Linear(channels, 1)
 
     def forward(self, features):
         features = self.norm(features)
-        spatial = self.location(features).flatten(1)
+        spatial = torch.nn.functional.pixel_shuffle(self.location(features), self.upscale).flatten(1)
         absent = self.absence(features.mean((-2, -1))) + math.log(spatial.shape[1])
         return torch.cat((spatial, absent), dim=1)
 
