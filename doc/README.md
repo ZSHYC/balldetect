@@ -56,6 +56,8 @@
 | [拖影轴与帧间搜索](literature/2026-09-10-blur-guided-correspondence.md) | blur-aware flow、曝光轨迹和fast-moving-object先例怎样限制用拖影轴引导候选搜索 |
 | [DQAligner自动query与记忆](literature/2026-09-10-dqaligner-query.md) | 作者源码如何修正硬候选、窗口状态与因果采样的解释，全文阅读仍有何限制 |
 | [位置分布与定位质量](literature/2026-09-11-localization-quality.md) | GFLv2、D-FINE与热图不确定性先例如何限制集中度、置信度与概率校准的主张 |
+| [固定像素的时间profile](literature/2026-09-11-temporal-profiles.md) | DeepPro全文与源码为何支持便宜时间变化作为竞争解释，其40帧非因果输出有哪些边界 |
+| [目标擦除与运动可靠性](literature/2026-09-11-counterfactual-motion.md) | CMRTrack的GT历史框擦除、受监督帧差与融合gate如何限制反事实和可靠对应的主张 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
@@ -72,7 +74,7 @@
 
 ## 阶段进展
 
-- [2026-09-10：从适配诊断到全量竞争系统与时序控制](progress/2026-09-10-full-baselines.md)：六组适配的边界、两套全量系统的完成结果，以及尚未启动训练的重复当前帧控制。
+- [2026-09-10至11：从适配诊断到全量竞争系统与时序控制](progress/2026-09-10-full-baselines.md)：六组适配的边界、两套全量系统的完成结果、运行中的重复当前帧控制及其解释边界。
 - [2026-09-10：空间读出实现与首轮真实实验](progress/2026-09-10-spatial-implementation.md)。
 - [2026-09-10：真实时序与对应诊断](progress/2026-09-10-temporal-and-correspondence.md)：九组时序实验、GT query结果和下一基线的依据。
 - [2026-09-10：局部对应的自动定位结果](progress/2026-09-10-local-cost-implementation.md)：三seed对应对照、精细位置退步、数值/传输实测及Shuttlecock开发统计。

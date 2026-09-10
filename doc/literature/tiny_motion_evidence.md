@@ -4,7 +4,7 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
-2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文补读，修订见§1.5、§1.7及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
 
 ## 0. 先给结论：哪些表述已经不能作为创新
 
@@ -76,11 +76,14 @@
 
 ### 1.5 DeepPro — 最危险的效率反证：时间 profile 可能已足够
 
-**证据与状态：B。** [arXiv:2506.12766](https://arxiv.org/abs/2506.12766)（最初 2025-06-15）和[作者仓库](https://github.com/TinaLRJ/DeepPro)已读；蓝图所列 IEEE TPAMI 链接可访问性受限，故在本文将正式发表状态保守标为“作者仓库给出 TPAMI 2026 citation，未由本轮出版全文复核”。
+**原阅读状态（2026-09-09）：B。** 当时只读[arXiv:2506.12766](https://arxiv.org/abs/2506.12766)摘要和[作者仓库](https://github.com/TinaLRJ/DeepPro)，正式出版状态未独立确认。
 
-* 它把红外小目标任务重构为每个空间位置的长时 1D temporal profile anomaly detection，强调 temporal saliency/correlation，并主要只沿 time 做计算；仓库给出 40-frame 训练序列设置。
-* 这不是跨位置 correspondence：固定像素位置的 time profile 在相机移动、球有大位移时可能完全不保留同一目标。因此它不能否定球的 wide-search 需求。
-* 但它强迫项目做廉价强基线。若一个 time-only/temporal-profile 分支（加当前帧 spatial head）在网球、羽毛球已达到方法结果，那么大规模 correspondence 并非必要贡献。
+**2026-09-11更新：A（开放全文与源码）。** 已完整补读[arXiv v5，2026-03-27](https://arxiv.org/pdf/2506.12766v5)及固定作者源码；正式书目信息为TPAMI 48(8):10157–10175（2026），[DOI](https://doi.org/10.1109/TPAMI.2026.3683258)，但没有取得IEEE排版全文，也未假定它与v5逐表相同。来源、版本与时间语义见[temporal profile专题](2026-09-11-temporal-profiles.md)。
+
+* 基础DeepPro在固定空间位置用学习的`T×T`矩阵混合时间特征，输出输入窗内每帧mask；它不是特征相似度生成的空间cost volume，也没有对象位移输出。基础版仍有空间pooling/上采样，不能把time-only写成没有任何空间操作。
+* 默认40帧全时间混合，重叠4帧取最大响应。非末帧输出可以用未来，作者没有报告只取末帧的因果版本；离线吞吐不能与本项目三帧当前输出的延迟直接比较。
+* **修正原判断的逻辑跳步：** 本条原以“同一固定像素不保留移动目标”弱化其对wide search的挑战。它确实不建立对象对应，但目标经过该像素形成的瞬态脉冲恰是检测证据；论文toy分析明确同尺寸下速度增加会缩短脉冲。缺少对应不等于不能检测高速目标。
+* 所以fixed-pixel变化/profile是“对应搜索是否必要”的真实竞争解释；相机跟球、背景扫描及RGB纹理下能否成立仍未验证。当前先完成既定时序输入控制，只有结果需要区分这一解释时再选择必要的廉价对照，不由一次补读启动所有长窗/离线路线。
 
 ### 1.6 DMR — camera/background coherent motion 与 local anomaly 的最直接概念冲突
 
@@ -94,13 +97,14 @@
 
 ### 1.7 CMRTrack — reliability 不是新词，counterfactual target-erased history 是很近的训练先例
 
-**证据与状态：B（预印本）。** [arXiv:2607.23209](https://arxiv.org/abs/2607.23209)，提交 2026-07-25；摘要已读。为得到训练操作细节，本轮还读了该文可检索 PDF 片段，故以下机制表述有来源支撑，但未完成整篇全文审计。
+**原阅读状态（2026-09-09）：B。** 当时仅摘要与可检索PDF片段。**2026-09-11更新：A（仍为预印本）。** 已读[arXiv:2607.23209v1全文](https://arxiv.org/pdf/2607.23209v1)，提交2026-07-25；未找到作者源码。公式、消融和ROI边界见[反事实运动专题](2026-09-11-counterfactual-motion.md)。
 
-* 面向 infrared UAV tracking；它已经拥有 template/search 的目标先验，因而不能等同于自动球检测。
-* 训练时从历史 search region 擦除目标，构造 counterfactual history；比较 factual 与 target-erased history 的 motion response，学习目标一致 motion，而非任意 temporal change。推理时移除 counterfactual branch，并把 learned motion 与 appearance score 做 reliability-aware fusion。
-* 这否定“我们首次判断 motion 是否可靠 / motion 可靠性门控”。若使用 history-erasure、相对 response gap、可靠性融合，必须明确是改造/任务迁移，且要做其直接消融。
+* 面向给定初始化的infrared UAV单目标tracking，有template/search和跨帧跟踪先验；它不解决从全图自动发现球。
+* Motion map实际来自当前/历史search crop的通道平均绝对像素差，经轻量卷积和当前GT热图监督。训练再按**历史GT框**以全局均值擦除历史像素，用事实/反事实前景与背景响应差监督内部融合gate；推理不执行擦除。该gate不是已校准的对应概率或no-match拒绝输出。
+* 已有tiny-size、fast-motion、背景属性、擦除填充值及模块消融，不能说作者完全未测小目标或背景。但没有球中心协议、原像素位移/尺寸分桶和自动候选覆盖实验。
+* 反事实响应差受擦除区域、当前GT加权支撑和卷积/resize有效范围影响；原视频位移又不等于跟踪ROI坐标位移。源码与ROI对齐细节未公开，不能把差值天然解释成大位移correspondence可靠性，也不能据条件推导断言论文存在实现bug。
 
-**本项目能否使用其思想？** 只有在训练标签定义允许时：有可信中心的相邻帧，才可遮蔽历史中心邻域做 counterfactual；不能对 OpenTTGames 等未标注帧擅自把未知位置擦除，也不能把擦除后低分当“球不存在”。更干净的主指标是匹配分布的 calibration：例如 `P(true correspondence in top-K | predicted support/confidence bin)`，以及 candidate recall、定位 F1/中心误差。可靠性分数若不能预测其中任一风险，便只是额外 head。
+**对当前决策的影响。** 基本的history-erasure、响应差监督和可靠性融合已有直接先例，不能单凭这些机制声称创新。中心标签也不直接给出作者所需的GT框面积；定义中心邻域代理是另一个需要证据的选择。当前继续同一参数化下真实历史/重复当前帧的重训控制，不立即引入跟踪状态、擦除监督或gate；该控制只能测固定学习规则下的输入增量，不能证明目标物理运动因果。将来若研究可靠性，再明确它预测的是候选覆盖、对应误差还是最终定位风险，并验证相应排序/校准；不能把这些不同事件共用一个无定义的“可靠度”。
 
 ## 2. sparse / global-local correspondence 的通用先例
 
@@ -228,7 +232,7 @@
 **明确未确认。**
 
 * 不是系统综述式全库检索，不能声称“所有” latest papers 已覆盖；高质量但未检索到的 remote sensing/infrared/point-tracking 工作仍可能存在。
-* DQAligner、MIST、DeepPro 的出版方全文本轮受访问/JS 限制；细节只以摘要/官方 README 为界。CMRTrack、DMR、FlowIt、MI-DETR、BIRD、EgoSIS 中除 DMR/BIRD 已读较多正文外，均应保守标为预印本或摘要级证据。
+* 截至原2026-09-09检索，DQAligner、MIST、DeepPro出版方全文受限，CMRTrack只读摘要及片段。2026-09-10至11的局部补读已更新：DQAligner/MIST仍无全文但有固定源码；DeepPro开放v5全文与源码已读、TPAMI书目信息已确认；CMRTrack完整v1已读但仍为预印本。其余论文保持各条目实际阅读深度，不把预印本状态和全文阅读与否混为一项。
 * 本轮未复现任何代码、未验收数据下载，也未验证这些小目标 benchmark 的标签定义与球数据完全一致。
 * 未覆盖用户蓝图中的体育球专门方法、TrackNet 系列、视频 foundation model、数据集划分与许可；这些由其他研究笔记负责，不能从本笔记推论。
 
@@ -238,9 +242,9 @@
 2. Zhang et al. **MOCID: Motion Context and Displacement Information Learning for Moving Infrared Small Target Detection**. AAAI 2025. [Proceedings](https://ojs.aaai.org/index.php/AAAI/article/view/33087), [全文](https://ojs.aaai.org/index.php/AAAI/article/view/33087/35242). A（2026-09-10补读方法与实验）。
 3. Deng et al. **Learning Global Dynamic Query for Large-Motion Infrared Small Target Detection**. IEEE TGRS 2026. [IEEE record](https://ieeexplore.ieee.org/document/11363482/), [official code](https://github.com/dengfa02/DQAligner_MIRSTD). B.
 4. Gao et al. **MIST: A Benchmark and Baseline for Multi-frame Infrared Small Target Detection in Complex Motion**. IEEE TIP 2026. [IEEE record](https://ieeexplore.ieee.org/document/11511399/), [official code/data](https://github.com/ShuCvlab/MIST). B.
-5. Li et al. **Probing Deep into Temporal Profile Makes the Infrared Small Target Detector Much Better**. arXiv:2506.12766; author repository cites TPAMI 2026. [arXiv](https://arxiv.org/abs/2506.12766), [official code](https://github.com/TinaLRJ/DeepPro). B.
+5. Li et al. **Probing Deep into Temporal Profile Makes the Infrared Small Target Detector Much Better**. TPAMI 48(8):10157–10175, 2026. [DOI](https://doi.org/10.1109/TPAMI.2026.3683258), [arXiv v5](https://arxiv.org/pdf/2506.12766v5), [official code](https://github.com/TinaLRJ/DeepPro). A（2026-09-11补读开放v5与固定源码，未取得IEEE排版全文）。
 6. Zhang et al. **Decoupled Motion Representation Learning for Moving Infrared Small Target Detection**. arXiv:2606.15286, 2026. [HTML](https://arxiv.org/html/2606.15286). A, preprint.
-7. Chen. **Counterfactual Motion Reliability Learning for Robust UAV Tracking**. arXiv:2607.23209, 2026. [arXiv](https://arxiv.org/abs/2607.23209). B, preprint.
+7. Chen, Lan, Wei. **Counterfactual Motion Reliability Learning for Robust UAV Tracking**. arXiv:2607.23209v1, 2026. [arXiv](https://arxiv.org/abs/2607.23209), [全文](https://arxiv.org/pdf/2607.23209v1). A（2026-09-11补读全文；源码未取得）, preprint.
 8. Yang, Huang, Wang. **QueryDet: Cascaded Sparse Query for Accelerating High-Resolution Small Object Detection**. CVPR 2022. [Official PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Yang_QueryDet_Cascaded_Sparse_Query_for_Accelerating_High-Resolution_Small_Object_Detection_CVPR_2022_paper.pdf). A.
 9. Bertasius, Torresani, Shi. **Object Detection in Video with Spatiotemporal Sampling Networks**. ECCV 2018. [Official PDF](https://openaccess.thecvf.com/content_ECCV_2018/papers/Gedas_Bertasius_Object_Detection_in_ECCV_2018_paper.pdf). A.
 10. Xu et al. **GMFlow: Learning Optical Flow via Global Matching**. CVPR 2022. [Official PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Xu_GMFlow_Learning_Optical_Flow_via_Global_Matching_CVPR_2022_paper.pdf). A.
