@@ -50,3 +50,11 @@ python scripts/train_tennis_heatmap.py --model dino --temporal-input repeat_curr
 输出使用新目录；原历史组位于outputs/full_heatmap/dino_prefix_seed0。复用同一RGB缓存，无新增解码。重复组实际只需14,030个不同当前帧；源缓存仍包含14,160帧，保留真实历史及已有实验用途。已核对正式config中的代码版本、输入槽位、目标数、参数量及训练设置；日志位于outputs/full_heatmap/dino_repeat_current.log。
 
 正式结果尚未得到。完整结束后按既定F1@16、其次F1@8选优，复用保存预测进行位置、存在、clip及历史条件配对。真实历史若未提高F1@16或降低PCK@8，暂停当前读出上的cost、门控或远搜索；另报告VC2且历史含VC1的64例是否净救回，以及VC0对应25例的误报。
+
+以下汇总已准备，尚未执行；基准为重复当前帧、挑战者为真实历史，因此正的净救回表示历史增量。现有visibility脚本仅增加实际比较对象及输出文件参数，默认调用仍复现原HRNet/DINO汇总，不重新计算模型特征。
+
+```bash
+python outputs/full_heatmap/summarize_saved_result.py outputs/full_heatmap/dino_repeat_current_seed0
+python scripts/compare_predictions.py --baseline outputs/full_heatmap/dino_repeat_current_seed0/val_predictions.csv --challenger outputs/full_heatmap/dino_prefix_seed0/val_predictions.csv --output outputs/full_heatmap/dino_repeat_vs_history_seed0.json
+python outputs/full_heatmap/summarize_visibility_predictions.py --runs dino_repeat_current_seed0 dino_prefix_seed0 --output dino_repeat_vs_history_visibility.json
+```
