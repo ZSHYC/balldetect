@@ -50,6 +50,7 @@
 | [第二轮：时序累积与搜索](literature/second_pass_search_motion.md) | 弱证据积累、track-before-detect 与稀疏全局对应如何挑战偏好的模型路线 |
 | [三帧因果基线核对](literature/2026-09-10-causal-baselines.md) | V4/V5/V6、BlurBall 的时序输出、差分非线性和前瞻边界 |
 | [局部对应的机制先例](literature/2026-09-10-local-correspondence-baselines.md) | MotionSqueeze、SELFY/STSS、TDN与2026年DMR对cost volume和背景解释的限制 |
+| [WASB训练实现边界](literature/2026-09-10-wasb-implementation.md) | 作者公开训练工程的缺口、标签与未来帧语义，以及本地强基线可重建的范围 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
@@ -66,6 +67,7 @@
 
 - [2026-09-10：空间读出实现与首轮真实实验](progress/2026-09-10-spatial-implementation.md)。
 - [2026-09-10：真实时序与对应诊断](progress/2026-09-10-temporal-and-correspondence.md)：九组时序实验、GT query结果和下一基线的依据。
+- [2026-09-10：局部对应的自动定位结果](progress/2026-09-10-local-cost-implementation.md)：seed0对照、精细位置退步、数值/传输实测与复核方向。
 - [2026-09-10：研究材料、公开数据与文档准备](progress/2026-09-10-project-setup.md)。
 
 新进展按日期追加到这里。根 README 只链接本导航；无需在多处同步“最新分数”和完整 TODO。

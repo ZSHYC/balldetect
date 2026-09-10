@@ -1,6 +1,6 @@
 # 显式局部对应能否改善真实三帧定位？
 
-日期：2026-09-10。状态：实现、集成smoke和完整cost缓存完成，seed0三组训练运行中。
+日期：2026-09-10。状态：三组seed0、完整固定头cost精度对照与机制诊断完成；seed1/2复核待运行。
 协议：[Tennis dense局部对应基线](../protocols/tennis-local-cost-probe-v1.md)。
 
 ## 假设与判别依据
@@ -32,20 +32,84 @@ python scripts/train_spatial_probe.py --cache data/cache/tennis/temporal_smoke_5
 python scripts/check_probe_precision.py --cache data/cache/tennis/temporal_smoke_512 --runs outputs/correspondence_probe/smoke_raw outputs/correspondence_probe/smoke_centered outputs/correspondence_probe/smoke_self_centered --output outputs/correspondence_probe/precision_smoke.json
 ```
 
-## 正式结果与下一步
+## 完整缓存与正式运行
 
-正式实现版本为`a5a1725`，独立只读审阅未发现需阻止实验的问题；相关6项CPU测试和语法编译通过。缓存位于`data/cache/tennis/local_cosine_s1_h2_r2_r4/{raw,centered,self_centered}`。三个完整1,733×106×36×64 cost共约2.37GiB，一次生成合计60.34秒，batch4、峰值已分配显存1152.66MiB。raw/centered/self的cost_volume GPU累计计算分别4.86/4.52/4.49秒，余下端到端准备时间包含读取、传输、检查、写回与flush；不是实时视频定位计时。帧解码及backbone forward均为0。
+正式实现版本为`a5a1725`，独立只读审阅未发现需阻止实验的问题；相关6项CPU测试和语法编译通过。缓存位于`data/cache/tennis/local_cosine_s1_h2_r2_r4/{raw,centered,self_centered}`。三个完整1,733×106×36×64 cost共约2.37GiB，一次生成合计60.34秒，batch4、峰值已分配显存1152.66MiB。raw/centered/self的cost_volume GPU累计计算分别4.86/4.52/4.49秒，其余时间包含读取、传输、检查、写回与flush；帧解码及backbone forward均为0。
 
-三组seed0已按raw→centered→self_centered顺序启动，每组完整30epoch，其余参数遵循协议。结果保存于`outputs/correspondence_probe/{raw,centered,self_centered}_seed0`，各有`console.log`。完整训练结果待运行完成后填写。
+三组seed0依次完成30epoch，输出为`outputs/correspondence_probe/{raw,centered,self_centered}_seed0`，各有config、history、console、checkpoint和逐帧预测。raw记录版本`a5a1725`，centered/self记录`c64f008`；期间仅增加事后位移统计及文档，训练前向、损失与选优未改变。汇总为`seed0_summary.json`。既有stack来自`9e8b271`的同一数据与读出协议。
 
 ```bash
 python scripts/cache_tennis_correlations.py --source-cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --output data/cache/tennis/local_cosine_s1_h2_r2_r4 --batch-size 4
-# 下列模板按raw、centered、self_centered依次执行，seed0，其余默认30epoch、batch16。
+# 按raw、centered、self_centered依次实际执行，默认30epoch、batch16。
 python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --cost-cache data/cache/tennis/local_cosine_s1_h2_r2_r4/centered --output outputs/correspondence_probe/centered_seed0 --stage 1 --output-stride 4 --hidden-channels 32 --temporal-input stack --seed 0
 ```
 
-与既有stack seed0比较相同230目标上的救回和新增错误。centered同时超过stack及self后才扩展seed1、2；若raw更好，补匹配的raw self控制再判断跨帧贡献。
+## seed0结果与判断
 
-无球误报、8个困难/4个遮挡目标的结果独立报告，不以easy类总体改善掩盖这些问题。完整固定头的cost精度检查待正式训练完成后执行。
+评价使用共同230目标，其中219有位置、11无球。表中的train成绩同样来自验证集选出的checkpoint。
 
-在完整模型结果产生前，位移辅助分组已实现并用已知点覆盖救回、新错、无配对样本及空组；新增2项对应测试通过。复用旧current/stack预测的集成结果精确保持既有全集paired统计。Δ1在同格/已移动且范围内/范围外分别有57/155/3个双端合法目标，Δ2为22/187/4。因此这一开发集不能单独支持远范围搜索的收益主张。旧stack相对current在范围内移动组的16px净救回为12/155、14/187；范围外均无净变化且样本过少。证据为`outputs/correspondence_probe/current_vs_stack_motion_seed0.json`。
+| 模型 | 最佳epoch | train PCK16 | val PCK8 | val PCK16 | val PCK32 | 检测F1@16 | 训练及末次评价秒数 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| stack | 8 | 96.63% | 64.84% | 83.56% | 85.39% | 81.70% | 267.84 |
+| +raw | 4 | 85.08% | 62.56% | 83.11% | 85.84% | 81.07% | 443.47 |
+| +centered | 9 | 97.94% | 57.99% | 85.84% | 88.13% | 84.49% | 399.70 |
+| +self_centered | 4 | 88.38% | 62.10% | 82.65% | 84.47% | 80.98% | 867.92 |
+
+![不同误差容差下的seed0定位表现](../../outputs/correspondence_probe/seed0_accuracy.png)
+
+另有[PDF矢量图](../../outputs/correspondence_probe/seed0_accuracy.pdf)。连线只连接已测的8/16/32px结果，不代表未测容差。
+
+三种新增头参数均23,589、峰值已分配显存390.22MiB；stack为20,197和268.19MiB。这些时间来自共享GPU环境和冻结缓存读出，包含输入准备；不是视频端到端速度，不能由self耗时直接推出其模型计算更多。
+
+centered相对stack在16px救回10、损害5，净增5/219；相对self救回7、损害0，净增7/219。它达到事先设定的双对照门槛，因此补固定seed1、2的centered和self，共四次；复用已有三个seed的stack结果，不重训stack、不再生成特征或cost。**这只是进入复核的条件，还不能宣布稳定的motion贡献。** raw相对stack救回5、损害6，未提供净增益，不扩展raw多seed或self_raw。
+
+收益伴随明确的精细定位代价：centered相对stack在8px救回17、损害32，净减15/219；相对self救回11、损害20。中位误差从stack的6.04px变成6.96px；较大错误减少不代表全尺度定位都更好。
+
+8个困难、4个遮挡目标在16px，三种新头均未命中。raw对11个无球全误报；centered/self各误报10个，但另漏判3/1个有位置目标，stack没有这些正例漏判。centered的3个漏判都在Clip7，原帧0016/0112为VC2，0072为VC1，不能把它们统一说成“不可见时合理拒绝”。完整检测成绩与条件PCK分别保留。
+
+逐帧比较为`stack_vs_{raw,centered,self_centered}_seed0.json`和`self_centered_vs_centered_seed0.json`。辅助位移分组在完整结果产生前固定：Δ1同格/范围内移动/范围外分别57/155/3个双端合法目标，Δ2为22/187/4。centered相对stack在范围内移动组16px净增1/155、3/187，相对self净增5/155、6/187；范围外均无净变化且样本过少。这不能单独支持远范围搜索的收益主张。
+
+位移分组的已知点测试覆盖救回、新错、无配对样本及空组；新增2项对应测试通过。复用旧current/stack预测的集成结果精确保持既有全集paired统计，证据为`current_vs_stack_motion_seed0.json`。
+
+## 完整精度对照与传输开销
+
+`precision_seed0.json`覆盖三个完整固定头的全部230个验证目标，使用690个唯一源特征，重新解码/提取帧数仍为0。固定同一float16 appearance，float32重算cost与实际float16 cost的最大差均为0.000244140625；三个头均无空间argmax或0.5存在判断变化，缓存分支精确重现保存的位置指标。raw/centered最大logit差为0，self为0.0000166893；不把这些结果扩写为其他骨干数值设置或两种精度的训练轨迹等价。
+
+```bash
+python scripts/check_probe_precision.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8_h2_s1 --runs outputs/correspondence_probe/raw_seed0 outputs/correspondence_probe/centered_seed0 outputs/correspondence_probe/self_centered_seed0 --output outputs/correspondence_probe/precision_seed0.json
+```
+
+self训练明显变慢后，一次资源快照未发现持续大量换页；确认另一个GPU任务来自`event`项目，未调整它。随后单独测量同一真实batch16、682×36×64的CPU float16输入：合并传输/转float32的`.to(cuda, float32)`中位54.08ms；先传float16再GPU转float32的`.to(cuda).float()`中位8.47ms。两条路径交替顺序各测7次，最终张量逐项完全相同；此段显存峰值从96增至144MiB。证据为`transfer_benchmark.json`，不能将这一局部约6.4倍差异宣称为整体训练加速。
+
+因此仅修改训练和预测两处传输表达式，保持进入模型的float32数值不变，供后续seed复核使用；不更改网络、输入、损失或选优规则，也不重跑已完成seed0。这是实际瓶颈的一项减少，不代表已解释self耗时的全部变化。
+
+## 错误候选的高相关值：辅助机制诊断
+
+这是探索性诊断，未据此训练新模型或选取阈值。固定旧stack seed0的错误目标（原图误差>16px且错误峰不在GT同一native cell），只取GT query JSON中双端均VC1的配对；比较**当前GT格**与**当前错误峰格**的centered cost，Δ1/R2有21对，Δ2/R4有20对。错误峰不是人工标注的“背景类别”，标签位移也没有分离相机运动。
+
+对每个当前格分别计算：`max_delta C`，以及`max_(delta!=0) C - C(delta=0)`。后一项只表示非零偏移相对于零偏移的匹配优势，不是物理motion reliability。
+
+| 时距 | 错误峰最大cos高于GT格 | GT非零偏移优势高于错误峰 | 最大cos中位数：GT/错误峰 |
+|---|---:|---:|---:|
+| Δ1 | 14/21 | 15/21 | 0.8003 / 0.9238 |
+| Δ2 | 12/20 | 13/20 | 0.7642 / 0.8552 |
+
+简单最大相关值会偏向许多已有错误候选，因此不能直接把它当作“这个位置是球且motion可靠”的置信度。非零偏移比较在这批样本更有区分力，但仍有6/21、7/20反例，且样本条件化、来源少；不能据此宣布一个可靠性模块成立。下一设计若压缩offset volume，必须注意保留相对零位移的结构，不能未经检验只压成一个最大值。
+
+全过程只读既有三帧特征索引、`stage1_cosine.json`、stack预测CSV及centered cost，未做解码/GPU计算。每对的身份、两个native cell和原始分数保存在`outputs/correspondence_probe/cost_peak_diagnostic.json`。它不直接证明新head实际如何使用cost，也不是所有空间点的无条件统计。
+
+## 细定位退步发生在哪里？
+
+固定每个模型实际选中的36×64 native block，只在该block对应的四个72×128输出子格里，使用GT选择最近一个。这是诊断性的条件oracle，不改变预测，也不等于整个模型的可达上限。先重现原始PCK8，再检查oracle误差不大于实际误差，以排除坐标或块映射错误。
+
+| seed0头 | 实际PCK8命中 | 固定预测块的四子格oracle命中 | 块内存在8px解但未选中 | 预测块等于GT native块 |
+|---|---:|---:|---:|---:|
+| stack | 142/219 | 167/219 | 25 | 148 |
+| raw | 137/219 | 173/219 | 36 | 154 |
+| centered | 127/219 | 167/219 | 40 | 143 |
+
+stack与centered选中同一native block的162个目标中，centered在8px救回5、损害17；block不同的57个目标中救回12、损害15。因此主要净损失发生在两者粗块相同的样本，不能只解释为远处背景误选，也不能把16px提升说成“正确native块选得更多”。GT恰好位于网格边缘时，相邻块也可能包含8px内的输出点，所以“GT同块数”与位置容差oracle本就不同。
+
+现有证据与“native cost经共享hidden32影响四个PixelShuffle子格的选择”一致，但没有证明其因果机制；新增非线性、优化随机性和checkpoint选优同样可能参与。centered按PCK16选中的epoch9 PCK8为57.99%，而epoch3曾为62.56%，说明选优规则解释部分退步；不能在事后换成按PCK8选优再声称本轮主要比较变好。
+
+输出为`outputs/correspondence_probe/subcell_diagnostic_seed0.json`。独立只读研究审查认为当前诊断已足以区分粗块选择与块内选择，不应继续凭单seed加模块；先完成self与预固定seeds条件。

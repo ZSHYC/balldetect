@@ -25,7 +25,7 @@ def predict(model, array, windows, indices, batch_size, device, temporal_input, 
             ids = indices[start:start + batch_size]
             selected = windows[ids]
             extra = cost_array[ids] if cost_array is not None else None
-            x = torch.from_numpy(frame_batch(array, selected, temporal_input, extra)).to(device, torch.float32)
+            x = torch.from_numpy(frame_batch(array, selected, temporal_input, extra)).to(device).float()
             logits = model(x)
             positions.extend(logits[:, :-1].argmax(1).cpu().tolist())
             probabilities.extend((1 - logits.softmax(1)[:, -1]).cpu().tolist())
@@ -122,7 +122,7 @@ def main():
         for start in range(0, len(order), args.batch_size):
             ids = order[start:start + args.batch_size]
             extra = cost_array[ids] if cost_array is not None else None
-            x = torch.from_numpy(frame_batch(array, windows[ids], args.temporal_input, extra)).to(device, torch.float32)
+            x = torch.from_numpy(frame_batch(array, windows[ids], args.temporal_input, extra)).to(device).float()
             y = torch.from_numpy(targets[ids]).to(device)
             loss = F.cross_entropy(model(x), y)
             if not torch.isfinite(loss):
