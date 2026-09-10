@@ -43,3 +43,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Tennis GT query 对应 v1](tennis-correspondence-probe-v1.md)：区分特征匹配、搜索覆盖与同格背景自相似，仅作oracle诊断。
 - [Tennis dense局部对应定位 v1](tennis-local-cost-probe-v1.md)：保留三帧appearance，以self-cost控制检验显式对应增量。
 - [Shuttlecock开发位移 v1](shuttlecock-development-motion-v1.md)：固定比赛级开发范围，仅用训练标签诊断位移与搜索覆盖。
+- [Tennis前缀适配 v1](tennis-prefix-adaptation-v1.md)：相同三帧读出初始化下，对比冻结前缀继续训练与共同微调，包含epoch0控制。
