@@ -1,6 +1,6 @@
 # 从适配诊断转入全量竞争系统
 
-日期：2026-09-10。状态：前缀适配诊断完成，HRNet全量训练中，DINO顺序等待。
+日期：2026-09-10；进展更新：2026-09-11。状态：前缀适配诊断与HRNet全量seed0完成；DINO前置检查通过，正式全量训练中。
 
 ## 本阶段改变了什么判断
 
@@ -12,7 +12,7 @@
 
 全量RGB缓存复用旧5,199帧，只新增解码8,961帧；共14,160唯一帧、12,167训练目标和1,863验证目标。真实时间顺序、clip边界和原visibility保留，最终games8–10未进入本轮。缓存、标签监督与真实HRNet batch8训练预检及完整入口smoke已通过，见[HRNet记录](../experiments/2026-09-10-full-hrnet.md)。
 
-HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO全量控制](../experiments/2026-09-10-full-dino.md)复用同一入口，官方前缀与随机新头共同训练，固定head/prefix两个学习率和交叉熵；按与HRNet相同的detection F1选优。新增CPU输入/解码测试与独立审阅通过，代码提交3ea19eb。新DINO入口的GPU smoke仍待执行，不能把CPU通过写成已完成全量训练。
+HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO全量控制](../experiments/2026-09-10-full-dino.md)复用同一入口，官方前缀与随机新头共同训练，固定head/prefix两个学习率和交叉熵；按与HRNet相同的detection F1选优。新增CPU输入/解码测试与独立审阅通过，代码提交3ea19eb。9月11日HRNet结束后，新DINO入口GPU smoke已通过，正式训练从327879b启动。
 
 环境继续统一为Conda zshihyc。OmegaConf 2.3.1本已安装，已记录为实际依赖；本阶段没有新装包或升级环境。
 
@@ -30,7 +30,9 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 ## 正在执行与后续依据
 
-一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次检查DINO批内帧复用的CUDA预测等价、验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。帧复用实现来自1185875，CPU顺序/复用与梯度检查已通过，真实CUDA检查仍待执行。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
+HRNet已完成30epoch并恢复最佳epoch18，验证PCK8/16/32=89.46%/90.44%/91.12%，检测F1@16=90.65%。最终预测的身份、顺序、标签及重算指标与缓存目标和保存结果一致。位置正确但存在分数低于阈值76帧、阈上位置错误51帧、阈下且位置错误116帧，另有16次无球误报；Clip7/8占9.0%的位置目标，却贡献41.9%的PCK16失败。训练接近拟合、困难类别与部分clip的验证残差明显，详情及归因边界见[HRNet完成记录](../experiments/2026-09-10-full-hrnet.md)。独立只读研究审阅支持继续既定共同任务对照，尚不选择新motion结构。
+
+一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh已确认HRNet完整结果，再依次通过DINO批内帧复用的CUDA预测等价检查和GPU smoke，现执行固定30epoch。帧复用实现来自1185875，实际检查于327879b执行：1,863目标坐标及存在判断变化均为0，存在分数差也为0；单次顺序计时不作为速度benchmark。smoke保存8/8预测、有限loss、预期参数量，总计1.504秒。全量结束后复用compare_predictions.py比较相同验证目标。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。
 
 两系统共享任务，但结构、输出尺度、预训练、损失和优化器不同。全量结果是强竞争系统参照，不能单独归因某个因素，也不替代最终backbone × motion的2×2。完成后先依据保存预测分析精细位置、困难条件、无球误报和有球漏报，再决定是否存在需要新motion机制解决的残留问题。
 
