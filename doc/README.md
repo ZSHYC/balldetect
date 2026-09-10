@@ -63,6 +63,7 @@
 - [Tennis 空间探针 v1](protocols/tennis-spatial-probe-v1.md)：已锁定的开发诊断协议，最终 benchmark 尚未启动。
 - [首阶段实施设计](research/2026-09-10-implementation-plan.md)：空间读出、真实测试及后续运动架构的证据驱动顺序。
 - [DINOv3 四级空间探针实验](experiments/2026-09-10-spatial-probe.md)：实施验证、运行设置、成绩与解释边界。
+- [全量因果强基线实施](research/2026-09-10-full-baseline-plan.md)：从稀疏探针转入共同任务的完整HRNet训练；[实际记录](experiments/2026-09-10-full-hrnet.md)。
 
 ## 阶段进展
 

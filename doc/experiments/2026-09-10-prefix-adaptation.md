@@ -1,6 +1,6 @@
 # 更新视觉表示能否超出继续训练读出头的收益？
 
-日期：2026-09-10。状态：seed0两臂完成；通过预定条件，正在复核seed1/2。
+日期：2026-09-10。状态：三个seed的冻结/微调共六组正式实验完成。
 协议：[相同初始化下的前缀适配](../protocols/tennis-prefix-adaptation-v1.md)。
 
 ## 当前问题与控制
@@ -67,8 +67,44 @@ epoch0的230个验证身份、位置和存在判断均重现共同起点。冻�
 
 完整学习曲线为[PNG](../../outputs/adaptation_probe/seed0_learning.png)与[PDF](../../outputs/adaptation_probe/seed0_learning.pdf)，包含epoch0–15，圆点标记按PCK16、再PCK8选出的同一个checkpoint。表格原始汇总为`outputs/adaptation_probe/seed0_summary.json`。
 
-## 当前判断与复核
+## seed0时的复核决定
 
 seed0通过预先固定的复核条件，因此按各自对应的旧stack初始化，顺序运行`frozen_seed1 → finetune_seed1 → frozen_seed2 → finetune_seed2`；参数、训练预算与选优规则不变。这是对同一比赛上随机初始化/训练差异的复核，不增加独立比赛数量。
 
 当前只支持一个有限判断：允许这个预训练前缀适应定位，在seed0优于只继续训练读出。它没有隔离单帧外观适配与跨帧对应改善，没有证明新的motion representation，也没有解决困难目标与存在判断。三seed结果完成后再决定这一训练条件是否进入后续控制，不根据单次正结果添加新模块。
+
+## 三seed完成后的结果与判断
+
+所有六组epoch0都重现对应原stack的230个目标身份、位置和0.5存在判断，错位均为0。六组都完成15epoch；没有因不利结果提前停止或更改学习率。运行实际代码版本为6400e06, b7b03a8；版本差异涉及期间的已记录提交，适配训练实现保持相同。
+
+| seed | 条件 | best epoch | PCK8 / 16 / 32 | F1@16 | presence TP / FP / FN | 耗时（秒） |
+|---:|---|---:|---|---:|---|---:|
+| 0 | frozen | 0 | 64.84% / 83.56% / 85.39% | 81.70% | 219 / 10 / 0 | 248.32 |
+| 0 | finetune | 5 | 70.32% / 86.30% / 88.13% | 84.38% | 219 / 10 / 0 | 636.80 |
+| 1 | frozen | 3 | 65.30% / 84.02% / 85.84% | 82.70% | 216 / 10 / 3 | 237.93 |
+| 1 | finetune | 2 | 67.58% / 84.02% / 86.76% | 82.46% | 211 / 9 / 8 | 644.82 |
+| 2 | frozen | 2 | 66.67% / 84.47% / 87.21% | 82.96% | 217 / 10 / 2 | 260.48 |
+| 2 | finetune | 2 | 69.41% / 84.02% / 86.30% | 82.25% | 216 / 10 / 3 | 648.53 |
+
+| 三seed均值±样本标准差 | PCK8 | PCK16 | PCK32 | detection F1@16 |
+|---|---:|---:|---:|---:|
+| frozen | 65.60±0.95% | 84.02±0.46% | 86.15±0.95% | 82.45±0.67% |
+| finetune | 69.10±1.40% | 84.78±1.32% | 87.06±0.95% | 83.03±1.17% |
+
+这些标准差只描述同一game7上的seed差异，不是跨比赛置信区间。冻结/微调峰值已分配显存分别约897.85/5278.30MiB；总耗时不与不同阶段共享资源下的旧探针作严格速度比。
+
+逐帧净变化：
+
+| seed | 8px 救回/新错 | 16px 救回/新错 | 32px 救回/新错 |
+|---:|---:|---:|---:|
+| 0 | 18/6 | 9/3 | 7/1 |
+| 1 | 13/8 | 5/5 | 6/4 |
+| 2 | 14/8 | 4/5 | 3/5 |
+
+三seed的PCK8均提高，均值增加3.50个百分点；PCK16一升、一平、一降，均值增加0.76个百分点；F1@16均值增加0.58个百分点，但seed1/2下降。不能把均值小幅提高写成三个seed均有效。seed1的finetune比frozen多5个有球漏报，seed2多1个；仅seed1少1个无球误报，其余仍各10个。
+
+困难/遮挡没有稳定恢复：seed1的frozen在16px命中1/8 VC2、1/4 VC3，finetune为1/8、0/4；seed0和seed2均为0/8、0/4。这些是位置条件PCK，不保证相应预测通过presence阈值。
+
+最终判断：前缀可适配性对精细定位有重复支持，但不是全面更强的定位/存在系统，也未证明correspondence改善。结束这个固定条件的适配诊断，不围绕lr、宽度、current或cost继续网格搜索。下一阶段建立[全量因果HRNet竞争系统](../protocols/tennis-full-causal-v1.md)，将数据密度、空间热图与完整训练作为必须面对的系统参照，并保留同全量DINO控制的需求。
+
+完整三seed汇总为outputs/adaptation_probe/multiseed_summary.json，图为[PNG](../../outputs/adaptation_probe/multiseed_accuracy.png)与[PDF](../../outputs/adaptation_probe/multiseed_accuracy.pdf)。12个VC2/3全部输入图为[第一页](../../outputs/adaptation_probe/hard_inputs_page1.png)、[第二页](../../outputs/adaptation_probe/hard_inputs_page2.png)、[第三页](../../outputs/adaptation_probe/hard_inputs_page3.png)，仅从已有RGB缓存制作，显示三帧相同空间裁剪与各自标签，不重新解码或修改原标签。

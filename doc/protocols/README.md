@@ -45,3 +45,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Shuttlecock开发位移 v1](shuttlecock-development-motion-v1.md)：固定比赛级开发范围，仅用训练标签诊断位移与搜索覆盖。
 - [Tennis前缀适配 v1](tennis-prefix-adaptation-v1.md)：相同三帧读出初始化下，对比冻结前缀继续训练与共同微调，包含epoch0控制。
 - [BlurBall开发轴向诊断 v1](blurball-development-axis-v1.md)：以真实过去到当前位移比较当前无向拖影轴，分别保留不可见与未定义方向。
+- [Tennis全量因果定位 v1](tennis-full-causal-v1.md)：全量合法末帧监督与检测选优，建立共同任务的HRNet竞争系统。
