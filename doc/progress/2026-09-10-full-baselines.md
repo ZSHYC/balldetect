@@ -26,6 +26,8 @@ HRNet正式运行来自32d37d4，固定30epoch、batch8、float32。新增[DINO�
 
 [MOCID条目](../literature/tiny_motion_evidence.md)已从摘要级补到官方全文方法与实验。需要保留的区别是频域调制、差异扫描与显式位置对应各自代表什么，以及依赖clip的空间特征不能按唯一帧直接缓存；未据此新增Mamba或频域模块。
 
+9月11日完成本批最后一项[MISTNet源码补读](../literature/tiny_motion_evidence.md)：确认浅层/多尺度局部异位置attention及分组平移，修订原先只有模块名称的描述。它没有硬候选前提，也未直接输出位移假设；论文全文仍未取得，不补写未核对的消融。这批有界文献补读结束，继续等待全量共同任务结果。
+
 ## 正在执行与后续依据
 
 一次性脚本outputs/full_heatmap/run_dino_after_hrnet.sh等待当前HRNet完整结束，再依次检查DINO批内帧复用的CUDA预测等价、验证DINO smoke、运行固定30epoch，最后复用compare_predictions.py比较相同验证目标。帧复用实现来自1185875，CPU顺序/复用与梯度检查已通过，真实CUDA检查仍待执行。日志位于outputs/full_heatmap/dino_queue.log；任一阶段失败就停止后续命令，由实际错误决定修复。脚本和训练产物留在outputs，不增加调度框架。

@@ -4,7 +4,7 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
-2026-09-10局部更新：MOCID已补读官方全文方法与实验；DQAligner已补读固定作者源码，全文仍不可访问。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
 
 ## 0. 先给结论：哪些表述已经不能作为创新
 
@@ -62,13 +62,17 @@
 
 ### 1.4 MIST / MISTNet — irregular fast motion 的多尺度隐式补偿和困难子集
 
-**证据与状态：B。** [IEEE TIP 条目](https://ieeexplore.ieee.org/document/11511399/)；[官方仓库](https://github.com/ShuCvlab/MIST) README 已完整读取。仓库说明 2026-04-27 接收、数据/代码/权重于 2026-03-08 发布；发表页因 JS 未读到全文。
+**证据与状态：B，加2026-09-11固定源码补读。** [IEEE TIP 条目](https://ieeexplore.ieee.org/document/11511399/)；[官方仓库](https://github.com/ShuCvlab/MIST) README 已完整读取。仓库说明2026-04-27接收；本次采用[2026-05-18源码c95bb208](https://github.com/ShuCvlab/MIST/tree/c95bb20805b823ddbf86a0e9864147f2a43f3a68)。发表页仍未取得全文，定向检索未找到作者公开PDF/arXiv；下面的机制来自代码，不称已审阅论文全部消融。
 
 * MIST 是合成引擎构建的 airborne IR benchmark，目标有姿态/尺寸/强度变化与真实背景融合；不能把其性能直接和 RGB 球赛结果比较。
-* MISTNet 的 Shifted Neighborhood Compensation Block (SNCB) 声称以多尺度 correspondence 做隐式 motion compensation，Progressive Distillation Decoder 过滤与目标无关的信息。
+* MISTNet的SNCB已由源码确认是局部异位置软对应：完整current特征作Q、past作K/V，NATTEN计算邻域相关，softmax后加权聚合；没有检测器硬候选输入。它先将past通道分八组，padding、平移、裁回后混合，默认位移3、邻域3/5/7。每个邻域输出聚合特征，下游不接收显式位移多峰列表。各尺度操作不能直接换算为一个原图物理搜索半径。[SNCB](https://github.com/ShuCvlab/MIST/blob/c95bb20805b823ddbf86a0e9864147f2a43f3a68/deepmist/models/multiframe/MISTNet/model_MISTNet.py#L6-L64)
+* 四级encoder均执行补偿，包括首次pooling之前的浅层；末帧为query，窗口中各帧含当前自身都参与，随后按时间聚合。decoder逐级上采样并融合最浅层，输出单通道mask。浅层路径存在不等于体育球精细定位已经验证。[encoder](https://github.com/ShuCvlab/MIST/blob/c95bb20805b823ddbf86a0e9864147f2a43f3a68/deepmist/models/multiframe/MISTNet/base.py#L83-L97)、[补偿与decoder](https://github.com/ShuCvlab/MIST/blob/c95bb20805b823ddbf86a0e9864147f2a43f3a68/deepmist/models/multiframe/MISTNet/model_MISTNet.py#L67-L170)
+* 当前MIST配置使用过去4帧加当前帧、末帧mask、frame_padding=False；序列开头四帧不生成窗口，没有取模回绕。默认损失为SoftIoU加0.01倍SufficiencyLoss，配置未使用GT光流或位移监督。没有复现运行，不能用这些代码事实补写未取得的论文消融数值。[数据窗口](https://github.com/ShuCvlab/MIST/blob/c95bb20805b823ddbf86a0e9864147f2a43f3a68/deepmist/datasets/MISTDataset.py#L33-L55)、[正式配置](https://github.com/ShuCvlab/MIST/blob/c95bb20805b823ddbf86a0e9864147f2a43f3a68/configs/train_MISTNet_MIST.yaml#L16-L39)
 * 其官方 hard split 是 11 条测试序列，条件为 SCR≤1、轨迹高度不规则、速度 >7 pixels/frame。这个**分桶思想**很适合项目：主报告不能只有均值；应预注册由真中心算出的 displacement/速度分桶、blur bucket、camera-motion proxy bucket。但切勿挪用 `>7 px/frame` 作体育球“高速”的物理阈值。
 
 **对创新的冲突。** “不规则/快小目标需要多尺度匹配补偿”和“压制无关 motion”已是已发表或近发表系统的主题。可区分之处必须来自可验证的球中心对应和计算-空间分辨率权衡，而不是词汇。
+
+源码补读使冲突更加具体：浅层细节、多尺度局部attention、分组平移与隐式补偿已有直接组合先例。但不能反过来强称这种dense方法存在硬候选漏检阶段；若本项目采用稀疏候选，候选覆盖是自己的额外责任。新机制仍需在自动球定位中证明收益，而非仅在GT查询下提高条件匹配。当前不增加MISTNet复现或模块。
 
 ### 1.5 DeepPro — 最危险的效率反证：时间 profile 可能已足够
 
