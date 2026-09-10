@@ -23,7 +23,7 @@ stage 1/2/3 使用相同参数与对应输出名。每个运行的 `config.json`
 - 5 个可运行测试通过：半像素/网格映射、无球和非法标签区分、发布 CSV 空坐标与原始帧身份、错位 FP/FN、合成特征小样本拟合。
 - 32 帧真实 smoke 一次提取四层，shape 分别为 `[32,96,72,128]`、`[32,192,36,64]`、`[32,384,18,32]`、`[32,768,9,16]`；无缺失/多余权重键。float16 保存的相对 L2 误差为 0.000205–0.000217，无溢出。这不证明 float16 与 float32 的最终定位完全相同。
 - 16 train + 16 val、3 epoch 的训练/保存/加载/预测流程已通过；它不构成性能实验。
-- 首次 smoke 在训练后加载 checkpoint 时失败：重复保存的配置包含 `torch.torch_version.TorchVersion` 对象。删除 checkpoint 的重复配置后恢复；配置保留在 JSON。失败运行位于 `outputs/spatial_probe/smoke_stage0/`，修正验证为 `smoke_stage0_fixed/`。完成首轮后删除无复用价值的 smoke 特征，保留本记录。
+- 首次 smoke 在训练后加载 checkpoint 时失败：重复保存的配置包含 `torch.torch_version.TorchVersion` 对象。删除 checkpoint 的重复配置后恢复；配置保留在 JSON。失败运行位于 `outputs/spatial_probe/smoke_stage0/`，修正验证为 `smoke_stage0_fixed/`。首轮后已删除三个 smoke 运行的无后续用途 checkpoint，保留小型日志/结果；32 帧特征缓存已用于子格头验证，继续保留以免下一次 smoke 重复解码。临时提取/精度控制台日志在统计写入 JSON 后删除。
 
 ## 首轮结果
 

@@ -27,7 +27,8 @@ def main():
         config = json.loads((run / "config.json").read_text())
         if config["stage"] != stage or config["cache_config"] != meta["config"]:
             raise ValueError("运行层位/缓存条件不匹配")
-        model = SpatialProbe(meta["shapes"][stage][1], upscale=config.get("upscale", 1)).cuda().eval()
+        model = SpatialProbe(meta["shapes"][stage][1], upscale=config.get("upscale", 1),
+                             hidden_channels=config.get("hidden_channels", 0)).cuda().eval()
         model.load_state_dict(torch.load(run / "best.pt", weights_only=True, map_location="cuda")["model"])
         models.append(model)
     backbone = ConvNeXt(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768])

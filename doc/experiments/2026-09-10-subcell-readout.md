@@ -1,6 +1,6 @@
 # 统一输出网格后，中层特征能否读出更细球位置？
 
-日期：2026-09-10。状态：准备运行。
+日期：2026-09-10。状态：线性子格比较已完成，非线性读出对照准备运行。
 沿用 [v1 协议](../protocols/tennis-spatial-probe-v1.md) 的数据、坐标、单帧输入、标签、指标与 train/val 划分；本轮明确改变读出网格，结果与原生网格分列，不覆盖首轮。
 
 ## 为什么进行这轮
@@ -22,4 +22,28 @@ python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_
 
 ## 结果与后续
 
-尚未完成实际比较，不填预期分数。若 train 与 val 的严格位置指标都明显改善，可说明对应细信息能被该读出利用；若只有 train 改善，先考虑容量和泛化；若仍不能拟合，继续非线性读出和尺度对照，不立即宣布特征没有球信息。
+两次线性子格运行的代码版本为 `84b25e4`。实际结果：
+
+| 层 / 读出 | train PCK@8 | val PCK@8 | val PCK@16 | val PCK@32 | val 中位误差 | 最佳 epoch | 秒数 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| stage1 原生（对照） | 34.86% | 33.93% | 61.61% | 63.39% | 10.12 | 18 | 77.76 |
+| stage1 子格 | 51.49% | 51.79% | 61.61% | 61.61% | 7.45 | 30 | 65.78 |
+| stage2 原生（对照） | 9.74% | 8.48% | 40.18% | 73.66% | 18.43 | 20 | 47.13 |
+| stage2 子格 | 27.57% | 10.27% | 39.73% | 65.63% | 21.27 | 24 | 36.82 |
+
+**stage1 的严格定位确实受原生读出限制。** 同一特征缓存，train/val 的 PCK@8 都提升；验证增加 17.86 个百分点，而 PCK@16 未变。可以说通道中存在能被该头利用的细位置信息，不能说新增了视觉证据。最佳 epoch 在运行末尾，还不能声称已经收敛。
+
+**stage2 没有同样的验证收益。** 训练严格定位改善，验证只小幅变化且宽容差指标下降。它既可能受读出容量/优化限制，也可能出现细相位泛化问题，不能直接判为信息不可恢复。两者都仍存在大量背景误选；本轮没有加入 motion，也没有证实时序救回。
+
+耗时因头结构和删除重复 batch 复制而变化，不作为控制充分的性能优化比较。各运行的完整 train/val、分组、存在指标与逐帧预测保存在对应输出目录。
+
+## 下一对照：固定宽度非线性头
+
+在相同 stage、stride-4 输出、缓存和训练条件下，空间头改为 `1×1(C,32) -> GELU -> 3×3(32,r²) -> PixelShuffle`。无球分支形式不变。stage1/2 参数分别为 7,525 / 17,329；这是读出容量对照，不作新颖性主张，不增加额外 backbone/RGB/motion 模块。训练仍为 30 epochs，先看现有冻结特征是否能被更充分利用。
+
+```bash
+python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8 --output outputs/spatial_probe/nonlinear_stage1_seed0 --stage 1 --output-stride 4 --hidden-channels 32
+python scripts/train_spatial_probe.py --cache data/cache/tennis/dinov3_convnext_tiny_512x288_step8 --output outputs/spatial_probe/nonlinear_stage2_seed0 --stage 2 --output-stride 4 --hidden-channels 32
+```
+
+新增非线性梯度/子格拟合测试，当前共 8 项；真实三轮 smoke 通过后启动完整运行。若改善明显，保留更强空间头再研究 temporal；若仍差，下一步比较高输入分辨率与适度微调，避免把弱头当成 motion 对照。

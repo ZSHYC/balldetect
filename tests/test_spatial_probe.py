@@ -97,6 +97,19 @@ class SpatialProbeTest(unittest.TestCase):
         self.assertEqual(model(x).shape, (4, 5))
         self.assertTrue(torch.equal(model(x).argmax(1), targets))
 
+    def test_nonlinear_readout_has_working_gradients_and_subcell_layout(self):
+        torch.manual_seed(0)
+        x = torch.eye(4).reshape(4, 4, 1, 1)
+        model = SpatialProbe(4, upscale=2, hidden_channels=8)
+        optimizer = torch.optim.Adam(model.parameters(), lr=.05)
+        for _ in range(60):
+            loss = torch.nn.functional.cross_entropy(model(x), torch.arange(4))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        self.assertTrue(torch.equal(model(x).argmax(1), torch.arange(4)))
+        self.assertTrue(all(p.grad is not None and torch.isfinite(p.grad).all() for p in model.parameters()))
+
 
 if __name__ == "__main__":
     torch.set_num_threads(1)

@@ -36,11 +36,14 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--stage", type=int, choices=range(4), required=True)
     parser.add_argument("--output-stride", type=int, choices=(4, 8, 16, 32), help="默认原生网格；更细网格使用子格线性读出")
+    parser.add_argument("--hidden-channels", type=int, default=0, help="0 为线性头；正数使用 1x1-GELU-3x3 读出")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=.003)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
+    if args.hidden_channels < 0:
+        raise ValueError("hidden_channels must be nonnegative")
     native_stride = 4 * 2 ** args.stage
     output_stride = args.output_stride or native_stride
     if output_stride > native_stride:
@@ -68,7 +71,7 @@ def main():
     present = np.array([r["visibility_raw"] != 0 for r in rows])
     grid_hw = tuple(s * upscale for s in array.shape[-2:])
     targets = grid_targets(target_xy, present, grid_hw)
-    model = SpatialProbe(array.shape[1], upscale=upscale).to(device)
+    model = SpatialProbe(array.shape[1], upscale=upscale, hidden_channels=args.hidden_channels).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=.01)
     val_rows = [rows[i] for i in val_idx]
     code_revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
@@ -77,7 +80,7 @@ def main():
               "device": torch.cuda.get_device_name(), "torch_version": str(torch.__version__),
               "train_frames": len(train_idx), "val_frames": len(val_idx),
               "parameters": sum(p.numel() for p in model.parameters()),
-              "head": "GroupNorm(1,C,affine=False) + linear subcell spatial/absence",
+              "head": "GroupNorm(1,C,affine=False) + " + ("nonlinear" if args.hidden_channels else "linear") + " subcell spatial; linear absence",
               "output_grid_hw": grid_hw, "upscale": upscale,
               "selection": "maximum val conditional PCK@16; then PCK@8; first on ties"}
     (args.output / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")

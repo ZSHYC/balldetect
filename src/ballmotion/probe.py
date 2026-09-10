@@ -7,11 +7,15 @@ from torch import nn
 
 
 class SpatialProbe(nn.Module):
-    def __init__(self, channels, upscale=1):
+    def __init__(self, channels, upscale=1, hidden_channels=0):
         super().__init__()
         self.upscale = upscale
         self.norm = nn.GroupNorm(1, channels, affine=False)
-        self.location = nn.Conv2d(channels, upscale ** 2, 1)
+        if hidden_channels:
+            self.location = nn.Sequential(nn.Conv2d(channels, hidden_channels, 1), nn.GELU(),
+                                          nn.Conv2d(hidden_channels, upscale ** 2, 3, padding=1))
+        else:
+            self.location = nn.Conv2d(channels, upscale ** 2, 1)
         self.absence = nn.Linear(channels, 1)
 
     def forward(self, features):
