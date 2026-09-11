@@ -34,6 +34,8 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 随后补读[MOSS](../literature/2026-09-11-higher-order-motion.md)与[Midway](../literature/2026-09-11-predictive-motion-latents.md)：多阶STSS和dense predictive motion learning均已有直接先例。前者融合后不再显式输出候选offset，后者的10个全局latent依赖两帧；两者尚未建立高速球中心定位证据。这里也纠正两种反向过推：没有显式地址轴不等于所有地址信息消失；读取source/target双帧不自动违背因果性，须先指定预测时刻。未据此加入新模型或训练任务，当前正式时序对照保持原协议。
 
+[V-JEPA 2.1](../literature/2026-09-11-dense-video-pretraining.md)与[What Moves?](../literature/2026-09-11-region-motion-reference.md)的全文及附录又补充了表示适配边界：前者的all-token目标是同clip预测，g/G的主dense结果不能自动套到监督设置不同的B/L蒸馏模型；后者的region来自外部mask，TAPNext提供伪轨迹监督，保留全景上下文尚不等于显式相机/物体运动分解。实际输入的resize与时间锚点也须按发布代码说明，不能只看架构名称。这些证据限制后续主张，没有改变正在运行的球实验。
+
 ## 当前控制实验
 
 下一项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。

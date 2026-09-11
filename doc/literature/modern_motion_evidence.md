@@ -6,7 +6,7 @@
 
 核心结论：蓝图提出的“高分辨率局部证据 + 有限预算的大位移对应”依然是合理问题，但绝不能以“没有人做局部 motion / 高分辨率 match / motion latent / 多阶关系”为创新点。能争取的贡献必须落在：**对极小、稀疏、快速、易混淆目标，如何在已标注中心监督下同时测量并改善候选覆盖、正确对应排序、当前帧定位，而非仅改善视频语义任务**。
 
-**2026-09-11局部补读：**本次只深化MOSS与Midway的全文机制、时间语义和评价边界，并修正末尾空间探针的过强推论；其余条目的检索日期和阅读限制仍按原记录。详见[多阶关系](2026-09-11-higher-order-motion.md)与[预测式运动潜变量](2026-09-11-predictive-motion-latents.md)，不表示已复现这两种方法。
+**2026-09-11局部补读：**本次深化MOSS、Midway、V-JEPA 2.1与What Moves?的全文机制、时间语义和评价边界，并修正末尾空间探针的过强推论；其余条目的检索日期和阅读限制仍按原记录。详见[多阶关系](2026-09-11-higher-order-motion.md)、[预测式运动潜变量](2026-09-11-predictive-motion-latents.md)、[密集视频预训练](2026-09-11-dense-video-pretraining.md)与[区域运动和全景参考](2026-09-11-region-motion-reference.md)，不表示已复现这些方法。
 
 ## 事实核验表
 
@@ -15,8 +15,8 @@
 | [WAFT](https://arxiv.org/html/2506.21526v3) | **ICLR 2026**；arXiv v3 2026-02-06 | 将 RAFT 类显式 cost volume 换为迭代的高分辨率 feature warping；论文明确说 warp 本身不显式比较多候选，长程关系依赖 Transformer update。 | 是“不要假定高分辨率相关体必需”的最强反证；可作为教师审计或强 flow 参照。 | 其目标是稠密 flow，不是 2--5 px、常模糊小球的中心 correspondence。完整 WAFT 是 input encoder + DPT update + 多轮迭代，不能拿“无 cost volume”包装成轻量模块或宣称简单替换就解决大位移。 |
 | [Midway Network](https://proceedings.iclr.cc/paper_files/paper/2026/file/8b301f565225e18c02af54308789dae4-Paper-Conference.pdf) | **ICLR 2026**；2026-09-11补读全文及固定作者源码 | source/target两帧生成10个全局latent token，条件化多层dense teacher-feature prediction；student与dynamics联合训练，teacher由EMA更新。 | 是dense predictive video-SSL的直接先例；分割与有监督微调flow的结果使它值得作为表示学习近邻。 | latent没有显式候选地址；全图token loss和flow EPE均不证明小球可读性。pair输入的因果性取决于输出锚在哪一帧，不能把已看到target的估计称为未来预测。详见[补读](2026-09-11-predictive-motion-latents.md)。 |
 | [MoAlign](https://arxiv.org/html/2510.19022) | **ICLR 2026**（OpenReview 页面被反爬；以论文与会议状态二次核验后引用） | video-diffusion latent 中对齐 motion-centric subspace；蓝图提到的 RAFT 监督属于模型产生的流目标。 | 可作为“appearance/motion 子空间解耦并非新意”的直接近邻；值得对照 probe：投影后是否提高球点真实跨帧匹配。 | RAFT 伪流不等于球中心位移真值，且扩散 latent 的空间分辨率、监督和生成目标与检测不同；不能把“子空间”本身写成贡献。 |
-| [V-JEPA 2.1](https://arxiv.org/html/2603.14482v3) | **预印本 v3，2026-06-11**；官方 Meta 仓库在文中链接 | all-token dense predictive loss、多个中间层自监督、图像/视频 tokenizers；作者自己显示原 V-JEPA 2 局部特征难线性读出，而新 recipe 改善 dense tasks。 | 是支持“先作层/空间 probe，再决定是否要 motion module”的高价值证据；可作为一次特征探针或教师候选。 | 默认主模型很大（文中 ViT-g/G 1B/2B，另有 B/L 蒸馏版）；dense segmentation/VOS 和小球中心定位不同。不能从 PCA 或 VOS 分数推出几像素球仍有足够证据。 |
-| [What Moves?](https://arxiv.org/html/2609.04383v1) | **预印本 v1，2026-09-03**；作者标注 ECCV 2026，尚需正式 proceedings 最终核验 | 对用户给定 spatial mask 的 region 条件 motion encoder，同时保留全场景上下文，目标是 compositional scene control / localized action。 | 是“运动需相对于相机和场景参考定义；裁剪可能丢上下文”的精确近邻。可启发候选球区域与全局参考共同编码。 | 输入假设已有 region mask；这绕开了球发现、候选漏检和从中心点训练 region query 的困难。不能将其结果外推为无提示、自动、逐帧定位。 |
+| [V-JEPA 2.1](https://arxiv.org/html/2603.14482v3) | **预印本 v3，2026-06-11**；2026-09-11补读全文及附录 | 同clip的masked与visible token均受EMA特征目标约束，四层深监督及其他recipe共同改善dense tasks；不是下一帧预测。 | 冻结线性depth/seg读出、GT初始mask的VOS、端到端STA分别提供不同强度的定位邻证。 | g/G主dense结果不自动适用于B/L蒸馏模型；B/L仅末层监督。token时空地址不是点对应，未测tiny-ball；双向attention的因果性须按输出时刻判断。详见[补读](2026-09-11-dense-video-pretraining.md)。 |
+| [What Moves?](https://arxiv.org/html/2609.04383v1) | **ECCV 2026官方会议项目已列**；arXiv v1 2026-09-03，Springer定稿/页码未取得；2026-09-11补读全文及固定源码 | 外部region mask形成content query，与完整视频共同生成motion latent；TAPNext伪轨迹用于训练decoder。发布面为encoder。 | full-scene context与region query在actor action/生成控制任务有实际消融；是避免裁剪丢上下文的直接近邻。 | 不自动发现region，也未显式估计或分离camera motion。mask不必人工新标，但候选来源误差须另测；latent与初始化轨迹都不是自动球中心结果。详见[补读](2026-09-11-region-motion-reference.md)。 |
 | [MotionEnhancer](https://arxiv.org/abs/2606.06853) | **CVPR 2026**（官方 CVF HTML 在本次抓取报错，arXiv 是可访问原稿） | 用 video-diffusion 的 motion-sensitive attention 作为 VLM motion 增强知识。 | 可作为外部 motion teacher / attention 蒸馏需要审计的反例。 | attention 不是 pixel correspondence、flow 或中心位移监督；VLM motion QA 的提升不能证明定位，且扩散教师的目标/误差会偏背景。 |
 | [ReMoRa](https://openaccess.thecvf.com/content/CVPR2026/html/Yashima_ReMoRa_Multimodal_Large_Language_Model_based_on_Refined_Motion_Representation_CVPR_2026_paper.html) | **CVPR 2026**, pp. 31845--31855；同时有 [arXiv v2](https://arxiv.org/html/2602.16412v2) | 在压缩视频中把稀疏 RGB 用于 appearance、block motion vector 经精炼后用作廉价 temporal proxy，追求长视频线性规模。 | “不同帧率 appearance/motion 分工”可作为二期算力对照。 | block motion 本身粗且有噪；作者任务是 long-video MLLM。它不提供小球局部对应精度或在线、因果保证，不能作为球运动独立证据。 |
 | [COMET](https://arxiv.org/html/2608.21030v1) | **预印本 v1，2026-08-21**；“ACM MM 2026 接收”需 proceedings 核验 | Taylor 式方向敏感差分 + appearance/motion 双分支 + 正反视频对比优化，面向 temporal reasoning。 | 一条低成本的**必须竞争的简单基线**：差分与方向/顺序监督应先跑，防止复杂 correspondence 模块只赢容量。 | 差分说明哪里变，不能决定跨位置“是哪一个球”；正反序 reasoning 也不等于像素级 displacement 正确。不可把 Taylor 输入当物理速度或加速度。 |
@@ -62,9 +62,9 @@ What Moves? 明确把局部 motion 定义为相对全局 reference（含相机/s
 检索式覆盖 `motion representation / localized motion / dense video SSL / motion latent / tiny object optical flow / large displacement small object`，在 arXiv 与官方会议入口进行；它是高风险近邻扫描，**不是完整 systematic review**。本轮没有发现可替代“球点大位移 correspondence”核心空白的、已确认会议版 2025--2026 方法；但有两条应补入蓝图的风险线：
 
 * V-JEPA 2.1 已将“dense video pretraining + intermediate supervision + locally readable feature”做成明确主题，因而不能泛称“video pretraining 忽略 dense local motion”。可研究的是该表征在 tiny-ball 尺度的实际失效及低成本修复。
-* What Moves? 已把“region-conditioned local motion with global context”做成明确主题，因而不能泛称“全局/局部 motion disentanglement”。你有可能拥有的是 **point-supervised、无 mask、长相对位移且计算受限的实例化**；是否成立由 coverage/rank/accuracy 三段证据决定。
+* What Moves? 已把“region-conditioned local motion with global context”做成明确主题，不能泛称全景上下文条件的区域运动无人研究。2026-09-11补读同时收紧这个引用：该文未显式完成相机/物体运动分解，不能拿它当此更强命题的直接证明。**point-supervised、推理无需GT mask、长相对位移且计算受限的实例化**仍是待检验问题；自动发现、对应与定位是否有效，要有各自实证。
 
-未确认项必须保持未确认：MoAlign 的正式可引用 proceedings/代码细节、What Moves? 的 ECCV 最终刊载、COMET 的 ACM MM 最终刊载、GMoT/Motion-as-Prompt/MOSS 的接收状态与独立复现。正式刊载未核实时，按 arXiv 的实际年份与版本引用，并注明预印本状态；不能统一写成 2026，例如 MoAlign 的初稿是 2025 年。
+未确认项必须保持未确认：MoAlign的正式可引用proceedings/代码细节、What Moves?的Springer定稿与页码、COMET的ACM MM最终刊载、GMoT/Motion-as-Prompt/MOSS的接收状态与独立复现。What Moves?已见ECCV官方项目，不能再写成只有作者自称接收，但这仍不等于读取Springer定稿。正式刊载未核实时，按arXiv的实际年份与版本引用并说明会议状态；不能统一写成2026，例如MoAlign的初稿是2025年。
 
 ## 特征上采样：必须新增的空间边界审查
 

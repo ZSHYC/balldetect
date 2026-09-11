@@ -60,6 +60,8 @@
 | [目标擦除与运动可靠性](literature/2026-09-11-counterfactual-motion.md) | CMRTrack的GT历史框擦除、受监督帧差与融合gate如何限制反事实和可靠对应的主张 |
 | [多阶关系与候选地址](literature/2026-09-11-higher-order-motion.md) | MOSS的STSS递归、关系编码和任务证据怎样限制高阶motion与点对应的解释 |
 | [预测式运动潜变量](literature/2026-09-11-predictive-motion-latents.md) | Midway的双帧latent、dense teacher监督、因果锚点与flow评价有哪些可迁移边界 |
+| [密集视频预训练与空间读出](literature/2026-09-11-dense-video-pretraining.md) | V-JEPA 2.1的all-token目标、主模型与蒸馏、线性读出和初始化传播能支持什么 |
+| [区域运动与全景参考](literature/2026-09-11-region-motion-reference.md) | What Moves?的外部mask、TAPNext伪轨迹、实际时空输入与相机解释有哪些限制 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
