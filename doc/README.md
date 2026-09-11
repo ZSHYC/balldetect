@@ -88,7 +88,7 @@
 - [位置分布集中度诊断](experiments/2026-09-11-readout-concentration.md)：固定坐标下的局部质量、背景响应及分数排序为何只能提供有限解释。
 - [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
 - [固定模型的当前帧细节读出](experiments/2026-09-11-frozen-detail-readout.md)：[固定协议](protocols/tennis-frozen-detail-readout-v1.md)的三seed六次训练全部完成；native平均PCK@8稍高、F1@16低于pooled，未通过联合复核条件，结束该配方。
-- [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)下，仅用元数据区分较早历史的位置越界与证据不可用。
+- [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)完成；s=2已有跨片段范围压力，但近帧本来可用，尚不足以启动远搜索模型。
 
 ## 阶段进展
 
