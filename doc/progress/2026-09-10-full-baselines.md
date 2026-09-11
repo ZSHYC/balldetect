@@ -36,6 +36,8 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 [V-JEPA 2.1](../literature/2026-09-11-dense-video-pretraining.md)与[What Moves?](../literature/2026-09-11-region-motion-reference.md)的全文及附录又补充了表示适配边界：前者的all-token目标是同clip预测，g/G的主dense结果不能自动套到监督设置不同的B/L蒸馏模型；后者的region来自外部mask，TAPNext提供伪轨迹监督，保留全景上下文尚不等于显式相机/物体运动分解。实际输入的resize与时间锚点也须按发布代码说明，不能只看架构名称。这些证据限制后续主张，没有改变正在运行的球实验。
 
+继续补读[MoAlign](../literature/2026-09-11-motion-subspace.md)与[COMET](../literature/2026-09-11-directional-differences.md)：前者已有RAFT伪流约束的64维子空间和时空关系对齐，但49→24→23的时间目标映射未披露；后者的完整五阶差分至少需要六帧，双ViT/MLLM也不是三帧球定位的廉价基线。下一阶段应选择兼容的时间变化原语，复用已存在的线性差分等价性结论，避免重复训练一个仅改变线性参数化的“新motion”。没有新增模型、数据解码或GPU任务。
+
 ## 当前控制实验
 
 下一项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。

@@ -62,6 +62,8 @@
 | [预测式运动潜变量](literature/2026-09-11-predictive-motion-latents.md) | Midway的双帧latent、dense teacher监督、因果锚点与flow评价有哪些可迁移边界 |
 | [密集视频预训练与空间读出](literature/2026-09-11-dense-video-pretraining.md) | V-JEPA 2.1的all-token目标、主模型与蒸馏、线性读出和初始化传播能支持什么 |
 | [区域运动与全景参考](literature/2026-09-11-region-motion-reference.md) | What Moves?的外部mask、TAPNext伪轨迹、实际时空输入与相机解释有哪些限制 |
+| [运动子空间与伪流监督](literature/2026-09-11-motion-subspace.md) | MoAlign的瓶颈、RAFT目标和关系对齐为何不等于可辨识运动或球对应 |
+| [方向差分与语义对照](literature/2026-09-11-directional-differences.md) | COMET的五阶像素变化、时间attention及倒序奖励能否作为当前三帧定位对照 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
