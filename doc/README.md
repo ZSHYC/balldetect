@@ -58,6 +58,8 @@
 | [位置分布与定位质量](literature/2026-09-11-localization-quality.md) | GFLv2、D-FINE与热图不确定性先例如何限制集中度、置信度与概率校准的主张 |
 | [固定像素的时间profile](literature/2026-09-11-temporal-profiles.md) | DeepPro全文与源码为何支持便宜时间变化作为竞争解释，其40帧非因果输出有哪些边界 |
 | [目标擦除与运动可靠性](literature/2026-09-11-counterfactual-motion.md) | CMRTrack的GT历史框擦除、受监督帧差与融合gate如何限制反事实和可靠对应的主张 |
+| [多阶关系与候选地址](literature/2026-09-11-higher-order-motion.md) | MOSS的STSS递归、关系编码和任务证据怎样限制高阶motion与点对应的解释 |
+| [预测式运动潜变量](literature/2026-09-11-predictive-motion-latents.md) | Midway的双帧latent、dense teacher监督、因果锚点与flow评价有哪些可迁移边界 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

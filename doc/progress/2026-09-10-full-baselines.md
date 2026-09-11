@@ -32,6 +32,8 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 2026-09-11补读[DeepPro全文与源码](../literature/2026-09-11-temporal-profiles.md)及[CMRTrack全文](../literature/2026-09-11-counterfactual-motion.md)。前者修正“缺少同对象对应便不能利用高速运动”的跳步：固定像素上的短瞬态也能成为检测证据，但作者40帧全输出允许未来，尚未验证三帧因果球定位。后者明确已有GT历史框擦除、受监督绝对帧差和可靠性融合，却没有给出可校准的对应概率；未知ROI对齐也限制了大位移解释。两者都不支持立即加模块，亦不能预先回答正在运行的输入内容控制。
 
+随后补读[MOSS](../literature/2026-09-11-higher-order-motion.md)与[Midway](../literature/2026-09-11-predictive-motion-latents.md)：多阶STSS和dense predictive motion learning均已有直接先例。前者融合后不再显式输出候选offset，后者的10个全局latent依赖两帧；两者尚未建立高速球中心定位证据。这里也纠正两种反向过推：没有显式地址轴不等于所有地址信息消失；读取source/target双帧不自动违背因果性，须先指定预测时刻。未据此加入新模型或训练任务，当前正式时序对照保持原协议。
+
 ## 当前控制实验
 
 下一项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。
