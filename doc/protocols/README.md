@@ -49,3 +49,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Tennis全量因果定位 v1](tennis-full-causal-v1.md)：全量合法末帧监督与检测选优，建立共同任务的HRNet竞争系统。
 - [Tennis全量DINO时序控制 v1](tennis-full-temporal-control-v1.md)：同一现代系统重新训练重复当前帧控制，区分真实历史视觉增量。
 - [Tennis可见中心端点辅助 v1](tennis-endpoint-auxiliary-v1.md)：同候选、同标签下比较实例关系与共享外观query的训练期监督。
+- [Tennis固定细节读出 v1](tennis-frozen-detail-readout-v1.md)：冻结已训练模型，仅比较当前stage0原始与低通细节的残差读出。

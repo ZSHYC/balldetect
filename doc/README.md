@@ -87,6 +87,7 @@
 - [全量DINO时序控制结果](experiments/2026-09-11-full-temporal-control.md)：真实历史相对重复当前帧重训的整体增量、困难组救回与无球误报。
 - [位置分布集中度诊断](experiments/2026-09-11-readout-concentration.md)：固定坐标下的局部质量、背景响应及分数排序为何只能提供有限解释。
 - [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
+- [固定模型的当前帧细节读出](experiments/2026-09-11-frozen-detail-readout.md)：依据[固定协议](protocols/tennis-frozen-detail-readout-v1.md)，比较已有stage0的原始与低通空间信息能否纠正自动定位。
 
 ## 阶段进展
 
