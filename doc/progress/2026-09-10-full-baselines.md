@@ -1,6 +1,6 @@
 # 从适配诊断转入全量竞争系统与时序控制
 
-日期：2026-09-10；进展更新：2026-09-11。状态：前缀适配、HRNet与DINO全量seed0、系统配对分析及固定样例检查已完成；重复当前帧控制已完成CPU与GPU smoke检查，正式30epoch训练中。
+日期：2026-09-10；进展更新：2026-09-11。状态：前缀适配、HRNet与DINO全量seed0、系统配对分析、重复当前帧30epoch控制及位置集中度诊断均已完成。
 
 ## 本阶段改变了什么判断
 
@@ -30,30 +30,32 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 [拖影轴近邻](../literature/2026-09-10-blur-guided-correspondence.md)、[DQAligner源码](../literature/2026-09-10-dqaligner-query.md)及[tiny-motion专题](../literature/tiny_motion_evidence.md)中的MOCID、MISTNet补读均已结束。直接先例限制了blur-aware匹配、全局query、频域调制和局部异位置attention的新颖性表述；这些阅读没有触发新模型训练。固定样例与配对分析保留了拖影、来源模糊、器械邻域和阈值拒绝等具体失败，但不把定性案例写成总体频率或机制结论。
 
-2026-09-11补读[DeepPro全文与源码](../literature/2026-09-11-temporal-profiles.md)及[CMRTrack全文](../literature/2026-09-11-counterfactual-motion.md)。前者修正“缺少同对象对应便不能利用高速运动”的跳步：固定像素上的短瞬态也能成为检测证据，但作者40帧全输出允许未来，尚未验证三帧因果球定位。后者明确已有GT历史框擦除、受监督绝对帧差和可靠性融合，却没有给出可校准的对应概率；未知ROI对齐也限制了大位移解释。两者都不支持立即加模块，亦不能预先回答正在运行的输入内容控制。
+2026-09-11补读[DeepPro全文与源码](../literature/2026-09-11-temporal-profiles.md)及[CMRTrack全文](../literature/2026-09-11-counterfactual-motion.md)。前者修正“缺少同对象对应便不能利用高速运动”的跳步：固定像素上的短瞬态也能成为检测证据，但作者40帧全输出允许未来，尚未验证三帧因果球定位。后者明确已有GT历史框擦除、受监督绝对帧差和可靠性融合，却没有给出可校准的对应概率；未知ROI对齐也限制了大位移解释。两者都不支持立即加模块，亦不能预先回答当时运行的输入内容控制。
 
 随后补读[MOSS](../literature/2026-09-11-higher-order-motion.md)与[Midway](../literature/2026-09-11-predictive-motion-latents.md)：多阶STSS和dense predictive motion learning均已有直接先例。前者融合后不再显式输出候选offset，后者的10个全局latent依赖两帧；两者尚未建立高速球中心定位证据。这里也纠正两种反向过推：没有显式地址轴不等于所有地址信息消失；读取source/target双帧不自动违背因果性，须先指定预测时刻。未据此加入新模型或训练任务，当前正式时序对照保持原协议。
 
-[V-JEPA 2.1](../literature/2026-09-11-dense-video-pretraining.md)与[What Moves?](../literature/2026-09-11-region-motion-reference.md)的全文及附录又补充了表示适配边界：前者的all-token目标是同clip预测，g/G的主dense结果不能自动套到监督设置不同的B/L蒸馏模型；后者的region来自外部mask，TAPNext提供伪轨迹监督，保留全景上下文尚不等于显式相机/物体运动分解。实际输入的resize与时间锚点也须按发布代码说明，不能只看架构名称。这些证据限制后续主张，没有改变正在运行的球实验。
+[V-JEPA 2.1](../literature/2026-09-11-dense-video-pretraining.md)与[What Moves?](../literature/2026-09-11-region-motion-reference.md)的全文及附录又补充了表示适配边界：前者的all-token目标是同clip预测，g/G的主dense结果不能自动套到监督设置不同的B/L蒸馏模型；后者的region来自外部mask，TAPNext提供伪轨迹监督，保留全景上下文尚不等于显式相机/物体运动分解。实际输入的resize与时间锚点也须按发布代码说明，不能只看架构名称。这些证据限制后续主张，没有改变当时运行的球实验。
 
 继续补读[MoAlign](../literature/2026-09-11-motion-subspace.md)与[COMET](../literature/2026-09-11-directional-differences.md)：前者已有RAFT伪流约束的64维子空间和时空关系对齐，但49→24→23的时间目标映射未披露；后者的完整五阶差分至少需要六帧，双ViT/MLLM也不是三帧球定位的廉价基线。下一阶段应选择兼容的时间变化原语，复用已存在的线性差分等价性结论，避免重复训练一个仅改变线性参数化的“新motion”。没有新增模型、数据解码或GPU任务。
 
 [MotionEnhancer](../literature/2026-09-11-diffusion-motion-teacher.md)与[ReMoRa](../literature/2026-09-11-compressed-motion.md)的补读进一步区分了教师目标与推理证据。前者离线蒸馏QA问题条件的文本—时空注意力，具有位置列但没有球点query对应；后者先重编码视频，再用CoTracker3目标精炼压缩MV。Tennis原始发布只有图片，不能凭空取得原始码流MV；B帧参考和16fps重采样也须另定义时间对齐。两篇的语义问答收益不替代中心误差，离线教师及输入准备成本也不能省略。本轮只修正文献主张，未增加教师、重编码或新训练任务。
 
-最后补读[GMoT](../literature/2026-09-11-gated-motion-tokens.md)与[Motion-as-Prompt](../literature/2026-09-11-trajectory-prompts.md)：前者实际为空间soft pooling，不能当硬候选筛除；完整分类收益还包含CoT与多阶段训练。后者已使用全局相似运动补偿、CoTracker3轨迹和全视频选帧，但没有球query覆盖或中心误差的证据。由此把候选coverage/rank诊断限定到真正建立对应候选的路线；有效运动利用也可能来自不输出候选轴的时序汇聚。所有新增文献只约束解释，没有替代正在运行的球定位实证或触发新模块。
+最后补读[GMoT](../literature/2026-09-11-gated-motion-tokens.md)与[Motion-as-Prompt](../literature/2026-09-11-trajectory-prompts.md)：前者实际为空间soft pooling，不能当硬候选筛除；完整分类收益还包含CoT与多阶段训练。后者已使用全局相似运动补偿、CoTracker3轨迹和全视频选帧，但没有球query覆盖或中心误差的证据。由此把候选coverage/rank诊断限定到真正建立对应候选的路线；有效运动利用也可能来自不输出候选轴的时序汇聚。所有新增文献只约束解释，没有替代当时运行的球定位实证或触发新模块。
 
-## 当前控制实验
+## 已完成的时序输入控制
 
-下一项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。
+本项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。
 
 重复当前帧已保留显式`[t,t,t]`训练。单次prefix再复制特征的CUDA梯度未满足锁定容差；关闭TF32的诊断使差异缩小，但未全部通过，因此删除该训练优化，保持历史组原数值设置。最终CPU输入检查3项与GPU smoke均通过，两个smoke的70个初始参数/buffer张量完全一致，预测身份及指标也已核对。正式30epoch已从4781357启动，配置与epoch0记录已核对；失败诊断与实际命令见[控制实验记录](../experiments/2026-09-11-full-temporal-control.md)。
 
 同一记录又补充了参数化边界：重复特征使首个位置投影及absence投影的三个权重块可求和，合并头为7,525参数；CPU合成特征检查的最大logit差4.47e−7、跨槽梯度差0。AdamW对权重和的更新也不等于直接构建单帧头后沿用同一学习率。因此该实验测固定参数化和学习规则下的可实现历史增量，不是独立单帧模型的容量/最优性证明。未修改当前训练或追加合并头实验。
 
-若真实历史未提高检测F1@16，或者降低PCK@8，就暂停在当前DINO+SpatialProbe读出上增加cost、门控或远搜索，先解释读出与监督限制。即使两项均通过，也只说明真实时序输入有增量，不构成新的运动表征贡献。
+正式30epoch现已完成并通过选优、目标身份/标签及指标复算。重复当前帧选epoch1，真实历史原选epoch7；历史使PCK@8由72.28%升至81.44%，F1@16由78.75%升至86.26%，通过预定整体判定。@16配对救回151、破坏35，九个clip均有正净增；@8八个clip为正，Clip5净减2。固定VC2且历史含VC1的64例@16净增10，VC0对应25例误报由25降至22。详见[完整控制结果](../experiments/2026-09-11-full-temporal-control.md)。
 
-另已完成[位置分布集中度诊断](../experiments/2026-09-11-readout-concentration.md)的实现、CPU数学测试与[最近邻审查](../literature/2026-09-11-localization-quality.md)，等待GPU空闲后对已选DINO epoch7运行一次验证forward。它固定坐标、阈值与检查点，区分分散响应和集中但错误的背景峰；真实统计尚未得到。该诊断不改变时序对照，也不把既有分布质量读出包装成motion创新。
+该结果不触发“历史无增量则暂停”的条件，但不自动批准新cost或远搜索。它证明当前固定系统能利用历史的额外信息，尚未隔离对应、短时变化、额外外观线索与优化路径；重复组也不等于所有独立单帧模型的最优表现。22/25的历史无球误报仍限制当前存在判断，不能只强调困难目标救回。
 
-训练期间完成[全量窗口的几何与空间支撑诊断](../experiments/2026-09-11-search-support.md)：VC1且历史有VC1的验证目标中，旧两档搜索的并集覆盖1585/1603；DINO在该群体的130个@16位置错误有124个出现在覆盖组。现有同格融合的局部路径也具有较大名义支撑，不能把同格等同于同像素。该结果进一步压低“先扩大半径”的优先级；所有统计复用metadata和保存预测，没有额外GPU工作，也没有修改正在运行的主要对照。
+[位置分布集中度诊断](../experiments/2026-09-11-readout-concentration.md)也已完成：DINO epoch7的一次验证forward完全复现1,863行坐标与q，耗时7.32秒，无额外解码。正确输出的m16中位数约0.999994，错位输出为0.7106，VC0误报为0.8647；固定计分板格只有0.4591，反复成为argmax不等于概率高度集中。q×m16的总体AUROC从0.94991升至0.96120，但九个clip五升四降。这支持部分分散响应解释，不能作为通用可靠度、校准、F1改进或motion创新；[近邻审查](../literature/2026-09-11-localization-quality.md)中的已有分布质量读出先例仍适用。
+
+训练期间完成[全量窗口的几何与空间支撑诊断](../experiments/2026-09-11-search-support.md)：VC1且历史有VC1的验证目标中，旧两档搜索的并集覆盖1585/1603；DINO在该群体的130个@16位置错误有124个出现在覆盖组。现有同格融合的局部路径也具有较大名义支撑，不能把同格等同于同像素。该结果进一步压低“先扩大半径”的优先级；所有统计复用metadata和保存预测，没有额外GPU工作，也没有修改当时运行的主要对照。
 
 [完整微调后的四子格oracle](../experiments/2026-09-11-full-subcell-readout.md)随后已完成：固定DINO实际预测块，仅额外恢复53个@8目标，PCK由81.44%到84.48%，另271例块内不可达；仍低于HRNet实际89.46%。这将“优先检查读出”进一步限定为区域选择与细位置的共同问题，单纯改善已选块内的子格不足以解释主要差距。小型测试与完整预测复现通过，分析仅复用保存预测，未执行模型forward或训练。

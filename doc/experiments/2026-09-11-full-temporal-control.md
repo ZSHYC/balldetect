@@ -1,6 +1,6 @@
 # 全量微调后，真实历史是否仍有定位增量？
 
-日期：2026-09-11。状态：实现及GPU smoke完成，正式30epoch训练中。
+日期：2026-09-11。状态：正式30epoch、保存结果核对与固定配对分析均已完成。
 协议：[Tennis全量时序输入对照v1](../protocols/tennis-full-temporal-control-v1.md)。依据：[HRNet/DINO完整比较](2026-09-11-full-hrnet-dino-comparison.md)。
 
 ## 要区分的解释
@@ -71,12 +71,53 @@ python scripts/train_tennis_heatmap.py --model dino --temporal-input repeat_curr
 
 输出使用新目录；原历史组位于outputs/full_heatmap/dino_prefix_seed0。复用同一RGB缓存，无新增解码。重复组实际只需14,030个不同当前帧；源缓存仍包含14,160帧，保留真实历史及已有实验用途。已核对正式config中的代码版本、输入槽位、目标数、参数量及训练设置；日志位于outputs/full_heatmap/dino_repeat_current.log。
 
-正式结果尚未得到。完整结束后按既定F1@16、其次F1@8选优，复用保存预测进行位置、存在、clip及历史条件配对。真实历史若未提高F1@16或降低PCK@8，暂停当前读出上的cost、门控或远搜索；另报告VC2且历史含VC1的64例是否净救回，以及VC0对应25例的误报。
+正式运行已正常退出，按既定F1@16、其次F1@8、同分取先出现者，选中重复组epoch1；真实历史组此前选中epoch7。31条epoch0–30记录、有限训练loss、检查点epoch、训练/验证目标身份与标签，以及保存指标复算全部通过。保留全部30epoch结果，没有因为中途验证下降改变训练、选择规则或精度设置。
 
-以下汇总已准备，尚未执行；基准为重复当前帧、挑战者为真实历史，因此正的净救回表示历史增量。现有visibility脚本仅增加实际比较对象及输出文件参数，默认调用仍复现原HRNet/DINO汇总，不重新计算模型特征。
+以下汇总已执行成功；基准为重复当前帧、挑战者为真实历史，因此正的净救回表示历史增量。现有visibility脚本仅增加实际比较对象及输出文件参数，默认调用仍复现原HRNet/DINO汇总，不重新计算模型特征。
 
 ```bash
 python outputs/full_heatmap/summarize_saved_result.py outputs/full_heatmap/dino_repeat_current_seed0
 python scripts/compare_predictions.py --baseline outputs/full_heatmap/dino_repeat_current_seed0/val_predictions.csv --challenger outputs/full_heatmap/dino_prefix_seed0/val_predictions.csv --output outputs/full_heatmap/dino_repeat_vs_history_seed0.json
 python outputs/full_heatmap/summarize_visibility_predictions.py --runs dino_repeat_current_seed0 dino_prefix_seed0 --output dino_repeat_vs_history_visibility.json
 ```
+
+### 整体结果：真实历史有可实现增量
+
+| 验证指标 | 重复当前帧，epoch1 | 真实历史，epoch7 | 历史减重复 |
+|---|---:|---:|---:|
+| PCK@8 | 72.2795% | 81.4433% | +9.1638 pp |
+| PCK@16 | 81.3860% | 88.0298% | +6.6438 pp |
+| PCK@32 | 82.8751% | 89.8053% | +6.9301 pp |
+| 检测F1@16 | 78.7476% | 86.2557% | +7.5081 pp |
+| 检测@16 TP／FP／FN | 1421／442／325 | 1525／265／221 | +104／−177／−104 |
+| 存在判断TP／FP／FN | 1746／117／0 | 1693／97／53 | −53／−20／+53 |
+
+原图8px内的配对为救回231、破坏71，净增160；16px内为救回151、破坏35，净增116；32px内为救回151、破坏30，净增121。位置指标不含拒绝阈值，故@16位置净增116和检测TP净增104并不矛盾：历史组有12个位置正确但被拒绝的目标。重复组在所有1,863个验证目标上均输出，117个VC0全部误报；历史组误报仍多，不能把整体提升说成absence已经解决。
+
+| clip | 有位置目标数 | @8救回／破坏 | @16救回／破坏 |
+|---|---:|---:|---:|
+| 1 | 124 | 26／4 | 16／3 |
+| 2 | 200 | 22／5 | 10／6 |
+| 3 | 44 | 5／1 | 4／0 |
+| 4 | 870 | 98／31 | 48／7 |
+| 5 | 186 | 11／13 | 11／9 |
+| 6 | 83 | 10／4 | 5／2 |
+| 7 | 124 | 30／8 | 29／4 |
+| 8 | 33 | 5／1 | 6／0 |
+| 9 | 82 | 24／4 | 22／4 |
+
+@16在九个clip均有正净增；@8在八个clip为正，Clip5净减2。整体不是只由Clip4贡献，但这些clip仍来自同一开发比赛，不能当九场独立比赛证明泛化。
+
+### 固定困难与无球历史分组
+
+当前VC2且历史含VC1的64例，PCK@16从24/64（37.50%）提高到34/64（53.125%），救回12、破坏2，净增10；PCK@8从21/64提高到29/64，救回11、破坏3，净增8。@16的clip贡献为：Clip1 +1、Clip2 0、Clip3 0、Clip4 +5、Clip5 +1、Clip6 0、Clip7 +2、Clip9 +1；该组在Clip8没有目标。因而本次困难组的正增量并非只发生在一个clip，但仍有30/64未达到@16，其中28例两组都错。
+
+当前VC0且历史含VC1的25例，误报从25降至22；历史不含VC1的另92例，误报从92降至75。历史输入未增加这两个固定组的误报数量，但带可见历史的无球目标仍有22/25误报，不支持“可靠地区分历史证据与当前存在”。这些分组中的历史标签仅供事后分析，未输入网络。
+
+### 耗时与解释边界
+
+重复组总耗时9,909.045秒，峰值已分配5,269.84MiB；历史组为10,287.650秒、5,265.46MiB。两者均显式三槽位训练，数据准备复用同一缓存；这里记录各次真实运行，不能把一次耗时差解释为稳定部署加速。重复组所选epoch1的训练PCK@8/@16为86.05%/93.80%，历史epoch7为98.86%/99.69%；选优时刻和优化轨迹不同，重复输入的参数化边界仍按前文保留，不宣称所有独立单帧模型已经充分优化。
+
+**锁定判定已通过**：真实历史提高F1@16且没有降低PCK@8，固定困难组也有净救回。因此，不触发协议中的“因时序输入无增量而暂停”条件。但这不自动批准更大搜索半径或新cost；此前几何覆盖、局部cost负结果和细定位限制仍成立。可成立的结论仅是：这个固定DINO系统在当前单seed、单验证比赛中有效利用了真实历史的额外信息。它尚未区分跨位置对应、短时变化、额外外观线索及优化路径，未建立新motion机制或论文贡献。
+
+完整产物为[结果与资源记录](../../outputs/full_heatmap/dino_repeat_current_seed0/results.json)、[选优及错误分解核对](../../outputs/full_heatmap/dino_repeat_current_seed0/error_summary.json)、[逐clip配对](../../outputs/full_heatmap/dino_repeat_vs_history_seed0.json)与[固定visibility条件配对](../../outputs/full_heatmap/dino_repeat_vs_history_visibility.json)。同期完成的[位置集中度诊断](2026-09-11-readout-concentration.md)独立回答读出分数问题，没有改变这里的预测或判定。
