@@ -1,8 +1,8 @@
 # 可见中心端点辅助：关系排序能否转化为自动定位
 
-日期：2026-09-11。状态：协议已锁定，CPU与真实batch检查通过；正式30epoch尚未启动。
+日期：2026-09-11。状态：relation正式30epoch完成并通过保存结果复核；appearance尚未启动；统一关系诊断入口已完成CPU验证，真实GPU读数待运行。
 
-执行依据为[端点辅助协议v1](../protocols/tennis-endpoint-auxiliary-v1.md)。比较已完成的无辅助full-history、relation与全局appearance-query辅助。主定位器、三真帧输入和推理输出保持既有定义；辅助只在训练时读已有VC1中心标签。正式结果尚未产生，不将以下smoke写成性能证据。
+执行依据为[端点辅助协议v1](../protocols/tennis-endpoint-auxiliary-v1.md)。比较无辅助full-history、relation与全局appearance-query辅助。主定位器、三真帧输入和推理输出保持既有定义；辅助只在训练时读已有VC1中心标签。下面分别保存实施smoke与正式结果，不混用两类证据。
 
 ## 为什么选这项有限干预
 
@@ -44,7 +44,7 @@ python scripts/check_tennis_endpoint_auxiliary.py \
 
 ## 正式运行与预定解释
 
-两组均用seed0、30epoch、batch8，主checkpoint只按既定F1@16/F1@8规则选择。计划命令如下，实际启动/完成后更新状态：
+两组均用seed0、30epoch、batch8，主checkpoint只按既定F1@16/F1@8规则选择。relation已从29bb383启动，配置中的训练/验证目标12,167/1,863、输入槽位、辅助系数及30epoch预算均符合协议，完整epoch0验证指标与无辅助基线完全相同，首200batch损失有限。appearance按下列固定命令随后串行运行：
 
 ```bash
 python scripts/train_tennis_heatmap.py --model dino \
@@ -59,6 +59,39 @@ python scripts/train_tennis_heatmap.py --model dino \
   --epochs 30 --batch-size 8 --seed 0
 ```
 
+relation完整stdout/stderr保存在[正式日志](../../outputs/full_heatmap/dino_relation_aux_seed0.log)，配置见[config.json](../../outputs/full_heatmap/dino_relation_aux_seed0/config.json)。初始指标一致验证了正式入口没有改变共同模型；它不预示训练后的结果。
+
 结束后复用保存预测核对选优、目标身份、PCK/F1，并按固定clip/visibility/位移组比较。三个主任务选优checkpoint另外测同域relation-query exact R@1和NLL：同样的局部候选、同样双端VC1与范围条件，按Δ及跨格组报告。只有relation同时胜过两种对照的预定关系读数和自动PCK@8/F1@16，才支持继续检验结构化融合；指标不一致时按协议保留竞争解释，不扫描更多温度、半径或系数。
 
 最终测试集未使用，没有新增依赖、人工标注或数据解码。
+
+## relation正式结果
+
+30epoch已正常退出；31条epoch记录、主/辅助损失有限、F1选优、checkpoint epoch、训练/验证目标身份及标签、保存预测的指标复算均通过。选中epoch11，不改选其它epoch。
+
+| 指标 | 无辅助history，epoch7 | relation，epoch11 |
+|---|---:|---:|
+| 验证PCK@8 | 81.4433% | 80.5842% |
+| 验证PCK@16 | 88.0298% | 86.2543% |
+| 验证F1@16 | 86.2557% | 84.3198% |
+| 检测@16 TP/FP/FN | 1525/265/221 | 1503/316/243 |
+| 存在TP/FP/FN | 1693/97/53 | 1718/101/28 |
+| 正式总时长 | 10,287.65秒 | 10,890.28秒 |
+| 正式峰值显存 | 5,265.46MiB | 5,316.09MiB |
+
+relation的PCK@8下降0.8591个百分点、F1@16下降1.9359个百分点，已经没有通过协议中“优于无辅助基线”的必要条件。训练PCK@8为99.5664%，不能用训练拟合较好替代验证任务收益；不同最优epoch也不独立证明差异来自过拟合或优化。
+
+这仍没有回答局部relation究竟是否学好。保留appearance对照，可以区分这种失败是否也出现在同标签的共享外观辅助中；不据此反复调温度或权重。下一步只补齐已计划的同域排序与配对错误，再作完整结论。
+
+## 统一关系诊断入口
+
+[probe_full_endpoint_relations.py](../../scripts/probe_full_endpoint_relations.py)对完成训练且有results.json的run读取原主任务best.pt，不读取或按关系指标另选checkpoint。三个模型统一使用当前实例query；appearance的训练向量w不参与该诊断。批内唯一帧编码及inverse恢复与现有预测路径一致，无额外解码或持久化dense特征。
+
+输出各run的endpoint_relations.csv/json，保存原帧身份、Δ、端点native格、offset类别、exact、NLL、same-cell与有效候选数；按Δ、同/跨格及clip统计，macro对两Δ等权，不按pair总数加权。脚本会核对已完成几何给出的1518=407+1111和1491=141+1350；范围外30/35的旧统计不冒充本脚本新读数。
+
+[一项合成检查](../../tests/test_probe_full_endpoint_relations.py)已通过，抓取批内pair身份恢复错误、两Δ不等数量时宏平均误加权、空分组及手推NLL不符。它只证明CPU聚合逻辑；实际GPU运行及数值另记。示例：
+
+```bash
+python scripts/probe_full_endpoint_relations.py --run outputs/full_heatmap/dino_prefix_seed0
+python scripts/probe_full_endpoint_relations.py --run outputs/full_heatmap/dino_relation_aux_seed0
+```

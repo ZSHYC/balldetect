@@ -64,4 +64,6 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 暂缓同clip远时刻“错配历史”两臂重训：它仍可能包含同一球，并同时改变时间跨度、球/相机状态及目标子集，正反结果均难以单独决定对应结构。这个取舍避免用又一轮输入分布变化冒充机制隔离；已通过的历史内容对照及其局限保留不变。
 
-下一项[可见中心端点辅助](../experiments/2026-09-11-endpoint-auxiliary.md)已锁定协议并完成合成与真实batch检查。relation与共享appearance向量使用同一GT当前ROI和历史offset标签；只在固定训练batch匹配初始辅助梯度，得appearance系数0.096873。70个初始张量与原基线完全一致，主forward差0，两臂真实更新有限；检查峰值5,862MiB。[近邻核对](../literature/2026-09-11-point-relation-supervision.md)确认一般特征对应监督已有先例，本轮只检验排序改善能否转化为自动定位，不将辅助loss本身当新算法。正式训练尚未启动。
+下一项[可见中心端点辅助](../experiments/2026-09-11-endpoint-auxiliary.md)已锁定协议并完成合成与真实batch检查。relation与共享appearance向量使用同一GT当前ROI和历史offset标签；只在固定训练batch匹配初始辅助梯度，得appearance系数0.096873。70个初始张量与原基线完全一致，主forward差0，两臂真实更新有限；检查峰值5,862MiB。[近邻核对](../literature/2026-09-11-point-relation-supervision.md)确认一般特征对应监督已有先例，本轮只检验排序改善能否转化为自动定位，不将辅助loss本身当新算法。独立代码审阅未发现训练阻断问题，relation正式30epoch已从29bb383启动，其epoch0完整验证指标与无辅助基线相同；appearance随后串行运行。
+
+relation随后完成30epoch，保存结果复核通过；选epoch11，PCK@8为80.5842%、F1@16为84.3198%，相对无辅助分别下降0.8591与1.9359个百分点，未通过预定任务收益条件。共同GT-query排序入口已完成一项CPU检查，准备对原基线和relation的主任务选优checkpoint测local exact R@1/NLL；appearance对照仍按已锁定配方执行，以补齐对额外端点监督的解释。
