@@ -38,6 +38,8 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 
 继续补读[MoAlign](../literature/2026-09-11-motion-subspace.md)与[COMET](../literature/2026-09-11-directional-differences.md)：前者已有RAFT伪流约束的64维子空间和时空关系对齐，但49→24→23的时间目标映射未披露；后者的完整五阶差分至少需要六帧，双ViT/MLLM也不是三帧球定位的廉价基线。下一阶段应选择兼容的时间变化原语，复用已存在的线性差分等价性结论，避免重复训练一个仅改变线性参数化的“新motion”。没有新增模型、数据解码或GPU任务。
 
+[MotionEnhancer](../literature/2026-09-11-diffusion-motion-teacher.md)与[ReMoRa](../literature/2026-09-11-compressed-motion.md)的补读进一步区分了教师目标与推理证据。前者离线蒸馏QA问题条件的文本—时空注意力，具有位置列但没有球点query对应；后者先重编码视频，再用CoTracker3目标精炼压缩MV。Tennis原始发布只有图片，不能凭空取得原始码流MV；B帧参考和16fps重采样也须另定义时间对齐。两篇的语义问答收益不替代中心误差，离线教师及输入准备成本也不能省略。本轮只修正文献主张，未增加教师、重编码或新训练任务。
+
 ## 当前控制实验
 
 下一项只比较同一完整DINO系统的真实历史`[t−2,t−1,t]`与重复当前帧`[t,t,t]`，条件与停止规则见[重复当前帧协议](../protocols/tennis-full-temporal-control-v1.md)。训练后只在推理时换帧会引入分布变化，不能代替重新训练。
