@@ -1,6 +1,6 @@
 # 固定现有表示后，当前帧细节能否纠正自动定位
 
-日期：2026-09-11起。状态：seed0两臂及结果复核均完成，native选epoch24、pooled选epoch17；预定读出seed1/2四次复核已从084e4bb串行启动。seed0检测优势仅净少1个错位输出，尚未证明稳定收益。
+日期：2026-09-11起。状态：三次native与前两次pooled已完成且通过核对，最后pooled seed2运行中。复核的F1均值条件已被数学下界排除，停止该固定残差配方的扩展；最后一臂仍完成以保留完整成对记录。
 
 执行[固定细节读出协议v1](../protocols/tennis-frozen-detail-readout-v1.md)。[端点辅助三臂](2026-09-11-endpoint-auxiliary.md)已经停止；本轮单独检验现有无辅助模型的当前stage0空间增量，不把它当作已证实的失败根因或新的motion贡献。
 
@@ -111,3 +111,17 @@ pooled seed1随后完成30epoch并通过同样的保存结果核对，选epoch25
 相对固定基线（也即native seed1），pooled的@8仅净多3个命中，却在@16净少3、@32净少4；[配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_pooled_seed1.json)分别为37救回/34破坏、19/22、20/24。检测@16少8个TP，同时少20个FP，F1提高0.23237个百分点；VC0误报97→91。这是位置与拒绝共同变化后的结果，不能把F1提高说成更准确的@16位置。
 
 以[pooled到native的同seed方向](../../outputs/full_heatmap/dino_frozen_detail_pooled_vs_native_seed1.json)报告，@8净变−3，clip净变依次为+1、−3、0、0、0、−1、+5、0、−5；两升三降四平。native seed1未通过原四项联合方向，与seed0结果不同。native seed2已经接续，pooled seed2随后运行；尚不计算完整三seed结论。
+
+### native seed2完成及复核门槛的确定结果
+
+native seed2完成30epoch并通过同样的选优、目标/标签与保存指标核对，选epoch27。[结果](../../outputs/full_heatmap/dino_frozen_detail_native_seed2/results.json)为PCK@8=82.3597%、PCK@16=88.4307%、PCK@32=90.6071%、F1@16=86.2690%；检测TP/FP/FN=1533/275/213，presence=1706/102/40。训练及评价1,149.5166秒、峰值354.02MiB。
+
+[相对基线配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_native_seed2.json)在@8救回42、破坏26，@16为20/13，@32为28/14；@8各clip净变为+1、−1、+1、+5、+3、−1、+3、0、+5。位置增量为正，但F1只超过基线0.01334个百分点，不能把较多@8救回当作较大的检测收益。
+
+此时最后的pooled seed2仍运行中，**实际pooled三seed均值尚未知**。不过选优包含epoch0，所以它最终F1至少为固定基线0.862556561086。已完成的三native平均F1为0.862965210155，而pooled最终平均F1的下界为：
+
+`(0.863406408094 + 0.864880273660 + 0.862556561086) / 3 = 0.863614414280`。
+
+native均值已经低于这个下界，因此预定“平均F1严格胜pooled”的必要条件不可能通过。这是选优规则与已完成结果给出的界，不是把未完成run填成epoch0后冒充实测均值。后续pooled seed2的改善只会提高该下界对应的最终值，不会使native反超。
+
+据此停止本固定残差配方的系统扩展，不追加seed、联合微调细节分支或调头/学习率挽救。最后pooled seed2仍完成原30epoch，以补齐约定的成对位置与检测证据；其实际结果和完整描述均值随后记录。否定的是本配方的预定联合收益，不能扩写为浅层信息完全无用或高分辨率路线一般无效。

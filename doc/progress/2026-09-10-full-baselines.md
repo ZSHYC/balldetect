@@ -81,3 +81,5 @@ pooled随后完成并通过核对，选epoch17，PCK@8为82.0160%、F1@16为86.3
 四次预定读出复核从084e4bb启动，顺序为native/pooled seed1，再native/pooled seed2，原backbone始终固定model seed0 epoch7。native seed1先完成并通过核对，最终选epoch0，预测与原基线相同，未复现seed0联合增量；耗时909.12秒。pooled seed1已接续，余下两次仍按锁定计划执行，不以这项中途负结果增减seed或改选优。
 
 pooled seed1随后完成并通过核对，选epoch25，PCK@8为81.6151%、F1@16为86.4880%，优于本seed的native；但相对基线@16原始定位净少3、检测TP少8，同时FP少20。其较高F1伴随更保守的输出，不能当成@16定位改善。seed1没有复现native方向，native seed2已接续；本轮仍按原seed范围完成，不中途改判据。
+
+native seed2随后完成并通过核对，选epoch27，PCK@8为82.3597%、F1@16为86.2690%。三native平均F1为86.2965%，已低于pooled最终均值的最低可能值86.3614%（最后一臂至少保留epoch0）。因此复核联合门槛已经不可能通过，停止本固定残差配方的扩展；这不等于浅层信息不存在。最后pooled seed2仍完成约定30epoch，随后补齐真实均值与成对结果，不以数学下界冒充未完成实验的实测。
