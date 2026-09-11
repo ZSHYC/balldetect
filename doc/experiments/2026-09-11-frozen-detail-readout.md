@@ -1,6 +1,6 @@
 # 固定现有表示后，当前帧细节能否纠正自动定位
 
-日期：2026-09-11起。状态：seed0两臂30epoch及保存结果复核均完成，native选epoch24、pooled选epoch17；通过预定方向门控，但检测优势仅净少1个错位输出，尚未证明稳定收益。
+日期：2026-09-11起。状态：seed0两臂及结果复核均完成，native选epoch24、pooled选epoch17；预定读出seed1/2四次复核已从084e4bb串行启动。seed0检测优势仅净少1个错位输出，尚未证明稳定收益。
 
 执行[固定细节读出协议v1](../protocols/tennis-frozen-detail-readout-v1.md)。[端点辅助三臂](2026-09-11-endpoint-auxiliary.md)已经停止；本轮单独检验现有无辅助模型的当前stage0空间增量，不把它当作已证实的失败根因或新的motion贡献。
 
@@ -95,3 +95,11 @@ native的PCK@8/F1@16数值均严格高于固定基线和pooled，满足原先锁
 全部三seed结果与同seed配对均保留。native的PCK@8/F1@16描述均值须均严格胜固定基线与pooled均值，同时至少两seed各自通过原四项严格方向，才进入一项后续系统干预；不通过则结束本固定残差配方，不继续追加seed。该判断只控制下一步研究投入，不声称统计显著或跨比赛稳定。
 
 复用上方正式命令，将`--seed`分别改为1、2，输出目录分别为`dino_frozen_detail_native_seed1`、`dino_frozen_detail_pooled_seed1`、`dino_frozen_detail_native_seed2`、`dino_frozen_detail_pooled_seed2`。运行顺序也按这个次序，GPU串行；实现和原30epoch训练条件没有改变。
+
+四次复核已从084e4bb按上述顺序串行启动，首个native seed1的epoch0完整验证与基线相同；其余运行依次接续。未完成的run不填结果或提前用于三seed均值。
+
+### 首个复核结果：native seed1未复现联合增量
+
+native seed1完成30epoch并通过31条记录、有限loss、选优/checkpoint、目标身份/标签及保存指标复算。最终选epoch0，train与val的完整指标均等于固定原基线；[位置配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_native_seed1.json)在@8/16/32均为救回0、破坏0。这是按预定选择规则得到的未复现，不改成按PCK挑选其他epoch，也不删除这一seed。
+
+本次训练及评价909.1248秒、峰值354.02MiB；[结果](../../outputs/full_heatmap/dino_frozen_detail_native_seed1/results.json)与原缓存准备成本分开。pooled seed1已接续运行，seed2两臂仍按预定顺序执行；完整复核判断仍未形成。
