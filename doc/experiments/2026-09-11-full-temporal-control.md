@@ -121,3 +121,5 @@ python outputs/full_heatmap/summarize_visibility_predictions.py --runs dino_repe
 **锁定判定已通过**：真实历史提高F1@16且没有降低PCK@8，固定困难组也有净救回。因此，不触发协议中的“因时序输入无增量而暂停”条件。但这不自动批准更大搜索半径或新cost；此前几何覆盖、局部cost负结果和细定位限制仍成立。可成立的结论仅是：这个固定DINO系统在当前单seed、单验证比赛中有效利用了真实历史的额外信息。它尚未区分跨位置对应、短时变化、额外外观线索及优化路径，未建立新motion机制或论文贡献。
 
 完整产物为[结果与资源记录](../../outputs/full_heatmap/dino_repeat_current_seed0/results.json)、[选优及错误分解核对](../../outputs/full_heatmap/dino_repeat_current_seed0/error_summary.json)、[逐clip配对](../../outputs/full_heatmap/dino_repeat_vs_history_seed0.json)与[固定visibility条件配对](../../outputs/full_heatmap/dino_repeat_vs_history_visibility.json)。同期完成的[位置集中度诊断](2026-09-11-readout-concentration.md)独立回答读出分数问题，没有改变这里的预测或判定。
+
+主要分析完成后，又复用旧几何作[双端VC1的位移分组](2026-09-11-search-support.md#输入控制完成后的几何配对2026-09-11补充)：Δ1/R2已覆盖跨格组的@8净增为11.251pp，同格仅0.737pp；Δ2/R4分别为9.333pp和3.546pp。它支持保留跨位置时间信息这一研究因素，但不将描述性位移关联当成correspondence的因果证明，也不改变主要判定。
