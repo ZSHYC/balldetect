@@ -153,3 +153,13 @@ $$\rho(t,\Delta)=d_{px}(t,\Delta)/s_t$$
 ## 可复用结语
 
 这个项目最稳固的测量对象不是抽象“真实球位移”，而是**带数据集特有标注约定的连续图像定位**。核心实验应证明模型在可直接审计的 `d_px` 大位移、tiny spatial evidence 和明确时序窗口下，是否真的提高 correspondence-supported localization；并把拖影端点/中点转换、遮挡插值和离线未来信息从这一主张中隔离出来。
+
+## 2026-09-11补充：BlurBall基线实现会遇到的评价差异
+
+为本项目[因果中点协议](../protocols/blurball-causal-midpoint-v1.md)再次定点读取同一固定上游提交，未重开已确认的中点/轴语义，也未读取最终测试标签。
+
+[BlurEvaluator的更新分支](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/utils/blur_evaluator.py#L35-L66)将可见且输出但位置错误记为FP1，不同时记FN；[聚合](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/utils/blur_evaluator.py#L98-L129)用FP1+FP2计算precision、仅用可见拒绝的FN计算recall。其RMSE仅统计GT可见且模型输出的项；公开代码未定义PCK。容差为原图Euclidean距离严格<4px，见[配置](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/configs/runner/eval_blurball.yaml)。因此本项目另列错位同时计FP/FN的local F1、全部V1的raw-argmax PCK及条件误差，不能混为作者数字。
+
+[loader](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/dataloaders/dataset_loader.py#L176-L214)在Visibility=0时创建空热图，不回归CSV占位；这只能支持“无合法可见中心输出”，不能证明物理无球。其[空间变换](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/dataloaders/dataset_loader.py#L21-L27)是以max(H,W)为scale的中心仿射，对1266×720会与本地宽高独立resize不同；18–21验证均1280×720这一事实来自已固定本地manifest，并非论文通用保证。
+
+[发布模型](https://github.com/cogsys-tuebingen/BlurBall/blob/2f0f5496f7ba4b5b1a36790749935121b2ce972d/src/configs/model/blurball.yaml)为三输入三输出MIMO，step是推理滑窗步长，不是本项目的输入间隔。其公开训练列表包含本项目验证18–21，README也未将每个checkpoint与中点/前端版本及自用split一一绑定。因此本地三输入末帧模型从官方DINO预训练及新头开始；不直接加载这些球模型权重或与其论文成绩排名。

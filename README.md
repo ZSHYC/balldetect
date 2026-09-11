@@ -40,14 +40,15 @@
 │   └── progress/         # 按日期记录阶段变化
 ├── data/                 # 本地数据、源标注、索引和数据说明
 ├── models/               # 权重说明与本地外部预训练权重
-├── src/ballmotion/       # Tennis 数据/时间语义、特征读出与评价
+├── src/ballmotion/       # 数据/时间语义、特征读出与定位评价
+├── configs/             # 实际基线使用的模型配置
 ├── scripts/              # 特征提取和实验入口
 ├── tests/                # 几何、标签、评价与拟合验证
-├── third_party/          # 上游 DINOv3 本地 checkout 与来源说明
+├── third_party/          # 上游 DINOv3、WASB 实现与来源说明
 └── outputs/              # 本地运行日志、预测、训练 checkpoint
 ```
 
-`configs/` 在实际需要配置文件时创建，目前运行参数直接保存在每次实验的 `config.json`。视频、权重、缓存和完整训练输出不放进 `doc/`，也不默认提交版本库。
+实际运行参数保存在每次实验的 `config.json`，WASB模型配置位于`configs/`。视频、权重、缓存和完整训练输出不放进 `doc/`，也不默认提交版本库。
 
 ## 数据与运行
 
@@ -63,7 +64,7 @@ conda activate zshihyc
 
 用户提供的 DINOv3 权重已整理到 `models/pretrained/dinov3/`，见 [权重说明](models/README.md)。首轮使用 ConvNeXt-Tiny，按 [上游代码说明](third_party/README.md) 准备 DINOv3；当前环境所用直接依赖见 [requirements.txt](requirements.txt)，无需重新安装已有依赖。
 
-已实现 [Tennis 单帧冻结空间探针](doc/protocols/tennis-spatial-probe-v1.md)，正在进行[因果三帧对照](doc/protocols/tennis-temporal-probe-v1.md)，还不是最终运动模型。单帧入口在项目根目录运行：
+Tennis的全量基线、历史控制与多项表示诊断已经完成，见[阶段记录](doc/progress/2026-09-10-full-baselines.md)。当前转向[BlurBall自然模糊下的因果中点定位](doc/experiments/2026-09-11-blurball-midpoint.md)，尚未确定最终motion模型。以下保留[早期Tennis单帧冻结探针](doc/protocols/tennis-spatial-probe-v1.md)的运行示例：
 
 ```bash
 PYTHONPATH=src python tests/test_spatial_probe.py

@@ -51,3 +51,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Tennis可见中心端点辅助 v1](tennis-endpoint-auxiliary-v1.md)：同候选、同标签下比较实例关系与共享外观query的训练期监督。
 - [Tennis固定细节读出 v1](tennis-frozen-detail-readout-v1.md)：冻结已训练模型，仅比较当前stage0原始与低通细节的残差读出。
 - [Tennis历史年龄 v1](tennis-history-age-v1.md)：共同当前目标上的较早历史可见性与固定近R2/远R4支持域，仅作元数据诊断。
+- [BlurBall因果中点 v1](blurball-causal-midpoint-v1.md)：原生三帧中点定位、4px严格容差与自然拖影长度分组；V0表示无合法可见中心。

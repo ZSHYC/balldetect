@@ -25,7 +25,7 @@ from dinov3.models.convnext import ConvNeXt
 from third_party.wasb.hrnet import HRNet
 
 
-def build_dino_model(weights_path):
+def build_dino_model(weights_path, upscale=2):
     # 保持完整backbone→prefix→head的原初始化顺序，供训练与辅助尺度检查共用。
     backbone = ConvNeXt(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768])
     backbone.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True,
@@ -33,7 +33,7 @@ def build_dino_model(weights_path):
     prefix = torch.nn.Sequential(backbone.downsample_layers[0], backbone.stages[0],
                                  backbone.downsample_layers[1], backbone.stages[1])
     del backbone
-    head = SpatialProbe(576, upscale=2, hidden_channels=32, num_frames=3,
+    head = SpatialProbe(576, upscale=upscale, hidden_channels=32, num_frames=3,
                         appearance_channels=576)
     return BackboneProbe(prefix, head, train_backbone=True)
 

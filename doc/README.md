@@ -89,9 +89,11 @@
 - [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
 - [固定模型的当前帧细节读出](experiments/2026-09-11-frozen-detail-readout.md)：[固定协议](protocols/tennis-frozen-detail-readout-v1.md)的三seed六次训练全部完成；native平均PCK@8稍高、F1@16低于pooled，未通过联合复核条件，结束该配方。
 - [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)完成；s=2已有跨片段范围压力，但近帧本来可用，尚不足以启动远搜索模型。
+- [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议](protocols/blurball-causal-midpoint-v1.md)已锁定，开始建立无需blur输入的自动定位与拒绝分组基线。
 
 ## 阶段进展
 
+- [2026-09-11：BlurBall自然模糊定位基线](progress/2026-09-11-blurball-baseline.md)：原生因果中点、严格4px容差、真实PTS缓存与blur条件误差。
 - [2026-09-10至11：从适配诊断到全量竞争系统与时序控制](progress/2026-09-10-full-baselines.md)：六组适配、两套全量系统、已完成的重复当前帧控制和位置集中度诊断。
 - [2026-09-10：空间读出实现与首轮真实实验](progress/2026-09-10-spatial-implementation.md)。
 - [2026-09-10：真实时序与对应诊断](progress/2026-09-10-temporal-and-correspondence.md)：九组时序实验、GT query结果和下一基线的依据。
