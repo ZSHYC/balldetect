@@ -1,6 +1,6 @@
 # 固定现有表示后，当前帧细节能否纠正自动定位
 
-日期：2026-09-11起。状态：native的30epoch完成并通过保存结果复核，选epoch24；pooled从同一7dcabb4串行运行中。
+日期：2026-09-11起。状态：seed0两臂30epoch及保存结果复核均完成，native选epoch24、pooled选epoch17；通过预定方向门控，但检测优势仅净少1个错位输出，尚未证明稳定收益。
 
 执行[固定细节读出协议v1](../protocols/tennis-frozen-detail-readout-v1.md)。[端点辅助三臂](2026-09-11-endpoint-auxiliary.md)已经停止；本轮单独检验现有无辅助模型的当前stage0空间增量，不把它当作已证实的失败根因或新的motion贡献。
 
@@ -51,20 +51,22 @@ python scripts/train_tennis_detail_readout.py \
 
 若只有一般残差收益、只有低通收益或没有联合收益，按协议收窄解释并停止本配方，不追加宽度、学习率或平滑尺度扫描。
 
-## native完成：有限增量，仍待低通对照
+## 两臂正式结果
 
-native正常结束30epoch。既有保存结果核对入口通过31条epoch、有限损失、F1选优/残差checkpoint一致、train/val目标身份与标签一致、全部保存指标复算；选epoch24。结果见[results.json](../../outputs/full_heatmap/dino_frozen_detail_native_seed0/results.json)。
+两臂均正常结束30epoch。既有保存结果核对入口通过各31条epoch、有限损失、F1选优/残差checkpoint一致、train/val目标身份与标签一致、全部保存指标复算；native选epoch24、pooled选epoch17。结果见[native JSON](../../outputs/full_heatmap/dino_frozen_detail_native_seed0/results.json)与[pooled JSON](../../outputs/full_heatmap/dino_frozen_detail_pooled_seed0/results.json)。
 
-| 指标 | 固定无辅助基线 | native，epoch24 |
-|---|---:|---:|
-| 验证PCK@8 | 81.4433% | 82.6460% |
-| 验证PCK@16 | 88.0298% | 88.6025% |
-| 验证PCK@32 | 89.8053% | 90.3780% |
-| 验证F1@16 | 86.2557% | 86.3649% |
-| 检测@16 TP/FP/FN | 1525/265/221 | 1536/275/210 |
-| 存在TP/FP/FN | 1693/97/53 | 1709/102/37 |
+| 指标 | 固定无辅助基线 | native，epoch24 | pooled，epoch17 |
+|---|---:|---:|---:|
+| 验证PCK@8 | 81.4433% | 82.6460% | 82.0160% |
+| 验证PCK@16 | 88.0298% | 88.6025% | 88.6025% |
+| 验证PCK@32 | 89.8053% | 90.3780% | 90.4926% |
+| 验证F1@16 | 86.2557% | 86.3649% | 86.3406% |
+| 检测@16 TP/FP/FN | 1525/265/221 | 1536/275/210 | 1536/276/210 |
+| 存在TP/FP/FN | 1693/97/53 | 1709/102/37 | 1710/102/36 |
 
 native训练集PCK@8为99.7789%、PCK@16为99.9575%。本轮固定读出的训练及评价共857.2261秒，峰值354.02MiB；另有共享基线缓存准备成本58.5609秒。它只计算当前浅层和残差，不能与完整模型端到端部署时间直接相比。
+
+pooled训练集PCK@8为99.3198%、PCK@16为99.9405%，训练及评价832.6096秒、峰值354.02MiB。两臂复用缓存，未再次生成原模型logits。不同选优epoch和训练拟合程度不足以把差异唯一归为信息量或优化。
 
 [保存预测配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_native_seed0.json)：@8救回41、破坏20，净增21/1746，即1.2027个百分点；@16救回20、破坏10；@32救回23、破坏13。@8各clip净变依次为−1、0、+1、+9、+8、−2、+2、0、+4，五升两降两平，不能称每个clip改善。@16净变为−2、+1、+1、+3、+2、0、+2、−1、+4。VC1/2/3的@8净增分别为17/2/2。
 
@@ -72,4 +74,24 @@ F1@16只提高0.1093个百分点：正确输出增11，同时错位输出从168�
 
 [固定visibility上下文](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_native_visibility.json)中，当前VC2且历史含VC1的64例，@8由29到30、@16由34到35，均只救回1例而未破坏。VC0且历史含VC1的25例误报22→23，历史无VC1的92例误报75→79。新分支只读当前特征，以上小群体增量不构成新的历史融合或对应证据。
 
-这满足native优于固定基线的必要方向，尚未满足与pooled比较的完整条件；不据此宣布高空间带宽解释成立。30次额外开发集选优、固定基线先前已被同game选择以及单seed限制继续适用。
+### pooled及两臂之间的配对
+
+[基线到pooled](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_pooled_seed0.json)：@8救回33、破坏23，@16救回19、破坏9，@32救回22、破坏10。其[固定VC2且历史含VC1的64例](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_pooled_visibility.json)，@8由29到30、@16由34到36；VC0的两类历史组误报同native，分别为23/25与79/92。一般残差读出也能改善严格定位，不能将native相对原基线的全部增量归给较高空间带宽。
+
+[pooled到native](../../outputs/full_heatmap/dino_frozen_detail_pooled_vs_native_seed0.json)：@8救回35、破坏24，净增11/1746，即0.6300个百分点；@16救回16、破坏16，净变0；@32救回17、破坏19，净减2。@8各clip净变为−1、−3、+1、+10、+5、−3、0、0、+2，四升三降两平；Clip4和Clip5贡献较多，不能称跨clip一致。VC1/2/3的@8净变分别为+9/0/+2，@16为+2/−2/0。
+
+两臂PCK@16、检测TP=1536和FN=210完全相同，VC0误报也同为102。native的F1@16只高0.02427个百分点，来自净少1个可定位帧的错位输出（173对174），不是更多@16正确定位；这里描述的是汇总净差，不声称两组只在同一个样本上发生变化。
+
+## 当前研究判断
+
+native的PCK@8/F1@16数值均严格高于固定基线和pooled，满足原先锁定的方向门控；不事后改写通过条件。但**方向通过不等于稳定的检测优势**：相对低通的F1仅由净1个错位输出决定，PCK@16持平、PCK@32略差，多个clip方向相反。只有有限的证据支持当前stage0较高空间带宽对严格位置读出有增量，尚无motion或泛化结论。
+
+30次额外开发集选优、固定基线先前已被同game选择及单seed限制继续适用。下一步优先固定同一基线表示，检验残差初始化与训练顺序的随机性，而不是立即联合微调前缀或增加motion模块。该复核若执行，应事先锁定seed范围及结束判断，不能追加seed直到获得正结果；其证据仍只覆盖固定表示上的读出稳定性。
+
+## 预定的读出随机性复核
+
+独立只读审查同意这一优先级，并确认必须称为初始化与batch顺序合并的读出优化随机性。已在[协议追加条款](../protocols/tennis-frozen-detail-readout-v1.md#seed0完成后的有限随机性复核)锁定：只增加seed1/2的两臂，共四次30epoch；源backbone和主头继续固定原model seed0 epoch7，复用同一缓存。seed0是探索结果，新增两seed是事前限定复核，不能把同一game7或同一原模型当成独立三份数据。
+
+全部三seed结果与同seed配对均保留。native的PCK@8/F1@16描述均值须均严格胜固定基线与pooled均值，同时至少两seed各自通过原四项严格方向，才进入一项后续系统干预；不通过则结束本固定残差配方，不继续追加seed。该判断只控制下一步研究投入，不声称统计显著或跨比赛稳定。
+
+复用上方正式命令，将`--seed`分别改为1、2，输出目录分别为`dino_frozen_detail_native_seed1`、`dino_frozen_detail_pooled_seed1`、`dino_frozen_detail_native_seed2`、`dino_frozen_detail_pooled_seed2`。运行顺序也按这个次序，GPU串行；实现和原30epoch训练条件没有改变。
