@@ -103,3 +103,11 @@ native的PCK@8/F1@16数值均严格高于固定基线和pooled，满足原先锁
 native seed1完成30epoch并通过31条记录、有限loss、选优/checkpoint、目标身份/标签及保存指标复算。最终选epoch0，train与val的完整指标均等于固定原基线；[位置配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_native_seed1.json)在@8/16/32均为救回0、破坏0。这是按预定选择规则得到的未复现，不改成按PCK挑选其他epoch，也不删除这一seed。
 
 本次训练及评价909.1248秒、峰值354.02MiB；[结果](../../outputs/full_heatmap/dino_frozen_detail_native_seed1/results.json)与原缓存准备成本分开。pooled seed1已接续运行，seed2两臂仍按预定顺序执行；完整复核判断仍未形成。
+
+### seed1配对完成：本次低通读出取得更高联合指标
+
+pooled seed1随后完成30epoch并通过同样的保存结果核对，选epoch25；[结果](../../outputs/full_heatmap/dino_frozen_detail_pooled_seed1/results.json)为PCK@8=81.6151%、PCK@16=87.8580%、PCK@32=89.5762%、F1@16=86.4880%。检测TP/FP/FN为1517/245/229，presence为1671/91/75。耗时1,088.7778秒、峰值354.02MiB。
+
+相对固定基线（也即native seed1），pooled的@8仅净多3个命中，却在@16净少3、@32净少4；[配对](../../outputs/full_heatmap/dino_baseline_vs_frozen_detail_pooled_seed1.json)分别为37救回/34破坏、19/22、20/24。检测@16少8个TP，同时少20个FP，F1提高0.23237个百分点；VC0误报97→91。这是位置与拒绝共同变化后的结果，不能把F1提高说成更准确的@16位置。
+
+以[pooled到native的同seed方向](../../outputs/full_heatmap/dino_frozen_detail_pooled_vs_native_seed1.json)报告，@8净变−3，clip净变依次为+1、−3、0、0、0、−1、+5、0、−5；两升三降四平。native seed1未通过原四项联合方向，与seed0结果不同。native seed2已经接续，pooled seed2随后运行；尚不计算完整三seed结论。

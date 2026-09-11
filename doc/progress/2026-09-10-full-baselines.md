@@ -79,3 +79,5 @@ native随后从7dcabb4完成30epoch并通过保存结果复核，选epoch24，PC
 pooled随后完成并通过核对，选epoch17，PCK@8为82.0160%、F1@16为86.3406%；native相对它@8救回35、破坏24，净增0.6300个百分点，但F1仅高0.02427个百分点，两臂@16正确位置数和检测TP/FN相同，差异来自净少1个错位输出。seed0通过原方向门控，但@8四clip升、三降、两平，不能称稳定的检测或跨clip优势。下一步先检验固定表示上的读出随机性，再决定系统干预，不把单次小增量直接升级为motion架构。
 
 四次预定读出复核从084e4bb启动，顺序为native/pooled seed1，再native/pooled seed2，原backbone始终固定model seed0 epoch7。native seed1先完成并通过核对，最终选epoch0，预测与原基线相同，未复现seed0联合增量；耗时909.12秒。pooled seed1已接续，余下两次仍按锁定计划执行，不以这项中途负结果增减seed或改选优。
+
+pooled seed1随后完成并通过核对，选epoch25，PCK@8为81.6151%、F1@16为86.4880%，优于本seed的native；但相对基线@16原始定位净少3、检测TP少8，同时FP少20。其较高F1伴随更保守的输出，不能当成@16定位改善。seed1没有复现native方向，native seed2已接续；本轮仍按原seed范围完成，不中途改判据。
