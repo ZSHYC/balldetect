@@ -4,6 +4,21 @@ import numpy as np
 from .probe import _counts
 
 
+def continuous_windows(frames, windows, boundaries):
+    """在按rally/原Frame排列的既有缓存上剔除跨已确认内部时间边界的窗口。"""
+    windows = np.asarray(windows, dtype=np.int64)
+    lookup = {(r['match'], r['rally'], int(r['original_frame_id'])): i
+              for i, r in enumerate(frames)}
+    keep = np.ones(len(windows), dtype=bool)
+    for row in boundaries:
+        key = (row['match'], row['rally'], int(row['new_segment_start']))
+        if key not in lookup or key[-1] <= 0:
+            raise ValueError(f'缓存中不存在合法的内部时间边界: {key}')
+        index = lookup[key]
+        keep &= ~((windows[:, 0] < index) & (windows[:, -1] >= index))
+    return windows[keep], np.flatnonzero(~keep)
+
+
 def source_coordinates(reference_xy, rows):
     dimensions = np.array([[r['width'], r['height']] for r in rows], dtype=float)
     return (np.asarray(reference_xy) + .5) * dimensions / [1280., 720.] - .5

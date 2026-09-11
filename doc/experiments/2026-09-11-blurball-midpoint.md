@@ -1,8 +1,8 @@
 # BlurBall自然模糊下的因果中点定位基线
 
-日期：2026-09-11。状态：全量RGB缓存、小规模检查与独立代码审查完成；正式训练尚未开始。
+日期：2026-09-11。状态：v1在epoch1未完成时因源内容时间突变而中断；v2窗口修复已验证，待从官方权重重启。
 
-执行[原生因果中点协议v1](../protocols/blurball-causal-midpoint-v1.md)。在Tennis固定细节读出停止、历史年龄诊断未建立远搜索动机后，转向已经有真实blur标注、尚无定位失败读数的BlurBall。独立审查支持这一取舍；逐样本交换历史槽位只改变显式帧龄信息，尚不能有效决定对应结构，故本轮不训练该控制。
+执行[原生因果中点协议v2](../protocols/blurball-causal-midpoint-v2.md)，模型与评价继承v1。在Tennis固定细节读出停止、历史年龄诊断未建立远搜索动机后，转向已经有真实blur标注、尚无定位失败读数的BlurBall。独立审查支持这一取舍；逐样本交换历史槽位只改变显式帧龄信息，尚不能有效决定对应结构，故本轮不训练该控制。
 
 ## 这一轮能改变什么判断
 
@@ -45,6 +45,7 @@ python scripts/cache_blurball_rgb.py \
   --output data/cache/blurball/rgb_512x288_all_h2
 python scripts/train_blurball_midpoint.py \
   --rgb-cache data/cache/blurball/rgb_512x288_all_h2 \
+  --boundaries configs/blurball_continuity_boundaries.csv \
   --output outputs/blurball/dino_midpoint_seed0 \
   --epochs 30 --batch-size 8 --seed 0
 ```
@@ -54,3 +55,9 @@ python scripts/train_blurball_midpoint.py \
 全量缓存从提交f56cf68完成，53,818帧均按原rally解码并保存PTS，RGB形状[53818,3,288,512]；766个边界目标排除。训练38,860目标（V1=33,008、V0=5,852），验证14,192目标（V1=12,896、V0=1,296），对应313/70个rally。全过程窗口/帧数量与源标签对齐检查通过，未修改原标签，也未读取22–25。
 
 解码、resize、mmap写出与flush合计180.295秒；版本为FFmpeg4.4.2-0ubuntu0.22.04.1。完整元信息位于`data/cache/blurball/rgb_512x288_all_h2/metadata.json`，启动日志为`outputs/blurball/cache_full.log`。这一结果仅确认输入准备完成，尚未产生定位性能。
+
+## v1中断与v2重启依据
+
+v1由1cfd50f启动，完成epoch0验证和epoch1部分batch；最后日志记录6400/38860个训练目标、CE均值6.3588。随后的[源内容复核](2026-09-11-blurball-continuity.md)确认match17三处内部时间跳变，因此终止该进程；没有完成任何训练epoch，不解释为性能结果。中断产物保留在`outputs/blurball/dino_midpoint_seed0_interrupted_boundary/`，不沿用其训练状态。
+
+v2按已确认边界额外排除6个跨界目标，实际训练38,854、验证仍14,192。源缓存及原38,860窗口账本保留不改；训练入口保存实际边界与被排除身份。合成检查和实际索引均通过，模型/loss未改，不重复GPU单batch或全量解码。重启仍为seed0、30epoch、相同官方预训练及新头；不根据这次中断调参。

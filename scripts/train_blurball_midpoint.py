@@ -1,5 +1,6 @@
 """BlurBall原生因果三帧的DINOv3中点定位基线，不使用blur标签训练。"""
 import argparse
+import csv
 import json
 from pathlib import Path
 import subprocess
@@ -13,7 +14,7 @@ from torch.nn import functional as F
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
-from ballmotion.blurball import evaluate_blurball, source_coordinates
+from ballmotion.blurball import continuous_windows, evaluate_blurball, source_coordinates
 from ballmotion.tennis import grid_targets
 from train_tennis_heatmap import build_dino_model, model_input, predict, write_predictions
 
@@ -29,6 +30,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--rgb-cache', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--boundaries', type=Path,
+                        default=ROOT / 'configs/blurball_continuity_boundaries.csv')
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
@@ -44,11 +47,15 @@ def main():
     frames = metadata['frames']
     if {r['match'] for r in frames} != {f'{i:02d}' for i in range(22)}:
         raise ValueError('开发源帧范围需要精确为match00–21')
-    windows = np.asarray(metadata['windows'], dtype=np.int64)
+    with args.boundaries.open(newline='') as handle:
+        boundaries = list(csv.DictReader(handle))
+    windows, removed = continuous_windows(frames, metadata['windows'], boundaries)
+    removed_rows = [frames[metadata['windows'][i][-1]] for i in removed]
     rows = [frames[i] for i in windows[:, -1]]
     train_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'train'])
     val_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'val'])
-    if (len(train_idx) != metadata['train_targets'] or len(val_idx) != metadata['val_targets']
+    if (len(train_idx) + sum(r['split'] == 'train' for r in removed_rows) != metadata['train_targets']
+            or len(val_idx) + sum(r['split'] == 'val' for r in removed_rows) != metadata['val_targets']
             or not len(train_idx) or not len(val_idx)):
         raise ValueError('目标划分与缓存不一致')
     rgb = np.load(args.rgb_cache / 'rgb.npy', mmap_mode='r')
@@ -73,6 +80,10 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
+              'protocol': 'blurball-causal-midpoint-v2',
+              'continuity_boundaries': boundaries,
+              'excluded_boundary_targets': [{k: r[k] for k in ('game', 'clip', 'original_frame_id')}
+                                            for r in removed_rows],
               'model': 'DINOv3 ConvNeXt-Tiny stages0–1 + random SpatialProbe',
               'head': {'input_channels': 576, 'hidden_channels': 32, 'upscale': 8,
                        'num_frames': 3, 'appearance_channels': 576},

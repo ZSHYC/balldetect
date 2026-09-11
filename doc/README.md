@@ -89,7 +89,7 @@
 - [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
 - [固定模型的当前帧细节读出](experiments/2026-09-11-frozen-detail-readout.md)：[固定协议](protocols/tennis-frozen-detail-readout-v1.md)的三seed六次训练全部完成；native平均PCK@8稍高、F1@16低于pooled，未通过联合复核条件，结束该配方。
 - [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)完成；s=2已有跨片段范围压力，但近帧本来可用，尚不足以启动远搜索模型。
-- [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议](protocols/blurball-causal-midpoint-v1.md)已锁定，开始建立无需blur输入的自动定位与拒绝分组基线。
+- [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议v2](protocols/blurball-causal-midpoint-v2.md)已锁定；[源内容复核](experiments/2026-09-11-blurball-continuity.md)确认3处内部时间边界，修复后重新建立自动定位与拒绝分组基线。
 
 ## 阶段进展
 

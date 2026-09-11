@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from ballmotion.blurball import evaluate_blurball, source_coordinates
+from ballmotion.blurball import continuous_windows, evaluate_blurball, source_coordinates
 from ballmotion.tennis import grid_targets
 
 
@@ -37,6 +37,21 @@ def test_localization():
                          ([r['height'] for r in dimensions], [r['width'] for r in dimensions]))
     assert cells.tolist() == [40*512+20] * 3
     assert grid_targets([[9999., 9999.]], [False], (288, 512)).tolist() == [288*512]
+    frames = [dict(match='17', rally=rally, original_frame_id=i)
+              for rally in ('001', '002') for i in range(6)]
+    windows = np.array([[i-2, i-1, i] for i in (2, 3, 4, 5, 8, 9, 10, 11)])
+    kept, removed = continuous_windows(frames, windows,
+        [dict(match='17', rally='001', new_segment_start='3')])
+    assert removed.tolist() == [1, 2]
+    assert kept.tolist() == [[0, 1, 2], [3, 4, 5], [6, 7, 8], [7, 8, 9],
+                             [8, 9, 10], [9, 10, 11]]
+    try:
+        continuous_windows(frames, windows,
+                           [dict(match='17', rally='001', new_segment_start='33')])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('不存在的分段起点不能静默忽略')
     print('BlurBall localization check passed')
 
 

@@ -1,6 +1,8 @@
 # BlurBall原生因果三帧中点定位基线
 
-状态：已锁定；版本：v1；锁定日期：2026-09-11。
+状态：窗口部分已由[v2](blurball-causal-midpoint-v2.md)替代；版本：v1；原锁定日期：2026-09-11。
+
+v1运行在完成epoch0验证、epoch1尚未完成时，因确认源rally内存在时间突变而终止。此处保留原协议；v2增加3处内部边界，额外排除6个训练窗口，其他条件继承本页。证据见[连续性复核](../experiments/2026-09-11-blurball-continuity.md)。
 
 依据：[训练侧拖影轴诊断](../experiments/2026-09-10-blurball-axis.md)、[标注语义核对](../literature/second_pass_measurement.md)、[数据来源](../../data/blurball/README.md)。本协议检验自然拖影条件下的自动定位失败，不是新blur或motion结构；不延长历史间隔制造压力。
 
