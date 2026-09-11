@@ -86,7 +86,7 @@
 - [完整微调后的细定位分解](experiments/2026-09-11-full-subcell-readout.md)：固定实际预测粗块的四子格oracle能恢复多少误差，以及它为何不足以解释主要精度差距。
 - [全量DINO时序控制结果](experiments/2026-09-11-full-temporal-control.md)：真实历史相对重复当前帧重训的整体增量、困难组救回与无球误报。
 - [位置分布集中度诊断](experiments/2026-09-11-readout-concentration.md)：固定坐标下的局部质量、背景响应及分数排序为何只能提供有限解释。
-- [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)比较训练期实例关系与共享外观query，保持自动定位推理图不变。
+- [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
 
 ## 阶段进展
 

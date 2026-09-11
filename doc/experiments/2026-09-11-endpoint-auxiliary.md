@@ -1,6 +1,6 @@
 # 可见中心端点辅助：关系排序能否转化为自动定位
 
-日期：2026-09-11。状态：relation正式30epoch及保存结果复核完成；无辅助/relation统一关系诊断完成；appearance正式30epoch已启动。
+日期：2026-09-11起。状态：三组正式30epoch、保存结果复核与统一关系诊断均完成；本辅助配方未通过预定自动定位收益条件，停止该配方的扩展。
 
 执行依据为[端点辅助协议v1](../protocols/tennis-endpoint-auxiliary-v1.md)。比较无辅助full-history、relation与全局appearance-query辅助。主定位器、三真帧输入和推理输出保持既有定义；辅助只在训练时读已有VC1中心标签。下面分别保存实施smoke与正式结果，不混用两类证据。
 
@@ -65,23 +65,23 @@ relation的[日志](../../outputs/full_heatmap/dino_relation_aux_seed0.log)与[�
 
 最终测试集未使用，没有新增依赖、人工标注或数据解码。
 
-## relation正式结果
+## 三组正式结果
 
-30epoch已正常退出；31条epoch记录、主/辅助损失有限、F1选优、checkpoint epoch、训练/验证目标身份及标签、保存预测的指标复算均通过。选中epoch11，不改选其它epoch。
+relation与appearance的30epoch均完成；31条epoch记录、主/辅助损失有限、F1选优、checkpoint epoch、训练/验证目标身份及标签、保存预测的指标复算均通过。relation选epoch11，appearance选epoch7，不改选其它epoch。
 
-| 指标 | 无辅助history，epoch7 | relation，epoch11 |
-|---|---:|---:|
-| 验证PCK@8 | 81.4433% | 80.5842% |
-| 验证PCK@16 | 88.0298% | 86.2543% |
-| 验证F1@16 | 86.2557% | 84.3198% |
-| 检测@16 TP/FP/FN | 1525/265/221 | 1503/316/243 |
-| 存在TP/FP/FN | 1693/97/53 | 1718/101/28 |
-| 正式总时长 | 10,287.65秒 | 10,890.28秒 |
-| 正式峰值显存 | 5,265.46MiB | 5,316.09MiB |
+| 指标 | 无辅助history，epoch7 | appearance，epoch7 | relation，epoch11 |
+|---|---:|---:|---:|
+| 验证PCK@8 | 81.4433% | 80.0687% | 80.5842% |
+| 验证PCK@16 | 88.0298% | 87.2852% | 86.2543% |
+| 验证F1@16 | 86.2557% | 85.4407% | 84.3198% |
+| 检测@16 TP/FP/FN | 1525/265/221 | 1517/288/229 | 1503/316/243 |
+| 存在TP/FP/FN | 1693/97/53 | 1704/101/42 | 1718/101/28 |
+| 正式总时长 | 10,287.65秒 | 10,090.45秒 | 10,890.28秒 |
+| 正式峰值显存 | 5,265.46MiB | 5,316.09MiB | 5,316.09MiB |
 
 relation的PCK@8下降0.8591个百分点、F1@16下降1.9359个百分点，已经没有通过协议中“优于无辅助基线”的必要条件。训练PCK@8为99.5664%，不能用训练拟合较好替代验证任务收益；不同最优epoch也不独立证明差异来自过拟合或优化。
 
-这仍没有回答局部relation究竟是否学好。保留appearance对照，可以区分这种失败是否也出现在同标签的共享外观辅助中；不据此反复调温度或权重。下一步只补齐已计划的同域排序与配对错误，再作完整结论。
+appearance相对无辅助的PCK@8下降1.3746个百分点、F1@16下降0.8149个百分点。relation相对appearance的PCK@8高0.5155个百分点，但F1@16低1.1209个百分点。因此两种辅助均未取得原定位器之上的联合收益；不能只选relation较高的PCK或appearance较高的F1叙述成功。耗时来自各次真实运行，不能把运行间的差异单独当作辅助算子的理论开销。
 
 ## 统一关系诊断入口
 
@@ -125,4 +125,27 @@ python scripts/probe_full_endpoint_relations.py --run outputs/full_heatmap/dino_
 
 [已确认的空间支撑](2026-09-11-search-support.md)还说明该descriptor包含较大范围的视觉上下文；GT中心处取特征不等于只取球像素。排序改善可以利用球或周围上下文的可区分变化，当前读数不能证明已经恢复微小球本身的纯外观信息或物理对应。
 
-因此本轮不进入transport或增加融合模块，也不把“主loss没有显式对应约束”写成已证实的错误。appearance还将回答共享端点外观监督能否复现这种排序变化；即使relation随后在排序上胜过appearance，也不能事后放宽原协议中同时改善自动指标的门控。若后续依据完整负结果提出另一实验，须明确重立有限问题，不能声称本轮假设已经通过。
+因此本轮不进入transport或增加融合模块，也不把“主loss没有显式对应约束”写成已证实的错误。appearance完成后的比较如下；不能因为relation在排序上胜过appearance，就事后放宽原协议中同时改善自动指标的门控。
+
+## appearance完成后的完整机制判断
+
+appearance的共同GT-query诊断正常退出，仍为同样的1518/1491个pair；在c020c2d执行，耗时9.4181秒、峰值501.87MiB。输出见[appearance关系JSON](../../outputs/full_heatmap/dino_appearance_aux_seed0/endpoint_relations.json)。该读数使用其当前实例descriptor，与其他两组完全相同，未把训练用w当作推理query。
+
+| 两Δ等权宏平均 | 无辅助 | appearance | relation |
+|---|---:|---:|---:|
+| 范围内exact R@1 | 57.9230% | 66.4045% | 73.4847% |
+| 范围内target NLL | 1.343111 | 1.057163 | 0.903325 |
+| 跨格exact R@1 | 53.9848% | 62.8608% | 71.0861% |
+| 跨格target NLL | 1.456704 | 1.167672 | 0.980113 |
+
+appearance的Δ1/Δ2范围内R@1分别为69.6970%/63.1120%，NLL为0.903378/1.210948；跨格R@1为64.5365%/61.1852%，NLL为1.059915/1.275429。同格R@1为83.7838%/81.5603%，NLL为0.476073/0.593571。relation相对appearance的跨格R@1在Δ1八个clip提高、Clip7持平，在Δ2八个提高、Clip9持平；跨格NLL两Δ各clip均更低。Δ1同格NLL却略差于appearance，不能声称所有分组均改善。
+
+这里得到两个同时成立的结果。第一，**额外端点外观监督本身就能改善实例query的匹配排序**：不能把无辅助到relation的全部排序增量归给跨帧实例比较。第二，在这组初始化、监督尺度和选优条件下，relation还比appearance多约7.08个百分点的总体R@1、8.23个百分点的跨格R@1；它提供了额外的条件排序改善，但同时带着当前query梯度、优化轨迹与不同选优epoch的差别。单seed、单开发比赛不支持统计显著性或唯一机制归因。
+
+[无辅助→appearance位置配对](../../outputs/full_heatmap/dino_baseline_vs_appearance_aux_seed0.json)中，@8救回65/破坏89、@16救回37/破坏50；[appearance→relation](../../outputs/full_heatmap/dino_appearance_vs_relation_aux_seed0.json)中，@8救回100/破坏91，@16救回48/破坏66。[appearance的固定几何组](../../outputs/full_heatmap/dino_baseline_vs_appearance_aux_motion_groups.json)同样在范围内跨格退步：Δ1 @8净减14/1111，Δ2净减15/1350，不是只有relation才产生任务负迁移。
+
+[appearance的visibility上下文](../../outputs/full_heatmap/dino_baseline_vs_appearance_aux_visibility.json)保留了困难群体的局部正结果：VC2且历史有VC1的64例@8仍为29，@16由34升至36（救回2、破坏0）；VC0且历史有VC1的25例误报为23，仍高于原来的22。整体错误且输出的位置为187、正确但拒绝为7、VC0误报101。局部正结果不能替代整体与预定跨格条件的任务退步。
+
+**本轮决定：停止该训练期端点辅助配方，不扫温度、系数或半径，不据此加入transport。** 原主定位器仍是后续比较基线；两个辅助checkpoint和诊断结果保留为有用负证据，不删除。这个结论不否定真实历史增量，也不否定所有motion representation；它否定的是“把这组端点排序辅助加在现有定位器上即可提高自动定位”的具体假设。
+
+下一问题应直接针对自动视觉证据到位置输出的路径。当前浅层空间细节是否被削弱，是值得单独审查的候选；尚未证明它就是本次负迁移的原因。若后续采用新的读出实验，要重新明确其有限假设和对照，不把它记成本轮门控通过后的融合扩展。
