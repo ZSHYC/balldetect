@@ -47,8 +47,13 @@ def grid_targets(xy, present, grid_hw, original_hw=(720, 1280)):
     oh, ow = original_hw
     xy = np.asarray(xy, dtype=float)
     xy = np.where(np.asarray(present, dtype=bool)[:, None], xy, 0.)
+    if (not np.isfinite(xy).all() or np.any((xy[:, 0] < 0) | (xy[:, 0] >= ow)
+                                         | (xy[:, 1] < 0) | (xy[:, 1] >= oh))):
+        raise ValueError("有位置目标必须是原图范围内的有限坐标")
     gx = np.floor((xy[:, 0] + .5) * w / ow).astype(np.int64)
     gy = np.floor((xy[:, 1] + .5) * h / oh).astype(np.int64)
+    # 合法小数坐标可位于最后半像素内；量化到最近边缘格，不修改原坐标。
+    gx, gy = np.minimum(gx, w - 1), np.minimum(gy, h - 1)
     return np.where(present, gy * w + gx, h * w)
 
 

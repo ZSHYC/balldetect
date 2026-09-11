@@ -37,6 +37,17 @@ def test_localization():
                          ([r['height'] for r in dimensions], [r['width'] for r in dimensions]))
     assert cells.tolist() == [40*512+20] * 3
     assert grid_targets([[9999., 9999.]], [False], (288, 512)).tolist() == [288*512]
+    # 原数据的合法底缘小数坐标曾落到第288行；右缘也不能绕到下一行。
+    edge = grid_targets([[250.13, 719.58], [1279.8, 250.13], [1279.8, 719.58]],
+                        [True] * 3, (288, 512))
+    assert edge.tolist() == [287*512+100, 100*512+511, 288*512-1]
+    for invalid in ([1280., 10.], [10., 720.], [-.1, 10.], [np.nan, 10.]):
+        try:
+            grid_targets([invalid], [True], (288, 512))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('非法原图位置不能通过边缘量化变成合法监督')
     frames = [dict(match='17', rally=rally, original_frame_id=i)
               for rally in ('001', '002') for i in range(6)]
     windows = np.array([[i-2, i-1, i] for i in (2, 3, 4, 5, 8, 9, 10, 11)])
