@@ -66,6 +66,8 @@
 | [方向差分与语义对照](literature/2026-09-11-directional-differences.md) | COMET的五阶像素变化、时间attention及倒序奖励能否作为当前三帧定位对照 |
 | [扩散注意力教师](literature/2026-09-11-diffusion-motion-teacher.md) | MotionEnhancer的文本条件、时空attention、离线蒸馏和语义评价能否支持球点对应 |
 | [压缩视频运动表示](literature/2026-09-11-compressed-motion.md) | ReMoRa的重编码、MV精炼、参考帧与成本在现有球数据上有哪些实际边界 |
+| [门控运动token](literature/2026-09-11-gated-motion-tokens.md) | GMoT的软空间池化、相邻差分和完整微手势训练配方能够支持哪些定位主张 |
+| [轨迹视觉提示](literature/2026-09-11-trajectory-prompts.md) | Motion-as-Prompt的query覆盖、相机补偿、全视频选帧和画线怎样依赖上游跟踪 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

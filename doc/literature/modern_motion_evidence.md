@@ -4,9 +4,9 @@
 
 本笔记只核验蓝图所列的现代 motion 表示、光流与 DINOv3 骨干，不评价本地代码或替代依赖。初次检索日期为 **2026-09-09**；优先使用论文原稿、会议proceedings、作者官方仓库和模型卡。确认会议身份与读取正式刊载版分别记录：官方会议项目可确认身份，但不自动等于已取得出版社定稿；arXiv可访问也不自动确认接收。此组包含正式会议论文和近期预印本，检索与阅读深度按条目说明；文献扫描不等于数值结果已被本地复现。
 
-核心结论：蓝图提出的“高分辨率局部证据 + 有限预算的大位移对应”依然是合理问题，但绝不能以“没有人做局部 motion / 高分辨率 match / motion latent / 多阶关系”为创新点。能争取的贡献必须落在：**对极小、稀疏、快速、易混淆目标，如何在已标注中心监督下同时测量并改善候选覆盖、正确对应排序、当前帧定位，而非仅改善视频语义任务**。
+核心结论：蓝图提出的“高分辨率局部证据 + 有限预算的大位移对应”依然是合理问题，但绝不能以“没有人做局部 motion / 高分辨率 match / motion latent / 多阶关系”为创新点。能争取的贡献必须落在：**对极小、稀疏、快速、易混淆目标，识别具体失效，并在现有中心监督与有限计算下改善逐帧定位**。采用显式对应方案时，还需分别测量候选覆盖、正确对应排序与最终定位；这不要求所有有效时序方法都建立候选轴，也不以视频语义任务的改善替代中心证据。
 
-**2026-09-11局部补读：**本次深化MOSS、Midway、V-JEPA 2.1、What Moves?、MoAlign、COMET、MotionEnhancer与ReMoRa的全文机制、时间语义和评价边界，并修正末尾空间探针的过强推论；其余条目的检索日期和阅读限制仍按原记录。详见[多阶关系](2026-09-11-higher-order-motion.md)、[预测式运动潜变量](2026-09-11-predictive-motion-latents.md)、[密集视频预训练](2026-09-11-dense-video-pretraining.md)、[区域运动和全景参考](2026-09-11-region-motion-reference.md)、[运动子空间](2026-09-11-motion-subspace.md)、[方向差分](2026-09-11-directional-differences.md)、[扩散注意力教师](2026-09-11-diffusion-motion-teacher.md)与[压缩视频运动](2026-09-11-compressed-motion.md)，不表示已复现这些方法。
+**2026-09-11局部补读：**本次深化MOSS、Midway、V-JEPA 2.1、What Moves?、MoAlign、COMET、MotionEnhancer、ReMoRa、GMoT与Motion-as-Prompt的可访问全文机制、时间语义和评价边界，并修正末尾空间探针的过强推论；具体缺失的附录/代码及其余条目的阅读限制按各自记录。详见[多阶关系](2026-09-11-higher-order-motion.md)、[预测式运动潜变量](2026-09-11-predictive-motion-latents.md)、[密集视频预训练](2026-09-11-dense-video-pretraining.md)、[区域运动和全景参考](2026-09-11-region-motion-reference.md)、[运动子空间](2026-09-11-motion-subspace.md)、[方向差分](2026-09-11-directional-differences.md)、[扩散注意力教师](2026-09-11-diffusion-motion-teacher.md)、[压缩视频运动](2026-09-11-compressed-motion.md)、[门控运动token](2026-09-11-gated-motion-tokens.md)与[轨迹视觉提示](2026-09-11-trajectory-prompts.md)，不表示已复现这些方法。
 
 ## 事实核验表
 
@@ -20,8 +20,8 @@
 | [MotionEnhancer](https://arxiv.org/abs/2606.06853) | **CVPR 2026已核验**，pp. 2778–2787；2026-09-11补读全文及附录，未找到作者公开实现 | 冻结CogVideoX以QA问题为条件，经inversion/reconstruction离线提取注意力，选择head/token后对齐VLM attention。 | 是扩散attention作语义motion教师的直接先例；时空列可支持文字grounding，但需另测点对应。 | QA改进不证明球定位；原教师依赖问题文本，20–30秒/A100/样本的离线提取须计入。对角/同址筛选不自动等于运动可靠性，也不能预断它必然偏背景。详见[补读](2026-09-11-diffusion-motion-teacher.md)。 |
 | [ReMoRa](https://openaccess.thecvf.com/content/CVPR2026/html/Yashima_ReMoRa_Multimodal_Large_Language_Model_based_on_Refined_Motion_Representation_CVPR_2026_paper.html) | **CVPR 2026**, pp. 31845–31855；arXiv v2；2026-09-11补读全文、附录及后期固定源码 | 论文先重编码为384²/16fps/H.264，稀疏I帧RGB与P/B帧MV分工；CoTracker3目标训练MV精炼器，再用于长视频QA。 | 是压缩域motion与appearance分工的直接先例；教师、编码、提取和推理需分别计时。 | Tennis发布包没有原始码流，后期提取代码也不等于论文重编码配方；MV参考关系和B帧未来依赖不能由模型窗口截断保证。未测球点误差。详见[补读](2026-09-11-compressed-motion.md)。 |
 | [COMET](https://arxiv.org/html/2608.21030v1) | **预印本 v1，2026-08-21**；作者标注ACM MM 2026接收，正式刊载未核；2026-09-11补读全文 | 灰度一至五阶有限差分、幂/聚合及归一化混合，独立ViT经同位置时间attention融合；另有固定文字答案的正反序GRPO。 | 保留方向敏感变化作为对应方法的竞争解释；应选择兼容且不冗余的廉价原语，而非强制复刻完整MLLM。 | 完整五阶构造至少六帧，不能原样塞入当前三帧；语义消融不证明跨位置位移，参数百分比不是定位延迟。详见[补读](2026-09-11-directional-differences.md)。 |
-| [GMoT](https://arxiv.org/html/2607.16322v1) | **预印本 v1，2026-07-15** | 对微手势的 spatial token 做运动感知门控/选择，任务为 MLLM recognition。 | 支持“小而弱的动态会被 pooling 稀释”的现象性动机。 | 微手势是较稳定人体部位的小振幅，不是几像素、可跨越大量 ball-size 的无纹理小球；gate/route 已不是新概念。 |
-| [Motion-as-Prompt](https://arxiv.org/html/2608.11655v1) | **预印本 v1，2026-08-12** | 从原视频恢复 dense point trajectories，按 motion 选帧并将轨迹画回稀疏 frame 输入，供 frozen MLLM reasoning。 | 强调 `query/track coverage`：轨迹提示有价值的前提是上游点轨迹已经覆盖球。 | 它把 tracking 结果作为输入而非解决 tracking；不能以“显式轨迹提示”主张自动重捕球或没有候选漏检。 |
+| [GMoT](https://arxiv.org/html/2607.16322v1) | **预印本 v1，2026-07-15**；作者标注ACM MM 2026接收，正式刊载未核；2026-09-11补读HTML及10页PDF，所引附录未随版发布 | 空间softmax池化、相邻signed difference与近关闭残差gate构成motion token路线；结合CoT及四阶段训练做微手势识别。 | spatial scorer、时间差和gate已有分类消融，是局部弱运动汇聚的直接近邻。 | 软池化不是硬删候选；新增token没有显式patch候选轴，不证明地址信息全失。完整配方收益、4fps微手势输入和未知部署成本不等于高速球定位证据。详见[补读](2026-09-11-gated-motion-tokens.md)。 |
+| [Motion-as-Prompt](https://arxiv.org/html/2608.11655v1) | **预印本 v1，2026-08-12**，under review；2026-09-11补读全文与次日固定作者源码 | CoTracker3规则query轨迹经全局相似运动补偿，用残差作全视频选帧，再把区间轨迹画到较晚帧供冻结MLLM问答。 | 已覆盖运动选帧、相机补偿残差和轨迹视觉提示；上游query覆盖、tracker位置/可见性和筛选保留率需要分开测量。 | 原流程是离线全视频理解；10×10规则query并不保证或否定球覆盖。问答accuracy没有验证球中心，后期库默认30-grid/8fps不能冒充论文配置。详见[补读](2026-09-11-trajectory-prompts.md)。 |
 | [MOSS](https://arxiv.org/html/2604.20760v1) | **预印本 v1，2026-04-22**；2026-09-11补读全文 | 一阶STSS显式枚举局部时空offset，经编码再递归构造高阶关系，最后融合为每query格的feature。 | 直接限制多阶self-similarity本身的新颖性；原始关系轴与融合后特征的区别有助于审查对应读出。 | 高阶不是物理加速度或可靠性；融合后没有显式候选轴不证明地址信息全部消失。也不能将多阶直接等同于多假设后验，球中心coverage/rank仍未验证。详见[补读](2026-09-11-higher-order-motion.md)。 |
 
 ## DINOv3：可确认的骨干事实，而非性能许诺
@@ -55,7 +55,7 @@
 
 ### 3. camera motion 的最小边界
 
-What Moves? 明确把局部 motion 定义为相对全局 reference（含相机/scene layout），但它并未解决自动对象发现。第一版保持 current-frame appearance 路径独立，固定机位主实验，并把连续 pan/zoom 作为分桶。只有在该分桶中定位确实下降、且全局 reference 条件真的提高对应 rank/coverage，才值得引入轻量全局 context/补偿；不要预设 SLAM、平面 homography 或“background subtraction”是正确答案。
+What Moves? 的区域query使用全景参考，但未解决自动对象发现或显式相机分解；Motion-as-Prompt则已用可见点拟合全局相似变换并扣除预测位移，其残差仍不能自动视为纯object motion。当前球实验遵守连续clip边界并允许相机连续变化，不因“同一镜头”就认定机位固定。pan/zoom分组须有可复查依据；只有实际失败和对应改善支持时，才引入轻量全局context/补偿。对有候选轴的方案可测rank/coverage，其他路线用其实际机制的证据，不强制所有模型建立cost volume；也不预设SLAM、平面homography或背景相减必然正确。
 
 ## 额外检索（2025--2026，非穷尽）
 
@@ -64,7 +64,7 @@ What Moves? 明确把局部 motion 定义为相对全局 reference（含相机/s
 * V-JEPA 2.1 已将“dense video pretraining + intermediate supervision + locally readable feature”做成明确主题，因而不能泛称“video pretraining 忽略 dense local motion”。可研究的是该表征在 tiny-ball 尺度的实际失效及低成本修复。
 * What Moves? 已把“region-conditioned local motion with global context”做成明确主题，不能泛称全景上下文条件的区域运动无人研究。2026-09-11补读同时收紧这个引用：该文未显式完成相机/物体运动分解，不能拿它当此更强命题的直接证明。**point-supervised、推理无需GT mask、长相对位移且计算受限的实例化**仍是待检验问题；自动发现、对应与定位是否有效，要有各自实证。
 
-未确认项必须保持未确认：MoAlign的正式排版版与作者代码、What Moves?的Springer定稿与页码、COMET的ACM MM最终刊载、GMoT/Motion-as-Prompt/MOSS的接收状态与独立复现。MoAlign已见ICLR官方poster，What Moves?已见ECCV官方项目，不能再写成只有作者自称接收，但这仍不等于读取出版社定稿。正式刊载未核实时，按arXiv的实际年份与版本引用并说明会议状态；不能统一写成2026，例如MoAlign的初稿是2025年。
+未确认项必须保持未确认：MoAlign的正式排版版与作者代码、What Moves?的Springer定稿与页码、COMET/GMoT的ACM MM最终刊载、Motion-as-Prompt/MOSS的接收状态与这些方法的独立复现。MoAlign已见ICLR官方poster，What Moves?已见ECCV官方项目，不能再写成只有作者自称接收，但这仍不等于读取出版社定稿。正式刊载未核实时，按arXiv的实际年份与版本引用并说明会议状态；不能统一写成2026，例如MoAlign的初稿是2025年。
 
 ## 特征上采样：必须新增的空间边界审查
 
