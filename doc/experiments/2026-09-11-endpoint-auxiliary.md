@@ -1,6 +1,6 @@
 # 可见中心端点辅助：关系排序能否转化为自动定位
 
-日期：2026-09-11。状态：relation正式30epoch完成并通过保存结果复核；appearance尚未启动；统一关系诊断入口已完成CPU验证，真实GPU读数待运行。
+日期：2026-09-11。状态：relation正式30epoch及保存结果复核完成；无辅助/relation统一关系诊断完成；appearance正式30epoch已启动。
 
 执行依据为[端点辅助协议v1](../protocols/tennis-endpoint-auxiliary-v1.md)。比较无辅助full-history、relation与全局appearance-query辅助。主定位器、三真帧输入和推理输出保持既有定义；辅助只在训练时读已有VC1中心标签。下面分别保存实施smoke与正式结果，不混用两类证据。
 
@@ -44,7 +44,7 @@ python scripts/check_tennis_endpoint_auxiliary.py \
 
 ## 正式运行与预定解释
 
-两组均用seed0、30epoch、batch8，主checkpoint只按既定F1@16/F1@8规则选择。relation已从29bb383启动，配置中的训练/验证目标12,167/1,863、输入槽位、辅助系数及30epoch预算均符合协议，完整epoch0验证指标与无辅助基线完全相同，首200batch损失有限。appearance按下列固定命令随后串行运行：
+两组均用seed0、30epoch、batch8，主checkpoint只按既定F1@16/F1@8规则选择。relation从29bb383运行；appearance随后从5e43b4b按下列固定命令启动，两版本间训练实现没有变化。两组的目标数、输入槽位、辅助系数、epoch预算及完整epoch0验证指标均已核对；appearance额外192参数的学习率也与协议一致。
 
 ```bash
 python scripts/train_tennis_heatmap.py --model dino \
@@ -59,7 +59,7 @@ python scripts/train_tennis_heatmap.py --model dino \
   --epochs 30 --batch-size 8 --seed 0
 ```
 
-relation完整stdout/stderr保存在[正式日志](../../outputs/full_heatmap/dino_relation_aux_seed0.log)，配置见[config.json](../../outputs/full_heatmap/dino_relation_aux_seed0/config.json)。初始指标一致验证了正式入口没有改变共同模型；它不预示训练后的结果。
+relation的[日志](../../outputs/full_heatmap/dino_relation_aux_seed0.log)与[配置](../../outputs/full_heatmap/dino_relation_aux_seed0/config.json)、appearance的[日志](../../outputs/full_heatmap/dino_appearance_aux_seed0.log)与[配置](../../outputs/full_heatmap/dino_appearance_aux_seed0/config.json)分别保存。初始指标一致验证了正式入口没有改变共同模型；它不预示训练后的结果。
 
 结束后复用保存预测核对选优、目标身份、PCK/F1，并按固定clip/visibility/位移组比较。三个主任务选优checkpoint另外测同域relation-query exact R@1和NLL：同样的局部候选、同样双端VC1与范围条件，按Δ及跨格组报告。只有relation同时胜过两种对照的预定关系读数和自动PCK@8/F1@16，才支持继续检验结构化融合；指标不一致时按协议保留竞争解释，不扫描更多温度、半径或系数。
 
@@ -95,3 +95,34 @@ relation的PCK@8下降0.8591个百分点、F1@16下降1.9359个百分点，已�
 python scripts/probe_full_endpoint_relations.py --run outputs/full_heatmap/dino_prefix_seed0
 python scripts/probe_full_endpoint_relations.py --run outputs/full_heatmap/dino_relation_aux_seed0
 ```
+
+### 实际GPU读数：排序改善，自动定位未改善
+
+上述两次诊断均在5e43b4b正常退出，合法pair计数与既有几何完全一致：Δ1共1518，Δ2共1491。两者分别耗时10.0485秒、8.2799秒，峰值均501.87MiB；计时含RGB索引/H2D、前缀、局部关系、逐pair CPU读数与分组，不含加载模型/元信息和最终写盘。结果见[无辅助JSON](../../outputs/full_heatmap/dino_prefix_seed0/endpoint_relations.json)与[relation JSON](../../outputs/full_heatmap/dino_relation_aux_seed0/endpoint_relations.json)，逐pair CSV随各run保存。
+
+| 共同GT-query条件 | pair数 | 无辅助 exact R@1 | relation exact R@1 | 无辅助NLL | relation NLL |
+|---|---:|---:|---:|---:|---:|
+| Δ1/R2，全部范围内 | 1518 | 61.9895% | 76.6140% | 1.142307 | 0.760188 |
+| Δ1/R2，同格 | 407 | 78.6241% | 85.5037% | 0.681226 | 0.485971 |
+| Δ1/R2，跨格 | 1111 | 55.8956% | 73.3573% | 1.311218 | 0.860644 |
+| Δ2/R4，全部范围内 | 1491 | 53.8565% | 70.3555% | 1.543916 | 1.046462 |
+| Δ2/R4，同格 | 141 | 70.9220% | 85.1064% | 0.985975 | 0.537853 |
+| Δ2/R4，跨格 | 1350 | 52.0741% | 68.8148% | 1.602190 | 1.099583 |
+
+按两Δ等权，范围内总体R@1由57.9230%升至73.4847%，NLL由1.343111降至0.903325；跨格R@1由53.9848%升至71.0861%，NLL由1.456704降至0.980113。这些集合包含同一目标的不同Δ，不能当作3009个独立视频样本。Δ1跨格九个clip的R@1全提高；Δ2八个提高，Clip7由44/86降至43/86。两Δ各clip的跨格NLL均降低。因此改善不限于同格或单一clip，但仍只来自一个开发比赛，不能使用统计显著性表述。
+
+### 同一自动定位任务的配对退步
+
+[保存预测配对](../../outputs/full_heatmap/dino_baseline_vs_relation_aux_seed0.json)中，@8救回97、破坏112，净减15；@16救回55、破坏86，净减31。@8九个clip的净变为−6、−2、+2、−9、+6、−1、−5、0、0；@16为−2、0、+1、−26、+4、−1、−5、−2、0。Clip4贡献较多退步，但并非唯一退步片段。
+
+[固定双VC1几何配对](../../outputs/full_heatmap/dino_baseline_vs_relation_aux_motion_groups.json)进一步排除“只在未受辅助监督的困难visibility退步”的解释：Δ1范围内跨格组@8净减6/1111、@16净减19/1111；Δ2对应净减8/1350、20/1350。对应排序提高和自动位置退步可以同时出现在同一预定可见跨格群体。两个Δ仍然不是独立干预，不能据此确定哪一个历史分支导致退步。
+
+[visibility上下文配对](../../outputs/full_heatmap/dino_baseline_vs_relation_aux_visibility.json)也保留正反变化：当前VC2且历史有VC1的64例，@8从29到31、@16从34到37（@16救回5、破坏2），并非所有困难群体都变差；但VC0且历史有VC1的25例误报由22到23。整体正确但被拒绝的位置从12降到3，错误且被输出的位置从168升到215，VC0误报从97升到101。PCK退步不依赖存在阈值，不能把全部下降解释为置信度校准；也不能只强调少量困难目标救回。
+
+### 当前可作出的研究判断
+
+当前候选已改善了给定正确当前格、双端VC1且历史中心在范围内时的descriptor排序，但没有通过自动定位收益的必要条件。辅助读数变好不说明推理时已自动找到正确query，更不说明几像素的细位置、absence或背景竞争获得改善。硬native格监督、特征更新与原读出的共同优化、当前细节保留，都仍是竞争解释；这些结果没有把其中任何一个定位成根因。
+
+[已确认的空间支撑](2026-09-11-search-support.md)还说明该descriptor包含较大范围的视觉上下文；GT中心处取特征不等于只取球像素。排序改善可以利用球或周围上下文的可区分变化，当前读数不能证明已经恢复微小球本身的纯外观信息或物理对应。
+
+因此本轮不进入transport或增加融合模块，也不把“主loss没有显式对应约束”写成已证实的错误。appearance还将回答共享端点外观监督能否复现这种排序变化；即使relation随后在排序上胜过appearance，也不能事后放宽原协议中同时改善自动指标的门控。若后续依据完整负结果提出另一实验，须明确重立有限问题，不能声称本轮假设已经通过。

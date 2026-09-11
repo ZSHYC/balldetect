@@ -67,3 +67,5 @@ HRNet总体精细定位和检测F1更好；DINO多检出22个容差内位置，�
 下一项[可见中心端点辅助](../experiments/2026-09-11-endpoint-auxiliary.md)已锁定协议并完成合成与真实batch检查。relation与共享appearance向量使用同一GT当前ROI和历史offset标签；只在固定训练batch匹配初始辅助梯度，得appearance系数0.096873。70个初始张量与原基线完全一致，主forward差0，两臂真实更新有限；检查峰值5,862MiB。[近邻核对](../literature/2026-09-11-point-relation-supervision.md)确认一般特征对应监督已有先例，本轮只检验排序改善能否转化为自动定位，不将辅助loss本身当新算法。独立代码审阅未发现训练阻断问题，relation正式30epoch已从29bb383启动，其epoch0完整验证指标与无辅助基线相同；appearance随后串行运行。
 
 relation随后完成30epoch，保存结果复核通过；选epoch11，PCK@8为80.5842%、F1@16为84.3198%，相对无辅助分别下降0.8591与1.9359个百分点，未通过预定任务收益条件。共同GT-query排序入口已完成一项CPU检查，准备对原基线和relation的主任务选优checkpoint测local exact R@1/NLL；appearance对照仍按已锁定配方执行，以补齐对额外端点监督的解释。
+
+共同GPU诊断随后完成：两Δ等权local exact R@1由57.9230%升至73.4847%，跨格由53.9848%升至71.0861%，NLL同步降低；Δ1跨格九clip R@1全升，Δ2只有Clip7微降。与此同时，自动@8净减15、@16净减31，两个范围内跨格群体也净退步。这建立了“oracle条件排序改善未转化为自动定位”的具体证据，不能据此断言是读出、细节或优化中的某个单独根因。appearance已从5e43b4b按原校准系数启动，epoch0与共同基线一致；当前不启动transport，也不事后放宽预定自动指标门控。完整表格与解释见[端点辅助记录](../experiments/2026-09-11-endpoint-auxiliary.md)。
