@@ -4,7 +4,7 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
-2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文，以及FlowIt v2全文与固定作者源码补读，修订见§1.5、§1.7、§2.3及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文、FlowIt v2全文与固定作者源码，以及 EgoSIS v2 全文的定向补读，修订见§1.5、§1.7、§2.3、§2.4及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
 
 ## 0. 先给结论：哪些表述已经不能作为创新
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | 高分辨率但只在少量位置计算 | QueryDet 从低分辨率粗 query 引导高分辨率稀疏计算；它直接以小目标的高分辨率计算冗余为动机。 | 不能声称首个高分辨率稀疏搜索。球任务仍可研究的是：**候选尚未被检测到时**如何保证跨帧真对应覆盖，而非把 QueryDet 式目标 query 直接搬过来。 |
 | 先远后近 / global-local matching | GMFlow 先全局匹配再局部残差细化；FlowIt 用全局最优传输初始化、置信度引导细化。 | “大位移全局匹配 + 局部精修”本身不新。真正困难是球在高分辨率里弱、全局特征里近乎不可辨，且不允许用 GT query。 |
-| 全局相机/背景运动与局部目标运动分离 | DMR 显式建模全局 coherent motion、以其引导局部 anomaly；EgoSIS 又把图像平面 transition、残差支持、可靠性因子化。 | 不能声称首个 global/local motion decoupling 或 camera residual。可研究“这种残差在像素级球定位中是否实际提高候选/对应”，但要避免把二维背景流残差称为物理球运动。 |
+| 全局相机/背景运动与局部目标运动分离 | DMR 显式建模全局 coherent motion、以其引导局部 anomaly；EgoSIS 又把**图像平面代理**的 transition、残差支持、可靠性因子化。 | 不能声称首个 global/local motion decoupling 或 camera residual。可研究“这种残差在像素级球定位中是否实际提高候选/对应”，但要避免把二维背景流残差称为物理球运动。 |
 | 多个对应假设、置信度或 no-match | SELF(Y)/STSS 保留时空相似关系；FlowIt 输出 occlusion/confidence；CMRTrack 用反事实历史学习可靠 motion；光流已长期处理遮挡。 | top-k、soft distribution、confidence gate、occlusion/no-match 都不是新概念。必须明确 no-match 的语义、监督和最终定位收益。 |
 | 运动上下文/位移建模可提升 tiny target | OTHR、MOCID、MIST、MI-DETR、BIRD、DQAligner 都针对微小且复杂/快速运动。 | 不能以“既有微小目标方法没有 motion 或只用帧差”为动机。应把贡献收束为一个可测的 **高分辨率弱证据 × 大位移候选覆盖 × 自动发现球** 失效。 |
 
@@ -149,7 +149,7 @@
 | **BIRD**, *Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection* | **A，arXiv:2508.15415**。已读官方 HTML 的方法与消融段；未见本轮可核验正式出版版本。 | 将 local deformable temporal fusion 与 whole-clip forward/backward propagation 合并，显式批评滑窗只用邻帧、整段多次处理的开销。它是“用更远的时间帧补救当前弱目标”的直接反证。球项目若自称 long-range temporal evidence 新颖，必须与此类递归 propagation 相比，并说明是否可 causal、边界如何 reset、是否跨 clip。 |
 | **MI-DETR**, *A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration* | **A，arXiv:2603.05071v1，2026-03-05**；已读官方全文方法/实验和作者公开源码的固定提交。仍是预印本。 | 它不是 correspondence/flow，而是廉价、因果、带状态的差分—累积 motion map 加双路融合；它是“显式大范围匹配是否必要”应面对的竞争解释，但不能以其 IR bbox 结果替代 RGB 球中心定位证据。 |
 | **FlowIt** | **A，arXiv:2603.28759v2，2026-05-31**；已读全文关键方法/实验与固定作者源码。作者项目称 BMVC 2026 Oral，论文可读版本仍为预印本。 | 它在 \(1/4\) 特征做 dense all-pairs OT，真有 dustbin 与监督的 confidence/可匹配分数，但最终仍强制输出 dense flow；因此覆盖 global matching、可靠性辅助与 unmatched mass，不等于已验证的球 `no-match` 或 tiny 自动定位。 |
-| **EgoSIS**, *From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning* | **C，arXiv:2609.08938，2026-09-08**，在截止日前一天；官方摘要已读。 | 用 RGB-derived bidirectional flow 拟合 robust image-plane transition，并产出 residual-support/reliability factor。任务是 UAV VQA，不是检测或球定位；不能当性能 baseline，却是 camera residual 表述的最新概念冲突。 |
+| **EgoSIS**, *From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning* | **A，arXiv:2609.08938v2，2026-09-09**；已读官方全文方法与实验，仍是预印本。论文未链接作者代码；本次未定位到可确认的作者公开实现。 | 冻结 VideoFlow/MOFNet 双向 flow 后以 Huber-IRLS/MAD 拟合 affine **image-plane proxy**，再把 residual/static-support 与手工可靠性门控用于 VQA 时空证据；它不是相机姿态或物体 motion 的可识别分解，也未验证像素定位、tiny ball 或端到端 flow 成本。 |
 
 另外，检索到 **OMFlow**（Pattern Recognition Letters 2026，occlusion motion estimation）等纯 flow 工作，但其目标/评测没有 tiny automatic detection 的可比性，未列为主近邻；它只补强了“occlusion/no-match 已有大量前史”，不足以支持球方法的具体机制。
 
@@ -163,6 +163,16 @@
 * **实验与成本的可比性。** 工作评估三套 moving-IR **bbox** 数据，用 mAP@0.5、P/R/F1；不是 RGB 视频的点中心或 blur 评价。IRDST-H 上报告 70.30 mAP@50、72.70 F1、32.44M parameters、93.90 GFLOPs、34.60 FPS（RTX 3090），但论文明确 FPS **不含一次 RCA preprocessing**。故其数值不能同 BlurBall 的中心容差、位置误差或端到端三帧吞吐直接排列，也不能据此称其在运动模糊 RGB 球上有效。
 
 **对当前决策的限制。** 不据此改变正在运行的三帧 DINO 基线，也不把 RCA/PMI 加入当前版本。若后续结果要宣称“wide correspondence 必要”，先用同一数据切分、输入尺度、目标帧和真实因果历史比较：(i) current-only，(ii) 只加可见的差分/EMA motion 图，(iii) motion 图加双路交互；否则会把固定 map、额外历史和 32.44M/93.90G detector 融合容量混为“motion mechanism”。该比较须计入图生成时间，并按本项目中心协议报告漏检/误检和定位，而不是移植 IR box mAP。即使 (ii) 已解释收益，也只否定该设置下昂贵匹配的必要性；它不证明或反驳球的真实跨位置 correspondence。
+
+#### EgoSIS 定向补读（2026-09-11）：二维稳定参考的概念先例，非球定位机制证据
+
+**证据范围。** [arXiv v2](https://arxiv.org/abs/2609.08938v2) 于 2026-09-09 修订；以下已读官方[方法](https://arxiv.org/html/2609.08938v2#S2)与[实验/消融](https://arxiv.org/html/2609.08938v2#S3)。论文页面及全文未提供作者代码链接；以题目和方法名检索时未定位到可确认的作者公开实现，故没有源码事实可报告。
+
+* **transition 与失败处理。** 冻结 VideoFlow/MOFNet 提供相邻 \(I_t,I_{t+1}\) 的双向 flow；论文未单独交代该 flow estimator 的完整输入上下文。只保留有限、端点在界、反向支持存在且通过像素单位 forward--backward 阈值的对应。随后在归一化坐标以 Huber-IRLS 加 MAD rejection 拟合 \(3\times3\) affine \(A_t\)；一致点过少时，该 edge 保持时间对齐但支撑和 confidence 置零。输出 packet 包含归一化的 residual median/MAD 统计；static support 与有效支撑、双向一致性、仿射条件数共同进入 \(c_t\)，而 cut score 还用 RGB photometric warp disagreement。方法段列出这些组成量，却未给 \(c_t\) 的具体组合公式，也没有对象/相机真值或单独校准监督。
+* **时间语义与可识别性。** ReTEM 按 edge 顺序以 \(g_t=c_t(1-q_t^{cut})\mathbf1[valid]\) 更新、只安全组合 geometry，并在 cut、持续低 confidence、不安全候选、质量下降或 segment horizon 时重锚；这是一条**有界、按时间正向**的 transition chain。VQA 实验把视频采样为 2 FPS、截为 8--32 帧；但正向递推和 causal LM loss 不代表逐帧视觉输入无前瞻。论文将 edge \(t\) 对齐源帧 \(t\)，该 edge 至少需要 \(t+1\)；EASE 的公式8又对同一 segment 内全部有效视觉组聚合，再以四个池化 context tokens 回注视觉切片。按该公式直接用于较早帧输出时可能包含其后的视觉组，这是公式的时间依赖推论，不是实测在线延迟。作者明确称表示是 image-plane proxy，不是 metric pose 或 3-D map：\(A_t\) 拟合通过筛选的优势二维变换，把它解释为背景运动还依赖足够背景支撑；不能把 robust fit 或 residual 自动当作真实 camera/object motion 分解。
+* **输出、监督、成本和消融边界。** 训练目标仅为 assistant answer token 的 causal language-modeling loss，Qwen vision 与 flow 均冻结；评测是 SIS-Bench 13 项 UAV VQA 的问答 accuracy，未报告点/框定位、tiny-object 指标或球 blur 条件。F/FR/FRE 的表 3 是逐级冻结继承模块、每级追加优化的 stagewise comparison；作者自己说明仍需 checkpoint-controlled progressive ablation 才能隔离 ReTEM/EASE。因此只能说论文报告含这些机制的整套训练流程获得更高 VQA 分数，额外优化与各组件的贡献尚未分离，不能将增益干净归因给 motion、reset 或可靠性本身。全文未报告 latency、FLOPs、显存，也未单列或计入 flow estimator 成本。
+
+**对本项目的限制。** EgoSIS 使“用鲁棒二维 background transition 生成可拒绝的 support-quality 描述符，并在时间边界 reset”不再是新概念；它不排除、也未验证其对高速微小 RGB 球的候选覆盖、中心误差或误匹配抑制。若未来采用同类分析，只能把它作为 background-supported image-plane proxy，按球的定位协议另测收益和端到端成本，不能写成物理 camera/object decomposition。
 
 ## 3. 五个候选设计逐项的创新冲突、可识别性和最小验证
 
@@ -211,7 +221,7 @@
 
 ### D. `camera residual / global-local`
 
-**冲突。** DMR 是最直接的 small-target detector 先例；EgoSIS 是最新 pose-free image-plane transition/residual/reliability factorization；传统 global motion compensation 更早已存在。
+**冲突。** DMR 是最直接的 small-target detector 先例；EgoSIS 是最新 pose-free **image-plane proxy** transition/residual/reliability factorization；传统 global motion compensation 更早已存在。
 
 **第一性原理限制。** 画面运动不是球 object motion。对于非共面球、透视、rolling shutter、变焦，单一 2D homography/flow 只可描述部分背景；球相对背景残差是观测性特征，不是几何分解真值。相机跟球时，所需的 correspondence 甚至可以接近零位移。因此把 residual 设为 detect 的必要条件会系统性伤害最需要的序列。
 
@@ -267,4 +277,4 @@
 11. Safadoust et al. **FlowIt: Global Matching via Hierarchical Transformers and Optimal Transport for Optical Flow**. arXiv:2603.28759v2, 2026-05-31. [arXiv](https://arxiv.org/abs/2603.28759), [project](https://kuis-ai.github.io/FlowIt/), [fixed author source](https://github.com/sadrasafa/FlowIt/tree/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f). A（2026-09-11补读全文关键段与固定源码）；作者项目称 BMVC 2026 Oral，当前论文来源为 arXiv v2。
 12. Luo et al. **Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection**. arXiv:2508.15415, 2025. [arXiv](https://arxiv.org/abs/2508.15415). A, preprint.
 13. Liu et al. **MI-DETR: A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration**. arXiv:2603.05071v1, 2026-03-05. [arXiv](https://arxiv.org/abs/2603.05071), [fixed author source](https://github.com/nliu-25/MI-DETR/tree/24257e4774c8f328738e88142c9a3cdabfd7afa5). A（2026-09-11 定向补读全文与固定源码）, preprint.
-14. Yang et al. **EgoSIS: From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning**. arXiv:2609.08938, 2026. [arXiv](https://arxiv.org/abs/2609.08938). C, preprint.
+14. Yang et al. **EgoSIS: From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning**. arXiv:2609.08938v2, 2026-09-09. [arXiv](https://arxiv.org/abs/2609.08938v2), [官方全文](https://arxiv.org/html/2609.08938v2). A（2026-09-11 定向补读全文方法与实验；未定位到可确认的作者公开代码）, preprint.
