@@ -142,11 +142,22 @@
 | 工作 | 状态/证据 | 对本项目最重要的影响 |
 |---|---|---|
 | **BIRD**, *Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection* | **A，arXiv:2508.15415**。已读官方 HTML 的方法与消融段；未见本轮可核验正式出版版本。 | 将 local deformable temporal fusion 与 whole-clip forward/backward propagation 合并，显式批评滑窗只用邻帧、整段多次处理的开销。它是“用更远的时间帧补救当前弱目标”的直接反证。球项目若自称 long-range temporal evidence 新颖，必须与此类递归 propagation 相比，并说明是否可 causal、边界如何 reset、是否跨 clip。 |
-| **MI-DETR**, *A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration* | **C，arXiv:2603.05071，2026-03-05**，官方摘要已读。 | 以 retina-inspired cellular automaton 将 raw sequence 转为与 appearance 同网格的 motion map，只用 bbox supervision。这是“简单 motion map + appearance 双路即可成为强 baseline”的危险反证；先跑等预算差分/运动图基线，再声称 correspondence 必要。 |
+| **MI-DETR**, *A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration* | **A，arXiv:2603.05071v1，2026-03-05**；已读官方全文方法/实验和作者公开源码的固定提交。仍是预印本。 | 它不是 correspondence/flow，而是廉价、因果、带状态的差分—累积 motion map 加双路融合；它是“显式大范围匹配是否必要”应面对的竞争解释，但不能以其 IR bbox 结果替代 RGB 球中心定位证据。 |
 | **FlowIt** | **C，arXiv:2603.28759，2026-03-30**，见上。 | 覆盖 global matching、置信度和 occlusion，尤其提醒 no-match 不能只是一个任意 sigmoid。 |
 | **EgoSIS**, *From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning* | **C，arXiv:2609.08938，2026-09-08**，在截止日前一天；官方摘要已读。 | 用 RGB-derived bidirectional flow 拟合 robust image-plane transition，并产出 residual-support/reliability factor。任务是 UAV VQA，不是检测或球定位；不能当性能 baseline，却是 camera residual 表述的最新概念冲突。 |
 
 另外，检索到 **OMFlow**（Pattern Recognition Letters 2026，occlusion motion estimation）等纯 flow 工作，但其目标/评测没有 tiny automatic detection 的可比性，未列为主近邻；它只补强了“occlusion/no-match 已有大量前史”，不足以支持球方法的具体机制。
+
+#### MI-DETR 定向补读（2026-09-11）：它实际排除了什么、没有排除什么
+
+**证据范围。** [arXiv v1](https://arxiv.org/abs/2603.05071v1) 于 2026-03-05 提交；以下已读其[方法 RCA/PMI](https://arxiv.org/html/2603.05071v1#S3)和[实验/复杂度](https://arxiv.org/html/2603.05071v1#S4)。作者确有公开源码；本条固定到 2026-03-11 提交 `24257e4774c8f328738e88142c9a3cdabfd7afa5`。其[README](https://github.com/nliu-25/MI-DETR/blob/24257e4774c8f328738e88142c9a3cdabfd7afa5/README.md#L39-L46)明确把appearance与预先生成的motion图一一配对为6-channel输入，模型配置在P3做双向`TransformerFusionBlock`。固定树中未找到从原始序列生成RCA map的脚本；复现包要求另取retina-processed data。因此算法事实以论文为准，公开代码只能核验其下游双路detector与预处理输入约定。
+
+* **实质算子。** 对当前帧先作阈值/侧抑制/ON--OFF contrast，随后取 `|C_t-C_{t-1}|`；该差分经 `S_a=0.8S_{a,t-1}+0.2R_t` 作指数累积，再与当前 contrast 经固定 Mexican-hat（约 \(5\times5\)）中心环绕滤波、阈值、双边滤波和归一化合成为 \(M_t\)。所以它绝非 raw one-step frame difference，也不只是多帧相加：有固定的空间抑制和状态去噪；但其时间核心仍是**同一像素地址**的一步绝对差分加 EMA，而非 feature correspondence。
+* **时间与因果性。** 输出/检测目标是当前 \(I_t\)；每一步只读当前帧、\(C_{t-1}\) 和 \(S_{a,t-1}\)，无未来帧，故可因果部署。序列开始时状态清零，首帧用空间梯度初始化；作者把 \(\alpha=0.8\) 解释为约五帧记忆。表中“1 frame”只表示没有显式缓存输入帧，**不等于无历史**。按EMA公式推导，约五帧是有效尺度，不是硬截断：充分长序列中五个最近输入之外仍有`0.8^5=32.768%`的线性累计权重；后续非线性处理还会影响实际响应。这是公式推论，不是论文报告的额外实验。任何同三帧球基线的对照都必须同样在rally及内部时间边界reset，并明确限制或报告真正可用的历史。
+* **监督、几何与相机边界。** 训练只有标准 detection 的类别、L1 box 与 GIoU 损失，没有 flow、位移、motion-map 或对应监督；论文统一 letterbox 到 \(512\times512\)。\(M_t\) 与 \(I_t\) 逐像素对齐，却是单张非负标量图：不含速度正负、物理位移向量、跨位置 candidate 或多假设。作者没有给出 camera-motion compensation 或静态相机假设；由同址差分可直接推知，连续平移/缩放造成的背景变化也会进入响应，不能把它解释为 object-only motion。
+* **实验与成本的可比性。** 工作评估三套 moving-IR **bbox** 数据，用 mAP@0.5、P/R/F1；不是 RGB 视频的点中心或 blur 评价。IRDST-H 上报告 70.30 mAP@50、72.70 F1、32.44M parameters、93.90 GFLOPs、34.60 FPS（RTX 3090），但论文明确 FPS **不含一次 RCA preprocessing**。故其数值不能同 BlurBall 的中心容差、位置误差或端到端三帧吞吐直接排列，也不能据此称其在运动模糊 RGB 球上有效。
+
+**对当前决策的限制。** 不据此改变正在运行的三帧 DINO 基线，也不把 RCA/PMI 加入当前版本。若后续结果要宣称“wide correspondence 必要”，先用同一数据切分、输入尺度、目标帧和真实因果历史比较：(i) current-only，(ii) 只加可见的差分/EMA motion 图，(iii) motion 图加双路交互；否则会把固定 map、额外历史和 32.44M/93.90G detector 融合容量混为“motion mechanism”。该比较须计入图生成时间，并按本项目中心协议报告漏检/误检和定位，而不是移植 IR box mAP。即使 (ii) 已解释收益，也只否定该设置下昂贵匹配的必要性；它不证明或反驳球的真实跨位置 correspondence。
 
 ## 3. 五个候选设计逐项的创新冲突、可识别性和最小验证
 
@@ -250,5 +261,5 @@
 10. Xu et al. **GMFlow: Learning Optical Flow via Global Matching**. CVPR 2022. [Official PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Xu_GMFlow_Learning_Optical_Flow_via_Global_Matching_CVPR_2022_paper.pdf). A.
 11. Safadoust et al. **FlowIt: Global Matching via Hierarchical Transformers and Optimal Transport for Optical Flow**. arXiv:2603.28759, 2026. [arXiv](https://arxiv.org/abs/2603.28759). C, preprint.
 12. Luo et al. **Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection**. arXiv:2508.15415, 2025. [arXiv](https://arxiv.org/abs/2508.15415). A, preprint.
-13. Liu et al. **MI-DETR: A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration**. arXiv:2603.05071, 2026. [arXiv](https://arxiv.org/abs/2603.05071). C, preprint.
+13. Liu et al. **MI-DETR: A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration**. arXiv:2603.05071v1, 2026-03-05. [arXiv](https://arxiv.org/abs/2603.05071), [fixed author source](https://github.com/nliu-25/MI-DETR/tree/24257e4774c8f328738e88142c9a3cdabfd7afa5). A（2026-09-11 定向补读全文与固定源码）, preprint.
 14. Yang et al. **EgoSIS: From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning**. arXiv:2609.08938, 2026. [arXiv](https://arxiv.org/abs/2609.08938). C, preprint.
