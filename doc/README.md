@@ -68,6 +68,7 @@
 | [压缩视频运动表示](literature/2026-09-11-compressed-motion.md) | ReMoRa的重编码、MV精炼、参考帧与成本在现有球数据上有哪些实际边界 |
 | [门控运动token](literature/2026-09-11-gated-motion-tokens.md) | GMoT的软空间池化、相邻差分和完整微手势训练配方能够支持哪些定位主张 |
 | [轨迹视觉提示](literature/2026-09-11-trajectory-prompts.md) | Motion-as-Prompt的query覆盖、相机补偿、全视频选帧和画线怎样依赖上游跟踪 |
+| [稀疏中心关系监督](literature/2026-09-11-point-relation-supervision.md) | DINO-Tracker、LoFTR与点跟踪先例如何限定训练期辅助的解释和新颖性 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
@@ -85,6 +86,7 @@
 - [完整微调后的细定位分解](experiments/2026-09-11-full-subcell-readout.md)：固定实际预测粗块的四子格oracle能恢复多少误差，以及它为何不足以解释主要精度差距。
 - [全量DINO时序控制结果](experiments/2026-09-11-full-temporal-control.md)：真实历史相对重复当前帧重训的整体增量、困难组救回与无球误报。
 - [位置分布集中度诊断](experiments/2026-09-11-readout-concentration.md)：固定坐标下的局部质量、背景响应及分数排序为何只能提供有限解释。
+- [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)比较训练期实例关系与共享外观query，保持自动定位推理图不变。
 
 ## 阶段进展
 

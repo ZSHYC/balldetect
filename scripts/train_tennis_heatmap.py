@@ -17,11 +17,25 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "third_party/dinov3"))
 from ballmotion.backbone_probe import BackboneProbe
+from ballmotion.correspondence import endpoint_logits, endpoint_loss, native_endpoint_cells
 from ballmotion.heatmap import disk_targets, heatmap_predictions, quality_focal_loss
 from ballmotion.probe import SpatialProbe, evaluate_predictions
 from ballmotion.tennis import grid_targets, grid_to_original
 from dinov3.models.convnext import ConvNeXt
 from third_party.wasb.hrnet import HRNet
+
+
+def build_dino_model(weights_path):
+    # 保持完整backbone→prefix→head的原初始化顺序，供训练与辅助尺度检查共用。
+    backbone = ConvNeXt(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768])
+    backbone.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True,
+                                       mmap=True), strict=True)
+    prefix = torch.nn.Sequential(backbone.downsample_layers[0], backbone.stages[0],
+                                 backbone.downsample_layers[1], backbone.stages[1])
+    del backbone
+    head = SpatialProbe(576, upscale=2, hidden_channels=32, num_frames=3,
+                        appearance_channels=576)
+    return BackboneProbe(prefix, head, train_backbone=True)
 
 
 def model_input(rgb, windows, ids, device, model_name):
@@ -89,9 +103,22 @@ def main():
     parser.add_argument("--model", choices=("hrnet", "dino"), default="hrnet")
     parser.add_argument("--temporal-input", choices=("history", "repeat_current"),
                         default="history")
+    parser.add_argument("--auxiliary", choices=("none", "relation", "appearance"), default="none")
+    parser.add_argument("--auxiliary-weight", type=float)
     args = parser.parse_args()
     if args.model == "hrnet" and args.temporal_input != "history":
         raise ValueError("repeat_current 控制只适用于 DINO")
+    if args.auxiliary != "none":
+        if args.model != "dino" or args.temporal_input != "history":
+            raise ValueError("端点辅助只适用于DINO真实历史")
+        if args.auxiliary_weight is None:
+            if args.auxiliary == "appearance":
+                raise ValueError("appearance需要传入固定训练batch校准得到的辅助系数")
+            args.auxiliary_weight = .1
+        if not np.isfinite(args.auxiliary_weight) or args.auxiliary_weight <= 0:
+            raise ValueError("辅助系数需要有限正数")
+    elif args.auxiliary_weight is not None:
+        raise ValueError("无辅助实验不使用auxiliary-weight")
     if (args.output / "config.json").exists():
         raise ValueError("此目录已有实验配置；请用新目录避免覆盖")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -148,15 +175,7 @@ def main():
     else:
         weights_path = (ROOT / "models/pretrained/dinov3/lvd1689m/"
                         "dinov3_convnext_tiny_pretrain_lvd1689m-21b726bb.pth")
-        backbone = ConvNeXt(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768])
-        backbone.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True,
-                                             mmap=True), strict=True)
-        prefix = torch.nn.Sequential(backbone.downsample_layers[0], backbone.stages[0],
-                                     backbone.downsample_layers[1], backbone.stages[1])
-        del backbone
-        head = SpatialProbe(576, upscale=2, hidden_channels=32, num_frames=3,
-                            appearance_channels=576)
-        model = BackboneProbe(prefix, head, train_backbone=True).to(device)
+        model = build_dino_model(weights_path).to(device)
         grid_hw = (72, 128)
         optimizer = torch.optim.AdamW([
             {"params": model.head.parameters(), "lr": 3e-4, "name": "head"},
@@ -177,6 +196,15 @@ def main():
                             "parameter_groups": {"head": {"lr": 3e-4},
                                                  "prefix": {"lr": 1e-5}},
                             "schedule": "constant"}
+
+    auxiliary_query = None
+    if args.auxiliary == "appearance":
+        auxiliary_query = torch.nn.Parameter(F.normalize(
+            torch.randn(192, generator=torch.Generator().manual_seed(args.seed)), dim=0).to(device))
+        optimizer.add_param_group({"params": [auxiliary_query], "lr": 3e-4,
+                                   "name": "appearance_query"})
+        optimizer_config["parameter_groups"]["appearance_query"] = {"lr": 3e-4}
+    native_cells = native_endpoint_cells(frames, windows) if args.auxiliary != "none" else None
 
     target_xy = np.asarray([[r["x_raw"], r["y_raw"]] for r in rows], dtype=float)
     present = np.asarray([r["visibility_raw"] != 0 for r in rows])
@@ -214,6 +242,14 @@ def main():
         "gradient_accumulation": None,
         "timing_scope": "RGB mmap indexing + H2D + online model train and evaluation; excludes RGB cache creation",
     }
+    if args.auxiliary != "none":
+        config["auxiliary_loss"] = {
+            "name": "visible center endpoint local cross_entropy", "temperature": .1,
+            "delta_radius": [[1, 2], [2, 4]], "weight": args.auxiliary_weight,
+            "query": args.auxiliary, "training_only_parameters": 192 if auxiliary_query is not None else 0,
+            "reduction": "mean valid pairs per delta, then mean nonempty deltas",
+            "supervision": "same-window VC1 endpoints within radius; out-of-image candidates masked",
+        }
     (args.output / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(config, ensure_ascii=False), flush=True)
 
@@ -232,7 +268,9 @@ def main():
     print(json.dumps(record), flush=True)
     best = (initial_metrics["detection16"]["f1"], initial_metrics["detection8"]["f1"])
     best_epoch = 0
-    torch.save({"model": model.state_dict(), "epoch": 0}, args.output / "best.pt")
+    torch.save({"model": model.state_dict(), "epoch": 0,
+                **({"auxiliary_query": auxiliary_query.detach()} if auxiliary_query is not None else {})},
+               args.output / "best.pt")
 
     for epoch in range(1, args.epochs + 1):
         epoch_started = time.perf_counter()
@@ -242,10 +280,17 @@ def main():
         order = rng.permutation(train_idx)
         total_batches = (len(order) + args.batch_size - 1) // args.batch_size
         loss_sum = 0.
+        main_loss_sum, auxiliary_loss_sum = 0., 0.
         for batch_number, start in enumerate(range(0, len(order), args.batch_size), 1):
             ids = order[start:start + args.batch_size]
             class_target = torch.from_numpy(target_indices[ids]).to(device)
-            logits = model(model_input(rgb, windows, ids, device, args.model))
+            pixels = model_input(rgb, windows, ids, device, args.model)
+            if native_cells is None:
+                logits = model(pixels)
+            else:
+                features = model.encode(pixels.flatten(0, 1))
+                features = features.reshape(len(ids), 3, *features.shape[1:])
+                logits = model.head(features.flatten(1, 2))
             if args.model == "hrnet":
                 target = disk_targets(class_target, grid_hw)
                 logits = logits[0]
@@ -254,6 +299,12 @@ def main():
                 loss = quality_focal_loss(logits, target)
             else:
                 loss = F.cross_entropy(logits, class_target)
+            if native_cells is not None:
+                auxiliary = endpoint_loss(endpoint_logits(features, native_cells[ids].to(device),
+                                                           auxiliary_query))
+                main_loss_sum += float(loss.detach()) * len(ids)
+                auxiliary_loss_sum += float(auxiliary.detach()) * len(ids)
+                loss = loss + args.auxiliary_weight * auxiliary
             if not torch.isfinite(loss):
                 raise ValueError(f"Non-finite loss at epoch {epoch}")
             optimizer.zero_grad(set_to_none=True)
@@ -278,12 +329,17 @@ def main():
                                      for group in optimizer.param_groups},
                   "epoch_seconds": time.perf_counter() - epoch_started,
                   "elapsed_seconds": time.perf_counter() - started}
+        if native_cells is not None:
+            record.update(train_main_loss=main_loss_sum / len(order),
+                          train_auxiliary_loss=auxiliary_loss_sum / len(order))
         with (args.output / "history.jsonl").open("a") as handle:
             handle.write(json.dumps(record) + "\n")
         print(json.dumps(record), flush=True)
         if score > best:
             best, best_epoch = score, epoch
-            torch.save({"model": model.state_dict(), "epoch": epoch}, args.output / "best.pt")
+            torch.save({"model": model.state_dict(), "epoch": epoch,
+                        **({"auxiliary_query": auxiliary_query.detach()}
+                           if auxiliary_query is not None else {})}, args.output / "best.pt")
         if args.model == "hrnet" and epoch in (10, 20):
             for group in optimizer.param_groups:
                 group["lr"] *= .1
