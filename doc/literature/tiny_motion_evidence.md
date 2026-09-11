@@ -4,7 +4,7 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
-2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文补读，修订见§1.5、§1.7及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文，以及FlowIt v2全文与固定作者源码补读，修订见§1.5、§1.7、§2.3及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
 
 ## 0. 先给结论：哪些表述已经不能作为创新
 
@@ -129,9 +129,14 @@
 
 **GMFlow，证据 A。** [CVPR 2022 官方 PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Xu_GMFlow_Learning_Optical_Flow_via_Global_Matching_CVPR_2022_paper.pdf)。它用 Transformer feature enhancement 和全局 matching 得初始 flow，再 warping 后在局部范围预测 residual；所以 global-then-local 本身不能构成球方法贡献。
 
-**FlowIt，证据 C（预印本）。** [arXiv:2603.28759](https://arxiv.org/abs/2603.28759)，2026-03-30 官方摘要。它明确针对 large pixel displacement，以 optimal transport 做 global initialization，同时导出 occlusion/confidence map，再用高可信运动引导低可信区 refinement。没有阅读全文，不能对其 exact complexity/损失作任何断言。
+**FlowIt，证据 A（arXiv v2；公开源码）。** [arXiv v2，2026-05-31](https://arxiv.org/abs/2603.28759v2)已读方法、训练与消融；[作者项目页](https://kuis-ai.github.io/FlowIt/)称 BMVC 2026 Oral，当前可读论文仍为 arXiv 版本。作者有公开模型实现；此处固定到 `sadrasafa/FlowIt@a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f`（2026-08-28）。
 
-二者同样不解决球任务的三项条件：tiny feature 可能没有判别性、全局 all-to-all 在高分辨率太贵、球检测不能以 GT point 初始化。但它们已将“global range + local refine + confidence/no-match”占为通用 correspondence 设计空间。
+* **不是稀疏 global search。** CNN/FPN/MRT 最终在 \(1/4\) 分辨率形成 feature，再构造完整 \(N\times N\) 4D cost/probability volume，\(N=HW/16\)；没有候选裁剪。它以降采样压低代价，但 all-pairs 元素数仍随原图面积平方增长。S 版在 FlyingChairs 消融中报 344 GMAC、99 ms（L40S）；该数不等于本项目端到端成本。[论文方法/表4](https://arxiv.org/html/2603.28759v2#S3)
+* **OT 与两个不同的分数。** Sinkhorn entropy-regularized OT 加 source/target dustbin；真实像素可把质量送入 dustbin。初始 `confidence` 是 argmax 周围 \(r=2\) 小窗内的有效概率质量；论文名为 `occlusion` 的图实为所有有效 target 的边缘质量，高值表示**非**遮挡/可匹配、低值表示质量流入 dustbin。随后三步局部 refinement 以 flow、图像特征、局部相关、confidence 和该可匹配分数为条件，更新三者；源码为每轴 \(r=4\) 的局部 correlation lookup 与 ConvGRU。[迭代代码](https://github.com/sadrasafa/FlowIt/blob/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f/core/flowit.py#L96-L128)、[ConvGRU](https://github.com/sadrasafa/FlowIt/blob/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f/core/refinenet.py#L98-L115)。
+* **有 dustbin，但不是输出层的拒绝。** 固定源码把 dustbin 行/列从返回的概率张量删去，再在剩余有效位置 argmax+局部期望以产生每个 source pixel 的 dense flow；confidence/可匹配分数参与 refinement，并作为辅助 dense maps 返回，但没有据其阈值化或拒绝输出 flow 的分支。这是“已有 unmatched mass 与辅助分数”的直接先例；若要作显式 `no-match` 决策，还需另定义并评价拒绝规则。[OT与初始化](https://github.com/sadrasafa/FlowIt/blob/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f/core/submodules.py#L216-L329)、[最终返回值](https://github.com/sadrasafa/FlowIt/blob/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f/core/flowit.py#L159-L167)。
+* **监督与证据范围。** 输入严格为两张 RGB 帧、目标为 dense two-frame optical flow；flow GT 直接监督。non-occlusion 标签由 forward--backward consistency（<2 px）构造；confidence 是 endpoint error <4 px 的指示量。初始 flow/confidence 只在 non-occluded pixel 监督，三次 refinement 的 flow/confidence 覆盖全图，非遮挡分数以 \(L_1\) 全图监督。它在 Sintel、KITTI、Spring、LayeredFlow 等 dense-flow 数据上测 EPE/像素阈值，未报告 tiny/small-object 分桶、自动球发现、球中心或 blur 评测。故这是**未验证 tiny RGB 自动定位**，不是“其机制已被证实不能保留 tiny 特征”；不应因创新边界把未知写成失败。
+
+二者已将“global range + local refine + confidence/occlusion”占为通用 correspondence 设计空间。FlowIt 的 dense flow 与全图 forward--backward 监督不能由现有球中心标签完整提供；这是监督条件的限制，不是 dustbin 算子本身不能复用。论文也没有验证其 \(1/4\) feature 或全图 flow 能否自动定位数像素球。若以后使用预训练 FlowIt 作 dense-flow 对照，应另测自动候选覆盖、球中心误差和实际高分辨率成本；用 GT 中心采样光流的结果必须标为 oracle 探针，不能当自动定位性能，也不能预设其为性能上界。
 
 **论文必须回答的不是“为什么局部窗口不够大”而是：** 为什么一个固定预算的全局候选机制能在弱小球 feature 上提供比 objectness-only / GMFlow-style coarse matching 更高的 top-K 真对应覆盖，且不会因高重复背景产生等量假匹配。若没有此证据，复杂 matcher 应删除。
 
@@ -143,7 +148,7 @@
 |---|---|---|
 | **BIRD**, *Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection* | **A，arXiv:2508.15415**。已读官方 HTML 的方法与消融段；未见本轮可核验正式出版版本。 | 将 local deformable temporal fusion 与 whole-clip forward/backward propagation 合并，显式批评滑窗只用邻帧、整段多次处理的开销。它是“用更远的时间帧补救当前弱目标”的直接反证。球项目若自称 long-range temporal evidence 新颖，必须与此类递归 propagation 相比，并说明是否可 causal、边界如何 reset、是否跨 clip。 |
 | **MI-DETR**, *A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration* | **A，arXiv:2603.05071v1，2026-03-05**；已读官方全文方法/实验和作者公开源码的固定提交。仍是预印本。 | 它不是 correspondence/flow，而是廉价、因果、带状态的差分—累积 motion map 加双路融合；它是“显式大范围匹配是否必要”应面对的竞争解释，但不能以其 IR bbox 结果替代 RGB 球中心定位证据。 |
-| **FlowIt** | **C，arXiv:2603.28759，2026-03-30**，见上。 | 覆盖 global matching、置信度和 occlusion，尤其提醒 no-match 不能只是一个任意 sigmoid。 |
+| **FlowIt** | **A，arXiv:2603.28759v2，2026-05-31**；已读全文关键方法/实验与固定作者源码。作者项目称 BMVC 2026 Oral，论文可读版本仍为预印本。 | 它在 \(1/4\) 特征做 dense all-pairs OT，真有 dustbin 与监督的 confidence/可匹配分数，但最终仍强制输出 dense flow；因此覆盖 global matching、可靠性辅助与 unmatched mass，不等于已验证的球 `no-match` 或 tiny 自动定位。 |
 | **EgoSIS**, *From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning* | **C，arXiv:2609.08938，2026-09-08**，在截止日前一天；官方摘要已读。 | 用 RGB-derived bidirectional flow 拟合 robust image-plane transition，并产出 residual-support/reliability factor。任务是 UAV VQA，不是检测或球定位；不能当性能 baseline，却是 camera residual 表述的最新概念冲突。 |
 
 另外，检索到 **OMFlow**（Pattern Recognition Letters 2026，occlusion motion estimation）等纯 flow 工作，但其目标/评测没有 tiny automatic detection 的可比性，未列为主近邻；它只补强了“occlusion/no-match 已有大量前史”，不足以支持球方法的具体机制。
@@ -259,7 +264,7 @@
 8. Yang, Huang, Wang. **QueryDet: Cascaded Sparse Query for Accelerating High-Resolution Small Object Detection**. CVPR 2022. [Official PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Yang_QueryDet_Cascaded_Sparse_Query_for_Accelerating_High-Resolution_Small_Object_Detection_CVPR_2022_paper.pdf). A.
 9. Bertasius, Torresani, Shi. **Object Detection in Video with Spatiotemporal Sampling Networks**. ECCV 2018. [Official PDF](https://openaccess.thecvf.com/content_ECCV_2018/papers/Gedas_Bertasius_Object_Detection_in_ECCV_2018_paper.pdf). A.
 10. Xu et al. **GMFlow: Learning Optical Flow via Global Matching**. CVPR 2022. [Official PDF](https://openaccess.thecvf.com/content/CVPR2022/papers/Xu_GMFlow_Learning_Optical_Flow_via_Global_Matching_CVPR_2022_paper.pdf). A.
-11. Safadoust et al. **FlowIt: Global Matching via Hierarchical Transformers and Optimal Transport for Optical Flow**. arXiv:2603.28759, 2026. [arXiv](https://arxiv.org/abs/2603.28759). C, preprint.
+11. Safadoust et al. **FlowIt: Global Matching via Hierarchical Transformers and Optimal Transport for Optical Flow**. arXiv:2603.28759v2, 2026-05-31. [arXiv](https://arxiv.org/abs/2603.28759), [project](https://kuis-ai.github.io/FlowIt/), [fixed author source](https://github.com/sadrasafa/FlowIt/tree/a6fa46829b1b5ae3fe0ff665f2d3771caf62bf9f). A（2026-09-11补读全文关键段与固定源码）；作者项目称 BMVC 2026 Oral，当前论文来源为 arXiv v2。
 12. Luo et al. **Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection**. arXiv:2508.15415, 2025. [arXiv](https://arxiv.org/abs/2508.15415). A, preprint.
 13. Liu et al. **MI-DETR: A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration**. arXiv:2603.05071v1, 2026-03-05. [arXiv](https://arxiv.org/abs/2603.05071), [fixed author source](https://github.com/nliu-25/MI-DETR/tree/24257e4774c8f328738e88142c9a3cdabfd7afa5). A（2026-09-11 定向补读全文与固定源码）, preprint.
 14. Yang et al. **EgoSIS: From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning**. arXiv:2609.08938, 2026. [arXiv](https://arxiv.org/abs/2609.08938). C, preprint.
