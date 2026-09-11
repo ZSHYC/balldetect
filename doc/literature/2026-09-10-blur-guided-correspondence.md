@@ -88,3 +88,31 @@ site:arxiv.org/abs "motion-blurred" "optical flow" 2024 OR 2025 OR 2026
 随后按TbD、ETR和MoTDiff准确题名补检，深读限制为上述五项。筛选保留会改变“曝光内轴约束帧间关系”判断的工作，没有把一般图像去模糊论文堆成列表。最早先例可比仅按年份追新更直接；同时纳入可访问的较新预印本，不把出版或代码状态未核实之处补成事实。
 
 本页不覆盖所有运动模糊、光流、点跟踪或扩散轨迹论文，也不提供穷尽检索保证。BlurBall、TrackNet和其他tiny-motion先例仍见既有专题；本次结果只决定这个候选应带哪些约束继续被审视，不决定主模型架构。
+
+## 2026-09-11 补检：状态自适应与上下文路线已经有近邻
+
+本次只补检 2025--2026 年能改变下一步决策的自动 RGB 体育目标定位工作；不重读 BlurBall，也不把一般图像去模糊列为相关工作。结论是：**没有发现推翻“先测自然 blur 条件下的误差，再选 motion 机制”的直接证据；相反，两项近邻把该顺序变得更必要。**
+
+实际检索包括`"fast-moving object" localization "motion blur" 2025 arXiv`、`"fast moving object" detection tracking motion blur 2026 arXiv`、`deblatting fast moving object 2025 2026 arXiv`、`sports ball localization motion blur 2025 2026 arXiv`，随后按MoSA-Det、PLUCC、LDINet题名补查全文与作者代码。arXiv检索结果不足以保证穷尽；本次只深读下列两项与当前决策有关的新增来源。
+
+### MoSA-Det：运动状态已被用于自适应时序融合，但不是 tiny-ball 点定位
+
+Lulu Yang、Wenqing Sun、Jinkui Ren，*MoSA-Det: motion state adaptive object detection for sports videos*，Scientific Reports 16, 15969，2026-04-03。[正式文章](https://www.nature.com/articles/s41598-026-43231-2)，[PMC 全文](https://pmc.ncbi.nlm.nih.gov/articles/PMC13194943/)。阅读深度：[P] 摘要、引言、运动状态估计/MAAF/SGTA、损失、三帧设置、ball 消融、伪标签敏感性和局限。
+
+作者以帧间 feature difference 与 local correlation 估计像素级 `static/slow/fast` 状态；该状态同时调节多尺度/可变形采样与跨帧注意力。快速区域的历史权重被压低，且另有位置补偿分支。状态监督却来自**相邻帧 GT box displacement** 的 one-hot pseudo-label；其三帧 `SGTA`、SoccerNet-Tracking/SportsMOT box-mAP 设置与本项目的自动微小球中心定位不同。论文报告 SoccerNet 的 Ball 类提升，但没有报告 BlurBall 式中点、逐帧像素容差、候选漏失、streak-length 条件或有/无球中心 heatmap 的证据。
+
+它限制了“首次按 motion state 选择时序聚合”“首次用 feature difference/local correlation 产生状态先验”这类宽泛表述，也表明以 GT 位移生成状态监督已经是已知训练路径。静/慢/快是运动状态，不等于对应正确概率或校准的可靠性；不能据此把所有 motion reliability 主张都视为已被同一机制覆盖。它**不**证明在真实 tiny-ball 视觉证据稀弱时，状态估计可发现球、对应可信，或应扩大搜索范围。若未来研究状态门控，必须先与该近邻区别在于：状态来自何种推理时可得证据、是否对球的定位/漏检而非 boxes 有效，以及相同计算预算下的条件收益；当前不据此加入模块。
+
+### PLUCC：模糊微小目标可由上下文改善，但其证据不能替代 motion 诊断
+
+Liam Salass 等，*Ice Hockey Puck Localization Using Contextual Cues*，CVPRW CVSports 2025；[正式论文](https://openaccess.thecvf.com/content/CVPR2025W/CVSPORTS/papers/Salass_Ice_Hockey_Puck_Localization_Using_Contextual_Cues_CVPRW_2025_paper.pdf)，[arXiv HTML](https://arxiv.org/html/2506.04365)。阅读深度：[P] 摘要、§1--§4.6 和数据/指标限制。
+
+该工作以单帧全分辨率 puck heatmap 与预训练 player detector/segmenter 生成的上下文图融合；作者明确将 small size、blur 与遮挡作为问题，并在其私有冰球数据上报告像素距离/AP。它没有使用帧间 correspondence；加入上下文预处理后的流程约6 FPS，必须计入成本，不能据此直接断言本机无法训练。其私有数据不能作为本项目现成公开2-D标注的直接复现基线。
+
+因此不能把“高分辨率 heatmap + 人/场景上下文帮助高速微小目标”写成新颖贡献。它也不要求现在加入球员检测或分割：本项目尚未测得 BlurBall 的自然 blur 残差究竟来自局部证据缺失、跨帧错配还是背景 FP。只有结果显示当前视觉/历史对应不足而语义上下文能以可接受成本区分错误时，才有理由把上下文作为另一条受控路线；届时必须与 motion 机制分开归因。
+
+### 其他检索命中没有新增决策证据
+
+2025 的 LDINet（Haodong Fan 等，*Journal of Visual Communication and Image Representation* 109:104439，[DOI](https://doi.org/10.1016/j.jvcir.2025.104439)）继续单张 FMO deblatting 的 latent decomposition/interpolation 路线，使用合成前景 blur 与背景条件。实际只读取出版社页面Highlights、摘要、引言/结论片段，未全文深读；其中没有提供自动跨帧球发现或有限搜索逐帧中心定位的证据，未改变上文结论。精确题名与作者代码检索未发现可核实的作者代码链接，不等于证明没有代码。2026 的 YOLO-Ball 仅能从作者期刊页的摘要确认其在自建网球数据上以 box mAP 处理 blur/occlusion，缺少公开数据、像素级中心协议与可复核完整方法证据，不作为当前设计依据。[来源](https://doi.org/10.1177/17543371261423768)。
+
+**当前决定。** BlurBall DINO 三帧中点基线仍先按 `l`、可见中心、原图像素误差、FP1/FP2/FN 和帧间 `d_px` 诊断自然残差；不从 MoSA-Det/PLUCC 直接移植状态门控、可变形采样、attention 或人类上下文。未来任何选择先用该条件残差提出可证伪问题，再做与这两项近邻可区分的同预算对照。
