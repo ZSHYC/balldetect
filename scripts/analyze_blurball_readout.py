@@ -71,6 +71,7 @@ def paired_groups(rows, old, new):
 def main(run):
     started = time.perf_counter()
     config = json.loads((run / 'config.json').read_text())
+    run_results = json.loads((run / 'results.json').read_text())
     metadata = json.loads((Path(config['rgb_cache']) / 'metadata.json').read_text())
     frames = metadata['frames']
     windows, _ = continuous_windows(frames, metadata['windows'], config['continuity_boundaries'])
@@ -98,7 +99,7 @@ def main(run):
         device = torch.device('cuda')
         model = build_dino_model(config['weights'], upscale=8).to(device)
         checkpoint = torch.load(run / 'best.pt', map_location=device, weights_only=True)
-        selected_epoch = json.loads((run / 'results.json').read_text())['best_epoch']
+        selected_epoch = run_results['best_epoch']
         assert checkpoint['epoch'] == selected_epoch, 'Checkpoint must match saved argmax selection'
         model.load_state_dict(checkpoint['model'])
         model.eval()
@@ -127,6 +128,7 @@ def main(run):
         np.savez(cache_path, window_ids=indices, centers=centers, patches=patches, q=q)
         info = {'protocol': ('blurball-full-temporal-control-v1' if temporal_input == 'repeat_current'
                              else 'blurball-local-readout-v1'), 'source_run': str(run),
+                'training_complete': run_results.get('training_complete', True),
                 'temporal_input': temporal_input,
                 'checkpoint_epoch': checkpoint['epoch'], 'radius_cells': 7, 'temperature': 1,
                 'batch_size': 8, 'precision': 'float32 model/logits; float64 CPU expectation',
@@ -135,6 +137,9 @@ def main(run):
                 'forward_elapsed_seconds': time.perf_counter()-started,
                 'timing_scope': 'metadata/model load + RGB/H2D/forward + local extraction/verification/cache write',
                 'peak_allocated_mib': torch.cuda.max_memory_allocated()/2**20}
+        if not info['training_complete']:
+            info['reference_protocol'] = info['protocol']
+            info['protocol'] = 'exploratory-interrupted-temporal-control'
         (output / 'config.json').write_text(json.dumps(info, indent=2) + '\n')
     grid_xy = barycenters(centers, patches)
     dimensions = np.array([[r['width'], r['height']] for r in rows])

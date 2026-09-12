@@ -227,8 +227,23 @@ def main():
     decoders = {decoder: {"history": history[decoder], "repeat": repeat[decoder]}
                 for decoder in ("argmax", "local_readout")}
     result = compare(rows, frames, val_windows, decoders)
+    training_status = {}
+    for name, run, config in (("history", args.history, history_config),
+                              ("repeat", args.repeat, repeat_config)):
+        records = [json.loads(line) for line in (run / "history.jsonl").read_text().splitlines()]
+        saved = json.loads((run / "results.json").read_text())
+        completed = records[-1]["epoch"]
+        training_status[name] = {
+            "planned_epochs": config["epochs"], "completed_epochs": completed,
+            "best_epoch": saved["best_epoch"],
+            "training_complete": completed == config["epochs"] and saved.get("training_complete", True),
+        }
+    complete = all(status["training_complete"] for status in training_status.values())
     result.update({
-        "protocol": "blurball-full-temporal-control-v1",
+        "protocol": ("blurball-full-temporal-control-v1" if complete
+                     else "exploratory-interrupted-temporal-control"),
+        "reference_protocol": "blurball-full-temporal-control-v1",
+        "training_status": training_status,
         "history_run": str(args.history.resolve()), "repeat_run": str(args.repeat.resolve()),
         "rgb_metadata": str((history_cache / "metadata.json").resolve()),
         "scope": "validation match18-21 only; GT centers/visibility/l used for post-hoc analysis",
