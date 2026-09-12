@@ -66,6 +66,31 @@ def paired_raw(rows, history_xy, repeat_xy, mask):
     return result
 
 
+def paired_decisions(rows, history_xy, history_q, repeat_xy, repeat_q):
+    """以各模型自己的坐标和q配对，不把位置变化与输出变化混为一项。"""
+    visible = np.array([row["visibility_raw"] == 1 for row in rows])
+    target = np.array([[row["x_raw"], row["y_raw"]] for row in rows], dtype=float)
+    history_error = np.linalg.norm(history_xy[visible] - target[visible], axis=1)
+    repeat_error = np.linalg.norm(repeat_xy[visible] - target[visible], axis=1)
+    history_rejected = history_q < .5
+    repeat_rejected = repeat_q < .5
+    result = {
+        "matrix_axes": {"rows": "repeat_current", "columns": "history"},
+        "v1_state_order": ["correct_emitted", "wrong_emitted", "correct_rejected", "wrong_rejected"],
+        "v0_state_order": ["emitted", "rejected"],
+        "v0": np.bincount(
+            2 * repeat_rejected[~visible] + history_rejected[~visible],
+            minlength=4).reshape(2, 2).tolist(),
+        "v1": {},
+    }
+    for radius in RADII:
+        history_state = (history_error >= radius).astype(int) + 2 * history_rejected[visible]
+        repeat_state = (repeat_error >= radius).astype(int) + 2 * repeat_rejected[visible]
+        result["v1"][str(radius)] = np.bincount(
+            4 * repeat_state + history_state, minlength=16).reshape(4, 4).tolist()
+    return result
+
+
 def _group(rows, history_xy, history_q, repeat_xy, repeat_q, mask):
     ids = np.flatnonzero(mask)
     selected_rows = [rows[index] for index in ids]
@@ -76,6 +101,8 @@ def _group(rows, history_xy, history_q, repeat_xy, repeat_q, mask):
         "repeat": evaluate_blurball(
             selected_rows, repeat_xy[ids], repeat_q[ids], grouped=False),
         "paired_raw": paired_raw(rows, history_xy, repeat_xy, mask),
+        "paired_decisions": paired_decisions(
+            selected_rows, history_xy[ids], history_q[ids], repeat_xy[ids], repeat_q[ids]),
     }
 
 

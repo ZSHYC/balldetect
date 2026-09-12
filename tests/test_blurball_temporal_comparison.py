@@ -37,8 +37,8 @@ class BlurBallTemporalComparisonTest(unittest.TestCase):
         rows = [frames[window[-1]] for window in windows]
         history_xy = np.array([[8.1, 0], [20, 0], [100, 100], [2, 1]])
         repeat_xy = np.array([[8, 0], [19.9, 0], [200, 200], [2, 1]])
-        history_q = np.array([.9, .9, .6, .9])
-        repeat_q = np.array([.8, .8, .4, .7])
+        history_q = np.array([.5, .9, .6, .49])
+        repeat_q = np.array([.49, .8, .4, .7])
         decoders = {
             "argmax": {"history": (history_xy, history_q),
                        "repeat": (repeat_xy, repeat_q)},
@@ -62,6 +62,27 @@ class BlurBallTemporalComparisonTest(unittest.TestCase):
             "both_correct": 1, "both_wrong": 0, "net_history_pck_change": 0.0,
         })
         self.assertEqual(groups["gt10_match/match18"]["n_targets"], 1)
+
+        paired = groups["all"]["paired_decisions"]
+        self.assertEqual(paired["matrix_axes"], {"rows": "repeat_current", "columns": "history"})
+        self.assertEqual(paired["v1_state_order"], [
+            "correct_emitted", "wrong_emitted", "correct_rejected", "wrong_rejected"])
+        self.assertEqual(paired["v1"]["4"], [
+            [0, 1, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0]])
+        self.assertEqual(paired["v1"]["8"], [
+            [1, 0, 1, 0], [0, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0]])
+        self.assertEqual(paired["v0_state_order"], ["emitted", "rejected"])
+        self.assertEqual(paired["v0"], [[0, 0], [1, 0]])
+        invisible = groups["visibility/V0_h11"]["paired_decisions"]
+        self.assertEqual(invisible["v1"]["4"], np.zeros((4, 4), dtype=int).tolist())
+        for radius in (4, 8, 16):
+            matrix = np.array(paired["v1"][str(radius)])
+            for model, margin in (("history", matrix.sum(axis=0)),
+                                  ("repeat", matrix.sum(axis=1))):
+                counts = groups["all"][model][f"frame_counts{radius}"]
+                self.assertEqual(margin[0], counts["tp"])
+                self.assertEqual(margin[1], counts["fp1"])
+                self.assertEqual(margin[2:].sum(), counts["fn_visible"])
 
         broken = {name: {model: (xy.copy(), q.copy()) for model, (xy, q) in values.items()}
                   for name, values in decoders.items()}
