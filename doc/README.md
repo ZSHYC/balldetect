@@ -77,7 +77,7 @@
 | [因果点跟踪与自动球定位](literature/2026-09-12-causal-point-tracking.md) | TAPNext/++、Track-On2的查询初始化、分布读出、DINOv3候选重排与训练时长如何约束创新 |
 | [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet、CoWTracker及FreeFlow对变化、transport、背景与对应成本的限制 |
 | [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互、因果末帧窗口与流式缓存，及它们和当前后期融合的差别 |
-| [Taylor与差分基的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor Videos/TDN的前置非线性、实际导出与时间输入如何限制可逆换基解释 |
+| [差分与递归高通的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor/TDN的前置运算，以及MCATrack的线性递归、历史与配准怎样限制可逆换基解释 |
 | [SWIFT的分尺度warping](literature/2026-09-12-warping-without-cost-volume.md) | 粗全局预测、细尺度采样、两帧因果语义与实际消融，区分MoL误差分量和多地址假设 |
 | [KeepTrack候选与干扰物关联](literature/2026-09-12-distractor-association.md) | 候选图、dustbin、已初始化身份与在线记忆怎样限制自动球发现和持续错误的解释 |
 | [背景运动条件化与物理解释](literature/2026-09-12-coherent-motion-conditioning.md) | DMR完整监督/条件消融、跟拍的绝对运动与相对残差，及OTHR结构/损失归因 |

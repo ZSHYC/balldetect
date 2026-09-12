@@ -27,7 +27,7 @@
 | [空间上采样](../literature/2026-09-12-feature-upsampling.md) | AnyUp v2、RaysUp v1 正文/附录/代码；FeatUp、LoftUp 近邻 | 区分 coarse feature、当前 RGB guidance、坐标/射线先验与外部监督，限制“恢复信息”的归因 |
 | [因果点跟踪](../literature/2026-09-12-causal-point-tracking.md) | TAPNext v2、TAPNext++ v1、Track-On2 v2 方法/实验/相关附录；TAP 官方发布路径 | 确认 DINOv3+候选重排前史，区分给定点、自动球、分布输出、记忆与训练范围 |
 | [新增微小目标近邻](../literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet v2、CoWTracker v1、FreeFlow v1 | 补入历史过滤、事件 transport、背景建模、无相关体跟踪和跨注意力光流的竞争解释 |
-| [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[Taylor/TDN](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor 正文与作者实现；补清 TDN 前置非线性 | 区分末层可逆换基、逐层时序交互、输入条件门控和丢信息的变化表示；纠正一处 PMLR 错链 |
+| [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[差分/递归高通](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor正文与作者实现；TDN前置非线性、MCATrack全文 | 区分可逆换基、逐层交互、历史状态、配准和信息压缩；纠正一处PMLR错链 |
 | [Motionformer 补读](../literature/correspondence_evidence.md#5-motionformer-全文补读先保留时间索引再做空间与时间池化) | v2 方法、实验、相关附录和实际 attention 前向 | 核对分帧空间归一化、时间池化、原型近似及历史/修正代码差别，避免把关系组织本身当创新 |
 | [SWIFT 补读](../literature/2026-09-12-warping-without-cost-volume.md) | CVPRW 2026 全文、公式图像与消融；回查 SEA-RAFT MoL 原公式 | 限定粗全局预测与 fine warp 的作用，区分误差分布分量、多地址假设与 no-match；保留实际实现缺口 |
 | [单帧快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | SI-DDPM-FMO 正文、Table 1 与固定评测源码 | 确认 GT 条件 ROI、方向消歧与输出吞吐，区分完整曝光重建和几何中点定位 |
@@ -153,6 +153,8 @@ TAPNext 通过图像/点 tokens 与 SSM，CoWTracker 通过单地址 warp 后的
 [SWIFT](../literature/2026-09-12-warping-without-cost-volume.md)进一步给出具体分工：1/16 跨帧 attention 回归粗 flow，1/16、1/8 继续全局交互，1/4 改用局部 CNN。单次 warp 按一个位移中心采样，不代表整个模型被该初值永久截断；反之，论文也未证明数像素球能获得可靠粗预测。其最终消融同时减少 AGA 迭代并增加 fine CNN，只能支撑联合配置，不能写成高分辨率层的独立收益。
 
 一个时间语义上的补充是：**固定输入 `[t−2,t−1,t]` 只预测末帧 `t`，并不要求窗口内部每一层都单向。** 历史 slot 在内部看到该窗口较晚 slot，仍未看到预测目标 `t` 之后的帧；它可以对末帧因果。但这些时序特征依赖整个窗口，不能未经分析就当成独立逐帧 feature 跨窗口复用。逐帧持久 state 的流式实现则需要另行满足时间依赖与缓存条件。不能把“无前瞻定位”和“全部中间状态都能增量缓存”设为同一个要求。
+
+[MCATrack的递归高通](../literature/2026-09-12-temporal-difference-representation.md#mcatrack有状态的递归高通本身仍然线性)提供了另一条实际先例：图像进入骨干前，利用时间变化增强微小目标与杂波的对比。递归滤波本身仍线性，差异在于历史、配准和插入位置；它的动态模板更新门也不等于搜索位移限制。该已初始化红外tracker的消融支持自己的任务收益，尚不能替代自动球定位对照。
 
 ### 3. 先建背景再发现小目标
 
