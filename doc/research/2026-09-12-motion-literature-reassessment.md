@@ -16,6 +16,7 @@
 4. **“没有 cost volume”不等于“不能建对应”，也不等于“线性成本”。** TAPNext、WAFT、CoWTracker 提供前一种反例；它们的全局注意力、细特征和多轮更新又限制后一种效率表述。[TAPNext](https://arxiv.org/html/2504.05579v2#S3)、[WAFT](https://arxiv.org/html/2506.21526v3)、[CoWTracker](https://arxiv.org/html/2602.04877v1#S3)
 5. **TrackNetV6 的可读材料已多于 demo，但仍不是完整复现证据。** 官方附录解释了跨网络尺度的 decoder 状态演化；这不能被误读为跨视频时间的球轨迹。主文与完整训练协议仍有访问缺口。[官方附录](https://github.com/Gi-gigi/TrackNetV6/blob/main/assets/Supplementary/Appendix.pdf)、[本轮来源说明](../literature/2026-09-12-tracknet-source-gaps.md)
 6. **经典轻量时序机制仍有必须读清的差别。** TSM 的逐层搬运、GSM/GSF 的输入条件门控、Taylor 的灰度幂乘与时间汇聚，不能统称为一次线性帧差。另一方面，也不能仅凭某条路径含非线性就声称相对完整网络的函数族严格扩大。当前更具体的待证问题是时间交互发生在哪层、如何压缩和组织关系。[轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)、[Taylor/TDN](../literature/2026-09-12-temporal-difference-representation.md)
+7. **原生匹配置信度和现代双图表征已有强近邻。** PDC、RoMa v2 与 PWarpC 已分别建模位置误差、共视和 null；9月8日的 RoMa-Ω 又提供受训读出的强证据及动态场景反例。它们缩小“可靠 motion”的宽泛创新空间，也要求分清单帧特征与已融合另一图的特征。[原生置信度与 RoMa-Ω](../literature/2026-09-12-native-matching-confidence.md)
 
 ## 二、本轮究竟补了什么，而哪些仍未知
 
@@ -38,10 +39,13 @@
 | [高效对应与预算](../literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP、SCV、FlowFormer正文/相关补充/源码；Briedis复杂度与CuTe清单 | 区分消息压缩、候选限制、算子执行与raw/latent路径；修正候选覆盖和效率归因 |
 | [时间与曝光测量补充](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界) | STARE正式全文；3DV 2026 ultra-fast blur正文与附录 | 区分线性插值误差与理论下界、运行延迟与目标帧误差、三维非唯一与二维中点 |
 | [整体匹配误差与几何后验](../literature/2026-09-12-coarse-fine-uncertainty.md) | 2608.08685 v2正文/补充/源码，后验公式CPU例 | 接受残差校准与几何细化正证据，分清错误排序、coarse-success、球身份及代码版本 |
+| [原生匹配置信度与双图表征](../literature/2026-09-12-native-matching-confidence.md) | PDC/PDC+、RoMa/v2/Ω、PWarpC主文/补充/关键源码；Ω为9月8日新稿 | 区分误差密度、共视、null、实际拒绝与球身份；确认遮挡监督版本差异和跨视图特征条件 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
 同日增量检索补到了 **2026-09-10 发布的 FreeFlow v1**，已读其方法、训练、主要结果和相关附录。其两帧 local/shifted/global cross-attention 进一步限制“无 cost volume 就没有成对匹配”的误推；没有球中心实证。本次按新提交日期的筛查与定向版本检索，也没有发现会改变当前训练分支的更新体育球近邻，但没有遍历全部旧稿修订。[FreeFlow 原文](https://arxiv.org/html/2609.11486v1)、[检索与适用范围](../literature/2026-09-12-recent-tiny-motion.md)
+
+随后对9月8日至12日的有界补查，另保留了[astro-VAE的已知轨迹累积实验](../literature/2026-09-12-recent-tiny-motion.md#同日增量补检2026-09-08-至-09-12)和[Point4D的3D查询传递](../literature/2026-09-12-causal-point-tracking.md#同日补检-point4d保留查询不等于保留当前视觉支持)。它们分别限定“提高条件信噪比不等于自动发现”和“查询能传下去不等于当前有视觉支持”；没有因领域不同而跳过，也没有据此扩张模型任务。
 
 **真实缺口要保留。** V2 原始正文和 V6 主文尚未取得可读作者/出版社全文，不能据摘要、demo 或第三方复现补出 split、容差、损失和完整时间协议。DQAligner/MIST 的代码阅读也不自动变成论文全文阅读。若后续机制恰与这些工作相邻，应继续补原始证据；这不阻止当前已授权基线继续训练。
 
@@ -76,6 +80,8 @@ SI-DDPM-FMO 的单图曝光轨迹恢复还提醒我们：**任务要求的量可
 信息损失不必只发生在 backbone。它也可能发生在自动发现、候选保留、跨帧证据融合、离散到连续的坐标读出，或可见决策中。某个阶段输出失败，不能仅凭下游指标反推上游信息已经消失。
 
 例如，冻结线性探针失败可能说明该读出不够合适；GT query 匹配成功可能绕开了自动发现；全局 all-to-all 候选中有真值可能仍排不过背景；热图有正确邻域质量也可能因 argmax 出现严格容差误差。这些是不同的失败。
+
+[RoMa-Ω 的 probe](../literature/2026-09-12-native-matching-confidence.md#45-roma-ω最新的强表征证据仍须分清输入条件)给出直接例子：后层 raw NN 较弱，但受训投影/decoder 能有效利用特征。这里的 feature 已融合图像对，论文所谓 linear probe 也含小 decoder。它支持受限读出失败不能证明信息全失，不支持把受训双图收益全部归给独立单帧 backbone，更不保证本地失败配方可以救回。
 
 本地对固定 logits 改读出已有正证据。因此，当前不能继续把所有严格中点误差解释为帧间 motion 丢失。另一方面，读出改善也没有消除全部错误，不能由此宣布无需时间信息。
 
@@ -192,6 +198,8 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 | 预测位置误差是否超过阈值 | CoTracker3、Track-On2、CoWTracker uncertainty/confidence | 需要明确阈值尺度、GT 来源和使用方式；不能自动解释为物理对应存在性 |
 | 位置分布在预测邻域有多集中 | TAPNext certainty | 尖锐但错误的候选仍可能自信；集中度是统计量，不是已校准正确率 |
 | 单一预测周围的误差尺度/混合权重 | SEA-RAFT 的同均值 MoL | 两个不同宽度的分量不等于两个不同位移地址，也不自动提供 no-match |
+| 预测误差落在给定区域的概率 | PDC-Net 的密度积分 | 默认 Laplace 的方框概率与欧氏圆容差不同；概率含义明确也不等于迁移后已校准 |
+| 共视和小残差条件下的位置风险 | RoMa v2 overlap / covariance | 共视可覆盖动态对象；只在共视且误差小于8px训练的 covariance 不覆盖全部粗匹配失败 |
 | transport 前后是否一致 | PACT gate | 是融合权重，不必有拒绝匹配这个动作 |
 | 候选是否符合历史运动先验 | Frame Dynamics 的轨迹过滤 | 可能提高最终轨迹分数，但不证明当前视觉证据充分 |
 | 某一候选对确实没有可用对应 | 匹配中的 no-match/dustbin 类设计 | 需要定义候选对、标签与回退路径，不能把所有缺标签当负对应 |
@@ -201,6 +209,8 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共享 flow 均值公式；SWIFT 对该先例的简述不能替代原公式。多分量、多峰、多地址候选和可拒绝对应是不同机制，未来若保留多个 motion hypothesis，必须说明实际保留的是哪一种信息。
 
 [2026 年 8 月整体匹配误差新稿](../literature/2026-09-12-coarse-fine-uncertainty.md)已实测 coarse/fine mixture 相对 fine-only 的改善，并检查 coarse-success 后验。但更好的 NLL 未带来更高的错误排序相关性，CoRe 的几何收益也需与普通 refit 区分。对运动球，即使背景几何准确，其投影残差仍可能包含真实独立运动，不能充当匹配错误真值。该论文的公开代码与 v2 后验公式还有已确认差异；当前只保留为直接近邻，不据此重新启动已停止的集中度配方。
+
+[PDC 与 RoMa v2](../literature/2026-09-12-native-matching-confidence.md)的风险预测直接来自图像对，不需要先给相机几何，不能用 CoRe 的限制一概排除。PDC-Net+ 的物体数与 mask 消融也表明 flow 精度和错误排序可以反向变化，监督规则还决定是否要求遮挡背景外推。PWarpC 则区分了学到 null 与最终拒绝：默认 flow API 去掉 bin 后仍选空间 argmax，置信度留给后续使用。只有任务明确将“没有球类对应”定义为 null，才可按该条件设计监督；普通背景有正确几何对应时不能直接标成几何 no-match。
 
 因此，未来即便需要可靠性，也应先定义要估计的事件，再选损失和决策。当前没有根据添加一个统称 reliability 的 head。
 

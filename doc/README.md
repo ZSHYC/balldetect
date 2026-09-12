@@ -85,6 +85,7 @@
 | [异常门控与因果解释](literature/2026-09-12-causal-anomaly-gating.md) | CHAL的背景/时序异常、残差门控、有效消融，以及因果推导与公开实现的边界 |
 | [高效对应与计算预算](literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP、Briedis、SCV与FlowFormer的消息/候选/执行/cost memory路径，区分保存、读到和最终输出 |
 | [整体匹配误差与几何后验](literature/2026-09-12-coarse-fine-uncertainty.md) | 2026年8月新稿的误差尾部校准、CoRe有效消融、背景几何迁移边界与公开后验公式差异 |
+| [原生匹配置信度与双图表征](literature/2026-09-12-native-matching-confidence.md) | PDC、RoMa/v2/Ω与PWarpC的误差密度、共视、null和实际决策；补入9月8日新稿与监督版本差异 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

@@ -1,6 +1,6 @@
 # 第二轮表示审查：冻结 VFM 的 correspondence probe 到底在测什么？
 
-**范围。** 本文只补第一轮遗漏的表示与评测边界；不重复 FeatUp/WAFT 等已审查模块，也不提出实现。检索截至 2026-09-09。核心判断是：对冻结 DINOv3/ViT 作 tiny-ball correspondence probe 时，失败既可能来自球证据丢失，也可能来自 patch phase、位置偏置、层选择、归一化和过早 top-1；成功也不能自动证明模型得到可用于当前帧定位的 motion。必须把它们逐项拆开。
+**范围。** 本文只补第一轮遗漏的表示与评测边界；不重复 FeatUp/WAFT 等已审查模块，也不提出实现。原始审查截至 2026-09-09；2026-09-12 的双图表征补读见末节。核心判断是：对冻结 DINOv3/ViT 作 tiny-ball correspondence probe 时，失败既可能来自球证据丢失，也可能来自 patch phase、位置偏置、层选择、归一化和过早 top-1；成功也不能自动证明模型得到可用于当前帧定位的 motion。应按实际失败选择能区分解释的诊断，不将下列历史候选机械地全部执行。
 
 ## 先给可执行结论
 
@@ -19,7 +19,7 @@
 | 4 | [Making Vision Transformers Truly Shift-Equivariant](https://openaccess.thecvf.com/content/CVPR2024/html/Ma_Making_Vision_Transformers_Truly_Shift-Equivariant_CVPR_2024_paper.html)，CVPR 2024；[Reviving Shift Equivariance in ViTs](https://arxiv.org/abs/2306.07470)，ICLR 2024 | **中读**：abstract/method claims | 两篇一致指出 strided patch tokenization、positional encoding、subsampled/window attention 会破坏 shift equivariance；后者明确把 patch embedding、position 和 subsampled attention 列为来源。故对 1--8 px 平移做一次 probe 不是 augmentation 花样，而是有效性检查。不要声称“球移动一个像素，feature 应只平移一个位置”。也不能由此推出改造 equivariant ViT 是论文贡献：已有完整架构先例。 |
 | 5 | [Probing the 3D Awareness of Visual Foundation Models](https://openaccess.thecvf.com/content/CVPR2024/html/El_Banani_Probing_the_3D_Awareness_of_Visual_Foundation_Models_CVPR_2024_paper.html)，CVPR 2024 | **中读**：protocol/limits | 该工作把 VFM descriptor 的 3D/跨视角可配准性当作需测量而非默认存在的性质，是 `descriptor quality != geometry` 的直接先例。它支持使用真实中心构成的、带几何容差的 correspondence recall，而不能把 detection heatmap accuracy 当 correspondence 成功。其测试对象可见、纹理/形状较丰富；对小球只提供评测思想。 |
 | 6 | [Data Leakage in Visual Datasets](https://openaccess.thecvf.com/content/ICCV2025W/Findings/html/Ramos_Data_Leakage_in_Visual_Datasets_ICCVW_2025_paper.html)，ICCVW 2025 Findings, pp.6368--6378 | **中读**：摘要/数据重叠定义 | 视觉 benchmark 的图像重叠会破坏公平评估这一点已有专门审查。用于本题的最小含义是：clip/rally 切分只防**下游**相邻帧泄漏，不能保证 DINOv3 web pretraining 未见过公开视频/赛事帧；应把两类风险分表。该工作不是 DINOv3 的 LVD 成员证明。 |
-| 7 | [Blind Baselines Beat Membership Inference Attacks for Foundation Models](https://arxiv.org/html/2406.16201v1)，NeurIPS 2024 | **深读**：problem/setup/conclusion | 论文针对未知 web-pretraining corpus 的 membership inference，结论是常用 MIA 评估不足以说明泄漏，且 blind baselines 能击败既有攻击。对本项目是重要的**负面方法论**：不得以“跑了 MIA 没检测到”声称 TrackNet/BlurBall/OpenTTGames 未被 VFM 预训练。可审计的是近重复、公开视频 URL/哈希、发布日期和公开 corpus manifest；不可审计的部分应如实保留。 |
+| 7 | [Blind Baselines Beat Membership Inference Attacks for Foundation Models](https://arxiv.org/html/2406.16201v1)，NeurIPS 2024 | **深读**：problem/setup/conclusion | 论文针对未知 web-pretraining corpus 的 membership inference，结论是常用 MIA 评估不足以说明泄漏，且 blind baselines 能击败既有攻击。对本项目是重要的**负面方法论**：不得以“跑了 MIA 没检测到”声称 TrackNet/BlurBall/OpenTTGames 未被 VFM 预训练。可记录公开视频 URL、发布日期和公开 corpus manifest；不可审计的部分应如实保留，不据此启动成员推断或指纹工程。 |
 | 8 | [Emergent Region-Level Facial Correspondence in Frozen VFMs](https://arxiv.org/html/2607.14423v1)，arXiv v1，2026-07-15 | **中读，预印本** | 该原稿在 DINOv3 ViT-L/16 人脸视频上发现 correspondence 最强层可在 intermediate block 18；其 final block 的全局混合更利于某些区域、却损害眉眼类细结构。其价值在于支持“layer is a scientific variable”；但人脸有固定拓扑、初始 FaRL labels 和大区域，远比球容易，不能作为 ball-motion 成功证据。 |
 
 ## 三个容易混淆的命题
@@ -53,10 +53,18 @@
 3. **候选曲线而非单点。** 对每个有相邻标签的可见帧对，以真实 `p_t` query，统计 `recall@K`、mean reciprocal rank、候选数量和 false-candidate 类别，K=1,2,3,5,8。用真实中心只作**诊断 oracle query**；另报 detector-query coverage，避免把 oracle 结果误称完整系统性能。
 4. **静态-时序必要性检验。** 保持 feature/head 容量，比较单帧定位、两帧 descriptor-only candidate readout、帧差、明确 correspondence。若简单差分在当前预算下已达到复杂模块的定位表现，应优先采用它并收缩复杂表示的主张；这不能判定问题的物理本质只是变化检测。
 5. **低 SNR 合成敏感性。** 在整张图作受控 blur/contrast/noise 扫描，保留原中心标签并单列报告；同步记录球附近/背景的 descriptor separability（正负 similarity 分布）。它不模拟真实曝光物理，也不声称保持拖影中心语义，只测模型对受控退化的敏感性。
-6. **污染与可复现记录。** 对可获得的 test-clip 来源 URL/赛事/上传或发布日保存 manifest；在合理成本内作 perceptual-hash 或公开近重复检查，并报告命中规则、排除数量及未能审计的 LVD 部分。再加至少一个不依赖现代 web-VFM 的公平空间对照。零命中只能表述为“本次公开审计未发现”，绝不能表述为“证明未预训练”。
+6. **污染与可复现记录。** 复用已有来源 URL/赛事/上传或发布日记录，不另建指纹清单，也不因预训练列表未公开就默认扫描全部数据。实际采用的旧/新骨干对照应报告预训练来源；它仍不能证明现代预训练未包含某个公开视频。只有具体重叠证据会改变实验使用范围时，才处理该证据；无法核对的 LVD 部分如实说明。
 
 ## 对论文创新边界的更新
 
 `top-K 保留多个可能对应`、`intermediate feature probe`、`training-free positional correction`、`shift robustness` 都已有直接近邻，不能单独作为贡献。仍值得研究的窄命题是：**在已有球中心标注、clip 内连续时序和严格计算预算下，冻结/轻调现代特征为何会在 tiny-fast 的 phase、blur、relative-displacement 条件下丢失真候选；一种机制能否在不牺牲当前帧证据的情况下改善 coverage--clutter--localization Pareto。**
 
 成功的最低证据链应是：空间层/相位诊断发现明确失效 → 机制提高真实中心候选 coverage 或 rank（非仅总热图）→ 在同 backbone/input/head/budget 下转化为定位收益 → 在 blur/large-displacement/相机连续变化分桶中不靠某一容易污染来源支撑。
+
+## 2026-09-12 补充：读出能力与输入条件必须一起控制
+
+[RoMa v2 与9月8日新稿 RoMa-Ω](2026-09-12-native-matching-confidence.md)为上述解释增加了正证据和反例。RoMa v2 的 DINOv3 特征 probe 有效，且并非所有数据上都优于 DINOv2；Ω 的后层 raw cosine 较差，经过受训投影/小 decoder 却可以获得强匹配。raw NN、所谓 linear probe 和完整 matcher 的能力不能混称；单个探针失败不能证明所有信息消失，成功也只在该读出与数据条件下成立。
+
+VGGT-Ω 后层 feature 在进入匹配头前已融合两图，DINOv3 对照则逐图编码。这既影响归因，也影响缓存：改变另一帧会改变条件特征，不能按单帧独立缓存的假设复用。相关成本与训练监督必须属于该特征探针的完整条件。
+
+Ω 最终在多数 dense 数据上更强，但在动态 FlyingThings 上弱于 RoMa v2；论文未证明退步来自哪一机制。当前不因此启动 3D backbone，也不重跑已结束的冻结特征配方。这次补读用于收窄解释，下一项实验仍由已锁定的 BlurBall 时序对照决定。

@@ -164,3 +164,15 @@ FreeFlow 加固而不改变已有判断：显式 cost volume、warp 和迭代都
 - CoWTracker 已有公开推理仓库，却使用 VGGT、DPT、raw-image U-Net、dense full-frame field及 H100 评测；其显存、窗口与因果部署面均未映射到当前机器，故目前没有安装任何依赖或权重。
 - FreeFlow 只核对作者论文的模型、监督与 benchmark；没有运行其代码、下载权重或把 dense-flow 预训练／高分辨率计时映射成本项目配置。
 - 本文没有重读已在其他专题完整审查的 FlowIt、EgoSIS、MI-DETR、DeepPro、DMR、CMRTrack、BIRD/STSN，也没有把 RacketVision、TT4D 的已记录数据事实重写。它们仍是互补证据，不能因本页新近邻而被排除。
+
+## 同日增量补检：2026-09-08 至 09-12
+
+通过 arXiv 的 `cs.CV` 新提交/更新时间范围与体育球、微小高速目标、dense matching 主题检索，继续排除已读的 FreeFlow、EgoSIS v2 和 RoMa-Ω。没有新证据要求改变当前训练分支；这只是有界筛查，不是全部分区、全部修订或未索引论文的穷尽保证。3D点云配准、静态遥感检测与球员战术条目没有扩成新专题；跨领域方法按实际机制保留，而非只因场景不同就排除。
+
+Angela Cratere 等的 [*Improving Faint Object Detection for Space Situational Awareness with Variational Autoencoders*](https://arxiv.org/abs/2609.11269v1)于2026-09-10首发，页面标注SPAICE2026接收。已读全文方法与实验；Tiny-U-Net产生星体mask，astro-VAE做背景修复，再接shift-and-stack。监督中的无星背景是替换mask像素构造的代理，并非同场景真实无星观测。PDF/文本缓存为 `outputs/literature/astro-vae-2609.11269v1.*`。
+
+最接近本项目的§3.3使用真实背景中注入的点目标，沿**已知十帧直线轨迹**累积。单帧SNR=3时，标准堆叠SNR=9.11，背景预处理后为35.40；star-removal配置的mask来自多帧中值，以保留移动目标。它支持给定轨迹时抑制背景的收益，未知轨迹的误警率和track purity仍列为未来工作。[§3.3–4](https://arxiv.org/html/2609.11269v1#S3.SS3)
+
+因此，“先找准路径再累积”的条件成功不能直接作为自动球定位结果；球本身若被mask擦掉，后续修复的是背景。这是对输入路径的逻辑判断，不是已测得体育失败。当前不引入VAE或星体mask，但保留背景抑制与弱证据累积作为竞争解释。
+
+另补读9月8日的[Point4D](2026-09-12-causal-point-tracking.md#同日补检-point4d保留查询不等于保留当前视觉支持)：3D坐标与旧外观可帮助已初始化轨迹跨块，但整块没有可见支持时仍不可靠。它补充查询/证据边界，不改变当前无状态三帧协议。

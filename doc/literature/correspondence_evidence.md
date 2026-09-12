@@ -108,3 +108,11 @@ Briedis 的 CVPR 2026 方法保持已请求 lookup 的数学定义，改变块�
 同日继续补足 SCV 和 FlowFormer：SCV 采用全局 brute-force top-k 后，再以多尺度局部位移格读取已保存值；FlowFormer 压缩 cost memory 后仍保留 raw cost map，并在每轮结合局部 raw patch 与全局 latent。两者都不能仅凭某一局部步骤推出最终坐标不可达；K 个 learned tokens 也不等于 K 个带地址候选。详见同一专题第五节，更新本文第 1/2 节的早期阅读范围。
 
 [8 月整体匹配误差新稿](2026-09-12-coarse-fine-uncertainty.md)另补校准与 CoRe：其输入是 coarse/fine 分布统计，几何细化还需要初始点投影残差。论文有真实误差和 coarse-success 验证，但不提供球身份、no-match 或任意候选预算下的可靠性保证；固定公开后验实现与 v2 公式的差异也已记录。
+
+## 8. 原生风险预测、null 与最新双图表征
+
+[PDC / RoMa / PWarpC 专题](2026-09-12-native-matching-confidence.md)补读了正式全文、相关补充和实际源码：PDC 在图像对 forward 中直接预测误差密度，RoMa v2 分开共视与条件内点 covariance；它们不需要 CoRe 的初始几何残差才能产生这些输出。PWarpC 以异类别图像对学习显式 null，但默认 dense-flow API 仍输出空间坐标，拒绝位置还需要任务决策。
+
+这些方法已有精度、错误排序或下游几何收益，不能因任务不同而忽略。它们也没有将正确背景对应变成球身份。专题另记录 PDC-Net+ 一个 target-only 合成物体分支的论文/代码差别：flow 数值保留为背景，并不意味着该处实际参与损失；复用需明确监督版本。
+
+2026-09-08 的 RoMa-Ω 是最新强近邻：VGGT-Ω feature 在受训 matcher 之前已跨视图条件化；raw NN 较差而受训读出有效，支持“某种读出失败不等于全部信息消失”。其后仍有全局相关和细化，动态 FlyingThings 较 RoMa v2 退步；这些证据不能被改写为独立单帧 backbone 的几像素球能力或低成本远搜索已解决。
