@@ -97,7 +97,8 @@ def main(run):
     else:
         torch.set_num_threads(4)
         device = torch.device('cuda')
-        model = build_dino_model(config['weights'], upscale=8).to(device)
+        model = build_dino_model(config['weights'], upscale=8,
+                                 interaction=config.get('interaction', 'baseline')).to(device)
         checkpoint = torch.load(run / 'best.pt', map_location=device, weights_only=True)
         selected_epoch = run_results['best_epoch']
         assert checkpoint['epoch'] == selected_epoch, 'Checkpoint must match saved argmax selection'
@@ -130,6 +131,7 @@ def main(run):
                              else 'blurball-local-readout-v1'), 'source_run': str(run),
                 'training_complete': run_results.get('training_complete', True),
                 'temporal_input': temporal_input,
+                'interaction': config.get('interaction', 'baseline'),
                 'checkpoint_epoch': checkpoint['epoch'], 'radius_cells': 7, 'temperature': 1,
                 'batch_size': 8, 'precision': 'float32 model/logits; float64 CPU expectation',
                 'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),

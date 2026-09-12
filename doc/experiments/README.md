@@ -61,3 +61,4 @@
 - [2026-09-12：BlurBall固定局部读出](2026-09-12-blurball-local-readout.md)：同best6与q下，局部重心通过全体和多比赛预设条件，修正部分沿轴偏差。
 - [2026-09-12：BlurBall连续错误](2026-09-12-blurball-error-persistence.md)：固定保存预测的六状态连续段与预选图，区分固定亮点、球网、运动前景和孤立错位。
 - [2026-09-12：BlurBall完整时序输入控制](2026-09-12-blurball-temporal-control.md)：重复当前帧重训，固定历史状态/位移/l分组和架构判定。
+- [2026-09-12：BlurBall压缩后空间交互](2026-09-12-blurball-spatial-interaction.md)：同预算移动GELU，记录真实batch验证与两组完整训练。

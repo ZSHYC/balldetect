@@ -57,6 +57,8 @@ def main():
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
+    parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address'),
+                        default='baseline')
     parser.add_argument('--resume', action='store_true', help='从输出目录的last.pt恢复完整轮次状态')
     args = parser.parse_args()
     if args.resume:
@@ -101,7 +103,7 @@ def main():
     device = torch.device('cuda')
     weights = ROOT / ('models/pretrained/dinov3/lvd1689m/'
                       'dinov3_convnext_tiny_pretrain_lvd1689m-21b726bb.pth')
-    model = build_dino_model(weights, upscale=8).to(device)
+    model = build_dino_model(weights, upscale=8, interaction=args.interaction).to(device)
     optimizer = torch.optim.AdamW([
         {'params': model.head.parameters(), 'lr': 3e-4, 'name': 'head'},
         {'params': model.prefix.parameters(), 'lr': 1e-5, 'name': 'prefix'},
@@ -111,7 +113,8 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': ('blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
+              'protocol': ('blurball-spatial-interaction-v1' if args.interaction != 'baseline' else
+                           'blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
                            else 'blurball-causal-midpoint-v2'),
               'continuity_boundaries': boundaries,
               'excluded_boundary_targets': [{k: r[k] for k in ('game', 'clip', 'original_frame_id')}
@@ -134,6 +137,8 @@ def main():
               'device': torch.cuda.get_device_name(), 'torch_version': str(torch.__version__),
               'precision': 'float32; no AMP', 'augmentation': None,
               'timing_scope': 'RGB mmap + H2D + online model train/evaluation; excludes RGB cache creation'}
+    if args.interaction == 'baseline':
+        config.pop('interaction')
     args.output.mkdir(parents=True, exist_ok=True)
     if args.resume:
         saved_config = json.loads((args.output / 'config.json').read_text())

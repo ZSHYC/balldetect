@@ -6,6 +6,27 @@ import torch
 from torch import nn
 
 
+class SpatialInteractionReadout(nn.Module):
+    """固定卷积顺序，只移动第二个GELU以比较归一化特征地址之间的非线性。"""
+    def __init__(self, channels, hidden_channels, upscale, interaction):
+        super().__init__()
+        if interaction not in ('same_address', 'cross_address'):
+            raise ValueError(f'Unknown spatial interaction: {interaction}')
+        self.interaction = interaction
+        self.project = nn.Conv2d(channels, hidden_channels, 1)
+        self.address = nn.Conv2d(hidden_channels, hidden_channels, 1)
+        self.spatial = nn.Conv2d(hidden_channels, hidden_channels, 3, padding=1)
+        self.readout = nn.Conv2d(hidden_channels, upscale ** 2, 1)
+
+    def forward(self, features):
+        features = self.address(torch.nn.functional.gelu(self.project(features)))
+        if self.interaction == 'same_address':
+            features = self.spatial(torch.nn.functional.gelu(features))
+        else:
+            features = torch.nn.functional.gelu(self.spatial(features))
+        return self.readout(features)
+
+
 class SpatialProbe(nn.Module):
     def __init__(self, channels, upscale=1, hidden_channels=0, num_frames=1, appearance_channels=None):
         super().__init__()
