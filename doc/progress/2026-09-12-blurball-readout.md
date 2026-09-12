@@ -9,3 +9,5 @@
 随后按[固定协议](../protocols/blurball-local-readout-v1.md)完成一次62.06秒的验证forward，原argmax和q完全复现；只改坐标读出的[局部重心](../experiments/2026-09-12-blurball-local-readout.md)把PCK@4提高到78.18%、本地F1@4提高到80.22%，PCK@16不降，长拖影四场均有净增。13.17MB局部logit缓存保留，无新训练、依赖安装或最终测试读取。
 
 研究决定：接受已有logits的读出解释，保留固定局部重心作为强基线候选，暂缓新的blur几何模块。补充的[解码文献](../literature/2026-09-12-midpoint-decoding.md)表明这种算子已有直接先例。下一问是剩余失败需要哪种时间证据，尚未确立新的motion机制或完成论文归因；实证修订见[研究总判断第18节](../research/2026-09-10-empirical-reframing.md#18-2026-09-12自然拖影与读出细定位困难成立不能直接归给缺失的motion模块)。
+
+同日推进：[完整时序输入控制](../experiments/2026-09-12-blurball-temporal-control.md)已从36bdd7c启动30epoch repeat_current训练，以同argmax选优及共同局部读出估计真实历史增量；GPU真实单batch与正式配置已确认。等待其结果期间，原history保存预测的几何邻近诊断不支持多数远错位停留在旧GT中心，暂不将简单历史位置复制作为主失效机制。
