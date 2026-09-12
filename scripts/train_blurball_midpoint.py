@@ -1,6 +1,7 @@
 """BlurBall原生因果三帧的DINOv3中点定位基线，不使用blur标签训练。"""
 import argparse
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
 from pathlib import Path
@@ -25,6 +26,21 @@ GRID_HW = (288, 512)
 def compact(metrics):
     return {k: metrics[k] for k in ('location', 'detection4', 'author_detection4',
                                     'detection8', 'visibility')}
+
+
+def prefetched_batches(rgb, windows, order, batch_size):
+    """只预取下一个CPU RGB batch；GPU计算和采样顺序仍由主线程负责。"""
+    def load(ids):
+        return model_input(rgb, windows, ids, 'cpu', 'dino')
+
+    with ThreadPoolExecutor(max_workers=1) as reader:
+        pending = reader.submit(load, order[:batch_size])
+        for start in range(0, len(order), batch_size):
+            ids = order[start:start + batch_size]
+            pixels = pending.result()
+            if start + batch_size < len(order):
+                pending = reader.submit(load, order[start + batch_size:start + 2 * batch_size])
+            yield ids, pixels
 
 
 def save_training_state(path, model, optimizer, rng, progress):
@@ -209,9 +225,10 @@ def main():
         model.prefix.eval()
         order = rng.permutation(train_idx)
         loss_sum = 0.
-        for start in range(0, len(order), args.batch_size):
-            ids = order[start:start + args.batch_size]
-            logits = model(model_input(rgb, windows, ids, device, 'dino'))
+        processed = 0
+        for batch_index, (ids, pixels) in enumerate(
+                prefetched_batches(rgb, windows, order, args.batch_size)):
+            logits = model(pixels.to(device))
             loss = F.cross_entropy(logits, torch.from_numpy(targets[ids]).to(device))
             if not torch.isfinite(loss):
                 raise ValueError(f'Non-finite loss at epoch {epoch}')
@@ -219,8 +236,8 @@ def main():
             loss.backward()
             optimizer.step()
             loss_sum += float(loss.detach()) * len(ids)
-            processed = start + len(ids)
-            if (start // args.batch_size + 1) % 400 == 0 or processed == len(order):
+            processed += len(ids)
+            if (batch_index + 1) % 400 == 0 or processed == len(order):
                 print(json.dumps({'epoch': epoch, 'targets': processed, 'total': len(order),
                                   'loss_so_far': loss_sum / processed,
                                   'epoch_seconds': time.perf_counter() - epoch_started}), flush=True)

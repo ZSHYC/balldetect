@@ -62,3 +62,4 @@
 - [2026-09-12：BlurBall连续错误](2026-09-12-blurball-error-persistence.md)：固定保存预测的六状态连续段与预选图，区分固定亮点、球网、运动前景和孤立错位。
 - [2026-09-12：BlurBall完整时序输入控制](2026-09-12-blurball-temporal-control.md)：重复当前帧重训，固定历史状态/位移/l分组和架构判定。
 - [2026-09-12：BlurBall压缩后空间交互](2026-09-12-blurball-spatial-interaction.md)：同预算移动GELU，记录真实batch验证与两组完整训练。
+- [2026-09-12：BlurBall训练I/O效率](2026-09-12-blurball-io-efficiency.md)：实际解码/重复编码与读取等待检查、CPU单批预取和数值正确性验证。
