@@ -59,4 +59,5 @@
 - [2026-09-11：BlurBall源内容连续性](2026-09-11-blurball-continuity.md)：三处内部时间突变的可见证据、六个跨界窗口排除与原统计限制。
 - [2026-09-12：BlurBall基线完成与沿轴误差](2026-09-12-blurball-midpoint-results.md)：最佳epoch6、完整分组、沿轴探索与固定源帧证据。
 - [2026-09-12：BlurBall固定局部读出](2026-09-12-blurball-local-readout.md)：同best6与q下，局部重心通过全体和多比赛预设条件，修正部分沿轴偏差。
+- [2026-09-12：BlurBall连续错误](2026-09-12-blurball-error-persistence.md)：固定保存预测的六状态连续段与预选图，区分固定亮点、球网、运动前景和孤立错位。
 - [2026-09-12：BlurBall完整时序输入控制](2026-09-12-blurball-temporal-control.md)：重复当前帧重训，固定历史状态/位移/l分组和架构判定。

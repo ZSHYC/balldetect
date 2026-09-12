@@ -79,6 +79,7 @@
 | [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互、因果末帧窗口与流式缓存，及它们和当前后期融合的差别 |
 | [Taylor与差分基的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor Videos/TDN的前置非线性、实际导出与时间输入如何限制可逆换基解释 |
 | [SWIFT的分尺度warping](literature/2026-09-12-warping-without-cost-volume.md) | 粗全局预测、细尺度采样、两帧因果语义与实际消融，区分MoL误差分量和多地址假设 |
+| [KeepTrack候选与干扰物关联](literature/2026-09-12-distractor-association.md) | 候选图、dustbin、已初始化身份与在线记忆怎样限制自动球发现和持续错误的解释 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
@@ -103,6 +104,7 @@
 - [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议v2](protocols/blurball-causal-midpoint-v2.md)已锁定；[源内容复核](experiments/2026-09-11-blurball-continuity.md)确认3处内部时间边界，修复后已[完成30epoch与沿轴诊断](experiments/2026-09-12-blurball-midpoint-results.md)，[固定局部读出](experiments/2026-09-12-blurball-local-readout.md)随后完成并通过预设条件，暂缓新blur几何模块。
 
 - [BlurBall完整时序输入控制](experiments/2026-09-12-blurball-temporal-control.md)：在共同读出下重训重复当前帧，区分真实历史的位置与存在增量。
+- [BlurBall连续错误](experiments/2026-09-12-blurball-error-persistence.md)：复用固定保存预测与 RGB 缓存，量化六类状态的连续段；固定亮点、球网和运动前景的预选证据不等于统一的背景或记忆失败。
 
 ## 阶段进展
 
