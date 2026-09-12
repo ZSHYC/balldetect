@@ -83,6 +83,7 @@
 | [背景运动条件化与物理解释](literature/2026-09-12-coherent-motion-conditioning.md) | DMR完整监督/条件消融、跟拍的绝对运动与相对残差，及OTHR结构/损失归因 |
 | [自适应搜索与细支撑](literature/2026-09-12-adaptive-search-support.md) | ASpanFormer的地址池化、固定样点、自适应跨度与全图恢复，以及可复算的几何反例 |
 | [异常门控与因果解释](literature/2026-09-12-causal-anomaly-gating.md) | CHAL的背景/时序异常、残差门控、有效消融，以及因果推导与公开实现的边界 |
+| [高效对应与计算预算](literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP及Briedis的消息压缩、地址限制和相关采样，区分候选覆盖与最终坐标域 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

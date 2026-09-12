@@ -4,7 +4,7 @@
 
 **2026-09-12 补充：** [因果点跟踪](2026-09-12-causal-point-tracking.md)已补读 TAPNext/++ 与 Track-On2 的方法、实验和相关附录；[微小目标新近邻](2026-09-12-recent-tiny-motion.md)进一步核对 CoWTracker 无 cost-volume 路线及其注意力成本。它们限制“显式相关体必需”和“无需相关体就整体线性”的两种相反误推。首轮表中的早期阅读深度按原记录保留。
 
-**同日继续补读：** [TSM/GSM/GSF](2026-09-12-lightweight-temporal-routing.md)与[Taylor Videos/TDN](2026-09-12-temporal-difference-representation.md)补足经典轻量机制的全文和实现；本文第 5 节补 Motionformer。新的 [FreeFlow v1](2026-09-12-recent-tiny-motion.md)纳入 9 月 10 日新稿。以下首轮“仅摘要”记录不再代表这些条目的最新阅读深度。
+**同日继续补读：** [TSM/GSM/GSF](2026-09-12-lightweight-temporal-routing.md)与[Taylor Videos/TDN](2026-09-12-temporal-difference-representation.md)补足经典轻量机制的全文和实现；本文第 5 节补 Motionformer，第 6 节补 ASpanFormer，第 7 节补 Efficient LoFTR、CasP 与 Briedis 的高效相关采样。新的 [FreeFlow v1](2026-09-12-recent-tiny-motion.md)纳入 9 月 10 日新稿。以下首轮“仅摘要”记录不再代表这些条目的最新阅读深度。
 
 ## 1. 最直接改变创新判断的三项前史
 
@@ -94,3 +94,13 @@ Motionformer 使用稠密 token 自查询，与 Track-On2 的给定点 query 不
 它已经用预测地址及不确定尺度确定有限局部采样，因而“按匹配难度自适应扩大窗口”本身不是新机制。源码中邻近query共享均值地址与平均采样尺度；地址分歧不会自动并入尺度，扩大范围也不增加样点数。可复算的几何例子说明：连续范围覆盖、样点覆盖和有效特征支撑必须分开；示例没有使用真实球数据或执行原网络。
 
 同时，最粗全局交互及最终全图coarse相关仍存在。因此局部漏采不构成整套方法的必然召回上限，局部步骤的线性复杂度也不能替代整个系统成本。后续若删除全图恢复路径，应作为新的受限模型重新评价。
+
+## 7. 高效对应补读：改变消息、地址与执行的三条路径
+
+2026-09-12 已补读 [Efficient LoFTR / CasP / Briedis 专题](2026-09-12-efficient-matching-budgets.md)中的主文、相关补充及公开实现，更新第 1 节中 Briedis 的早期阅读深度。
+
+Efficient LoFTR 聚合 attention 输入、保留原位置残差，但最终仍有 1/8 全局相似度。CasP 则在 1/16 全局生成 prior，限制 1/8 的直接匹配地址；其后未裁剪的 homography 回归仍能越过 cell 边缘。因此候选覆盖是否限制最终召回，需要完整解码域，不能仅看 coarse index 是否命中。
+
+Briedis 的 CVPR 2026 方法保持已请求 lookup 的数学定义，改变块计算和采样执行；其补充已经公开 CuTe kernel，实际使用 BF16 输入与 FP32 累加。精确算子、浮点结果接近、全局发现和 backward 可用性是不同结论。固定 lookup 大小的线性复杂度不能外推为任意全局高分辨率搜索。
+
+三者都有应当接受的条件收益，专题也记录了 CasP 接入 ELoFTR 的组件消融。当前限制的是宽泛的创新声称，不是预先否定这些方法在球任务上的可用性，也不要求立即全部复现。

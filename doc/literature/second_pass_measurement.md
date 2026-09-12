@@ -1,6 +1,6 @@
 # 第二轮证据审查：标签测量语义、可观测量与 2025–2026 直接近邻
 
-**范围与截点。** 本文是对第一轮 `sports_evidence.md` 的补充，主体检索与网页可用性截至 **2026-09-09**，**2026-09-10** 补核 BlurBall 官方 loader、线热图与 evaluator；只讨论会改变“高速微小球 motion representation”研究设计的事实。第一轮文件保持不变；本附件中的明确修订及证据边界优先，不把论文的模糊表述补成未经证实的物理事实。
+**范围与截点。** 本文是对第一轮 `sports_evidence.md` 的补充，主体检索与网页可用性截至 **2026-09-09**，**2026-09-10** 补核 BlurBall 官方 loader、线热图与 evaluator；**2026-09-12** 仅追加两篇与时间观测/曝光可辨识性直接相关的一手全文。只讨论会改变“高速微小球 motion representation”研究设计的事实。第一轮文件保持不变；本附件中的明确修订及证据边界优先，不把论文的模糊表述补成未经证实的物理事实。
 
 **阅读标记。** **[P]** 已读原始论文的相关章节/图表；**[R]** 已读作者官方仓库或项目页；**[A]** 只读摘要或元数据；**[U]** 尚未确认。链接均是原始论文、作者项目页或官方仓库，而非二手汇总。
 
@@ -26,6 +26,8 @@
 |[Uplifting Table Tennis / TTHQ 论文](https://arxiv.org/html/2511.20250) 与 [作者仓库 README](https://github.com/KieDani/UpliftingTableTennis)|[P]+[R]|TTHQ 规模/标注、三帧预测中央帧、高分辨率 Segformer++；标注 zip 的官方可下载入口和原始视频的取得方式。|
 |[1000 Rallies（arXiv HTML）](https://arxiv.org/html/2606.25620)|[P] 摘要、§III|传感器/多相机、三角化与 1 kHz 伪标签；论文仅使用将公开的将来时。|
 |[TT4D（arXiv HTML）](https://arxiv.org/html/2605.01234)|[P] 摘要、§1–3、资源声明|完整序列 3-D lifting、管线生成 140+h 派生数据；论文说“will release”。|
+|[STARE / ESOT500，Nature Communications 2026](https://www.nature.com/articles/s41467-026-70240-6)|[P] 全文方法、Fig. 1/3/4/7、ESOT500 与机器人实验；[R] [作者仓库](https://github.com/ispc-lab/STARE) README|500 Hz 时间对齐 VOT 框，低频框线性插值的 RE，最近可用输出的 latency-aware 评价；是时间测量/评价先例，非自动 RGB 球发现。|
+|[Recovering 3D Shapes from Ultra-Fast Motion-Blurred Images，arXiv:2602.07860 v1](https://arxiv.org/html/2602.07860v1)|[P] 正文、附录 H/M 与实验；[R] [作者项目页](https://maxmilite.github.io/rec-from-ultrafast-blur/)|极端曝光积分下三维形状非唯一的直接例子；已知相机、运动/blur setting 与 RGBA/alpha 条件说明其是可辨识性边界，不是 2-D 球中心算法。|
 
 ## 1. 标注的物理时刻/空间语义：逐数据集核验
 
@@ -110,6 +112,28 @@ $$\rho(t,\Delta)=d_{px}(t,\Delta)/s_t$$
 3. **采用可交叉的 metadata 矩阵，而非三层互斥分组。** 每个评测行尽可能带三列：`visibility`（数据集发布的 VC/binary 值）、`annotation convention`（lead/latest、streak-midpoint、direct-center、unspecified 等）与 `provenance-known`（论文明确为 direct、明确为 inferred，或 unknown）。例如 TTA 的 visible/partial 是 `direct-center`，fully-occluded 是 `trajectory-inferred`；BlurBall 可以是 visible × streak-midpoint，但没有必要把它另建成不相交的 `E_convention`。TrackNet VC2/VC3 虽有邻帧估计示例，论文不能提供逐帧精确 provenance mask，应标 `provenance=unknown/example-neighbor-assisted`，不能臆造 `E_inferred` 全集。
 4. **定位目标与对应监督分开声明。** 对带合法坐标的遮挡帧，仍可按数据集协议训练和评估 *localization loss*，并单列为 `trajectory-inferred` 或 provenance-unknown 的 protocol localization；它们只是不应自动作为“当前帧视觉 correspondence”正样本来支持该项机理主张。若保留带 future 的全遮挡标签，标明它是 dataset-protocol supervision；对 direct-visual / known-direct 子集另报主 localization 诊断。这样 causal/offline 的改善才不会被未来参与的标签制作掩盖。
 5. **对标注 convention 的移动敏感性单列。** `d_px` 的跨帧差在一个数据集内可比较；跨 TrackNet–BlurBall 时，endpoint vs midpoint 会重写高速/强 blur 桶的坐标，不宜混合训练后只给一个 pooled metric。
+
+### 2.4 2026-09-12 补充：时间采样与曝光观测的两个边界
+
+#### STARE：低频标签重建误差不等于所有估计器的理论下界
+
+Chu 等的 [STARE 正式论文](https://www.nature.com/articles/s41467-026-70240-6) [P] 使用 ESOT500 的 **500 Hz、时间对齐 bbox**：将其高频框下采样为某个低频率、用线性插值重建轨迹，再相对原 500 Hz 标注计算 reconstruction error (RE)。这使“低频 periodic labels 的线性插值会丢失高动态轨迹细节”成为实际可测命题。该工作还在任一世界时刻，以该时刻**之前最近可用**的模型输出与高频真值比对，因而把模型推理延迟造成的 stale output 记进 latency-aware error；其 Continuous Sampling 则在上次推理结束后立即取最新 event stream 继续处理。
+
+这给本项目的是一个严格的**评价与标签语义**反例，而不是某种必装 motion module：
+
+- STARE 的任务是 **GT `B_0` 初始化**的 event-camera VOT；其符号定义把 `B_0` 作为 tracking template box。它没有评估自然 RGB 内从无初始化候选自动发现几像素球，也没有报告球中心 PCK、曝光轴或大位移 correspondence 的收益。
+- RE 只度量“此数据内的低频 bbox + 指定线性插值”相对其 500 Hz 标注的失真。它**不是**任意利用视觉、物理先验或额外传感器的估计器都不能突破的理论下界；500 Hz 标注也不自动成为无误差的连续世界真值。论文的实验足以说明需要保留采样率、时间戳和重建规则，不能升级为关于所有运动的绝对结论。
+- “最近可用输出”相对世界时刻的 latency-aware error，和离线地把一个输入窗口回看后定位其目标帧的 retrospective input-frame error 是不同的测量量。固定 `[t-2,t-1,t]` 预测 `t` 的离线末帧协议可以是严格因果输入，却不能据此报成 STARE 意义下已计入实际运行时延的在线分数；反之亦然。
+
+因此 OpenTTGames 的原始视频连续、标签稀疏时，仍保留真实 frame index：绝不能把少量有标签帧线性插值后称为“高频 GT”，也不能重编号成伪连续序列。允许做**明确命名的派生插值分析**，例如在有更密同源标注的诊断集上报告某条插值规则相对该参考的误差；它必须与原始标签和主基准分开。若以后用作派生训练监督，也须单列来源，不能当作原始 GT，更不能由测试标签生成训练样本。没有高频参考时，甚至这个 RE 也不能被诚实估计。
+
+#### Ultra-fast blur：三维非唯一性不推出二维 midpoint 不可定位
+
+Yu 等的 [arXiv:2602.07860 v1 全文](https://arxiv.org/html/2602.07860v1) [P；arXiv 于 2026-02-08 提交并标注 3DV 2026 accepted] 在附录 H 给出一个明确反例：cylinder 与 twisted cylinder 的旋转模糊图像相同，因此作者不把任一形状当作唯一 3-D ground truth，也不以 3-D loss 或静态图像 loss 评测该旋转恢复。这确实把强 motion blur 的“多个潜在物理状态可给出同一观测”说清楚了，而非将失败归咎于缺一个 attention。
+
+但它的成功条件也同样明确：shape recovery 假定每图的 camera viewpoint 与 blur setting（平移/旋转速度）已知；平移恢复使用 multi-view RGBA 输入，目标函数使用 RGB 与 transparency，真实旋转实验又在受控黑背景中以阈值提取 object alpha。其指标是重渲染 blur 的相似度/shape-recovery 过程，非无初始化球检测或逐帧二维中心误差。作者项目页截至本次补读将代码标为 Coming Soon，故不从未公开实现推断额外细节。
+
+由此对 BlurBall 可安全保留的结论是：拖影轴/长度、帧间有符号位移、完整曝光轨迹与三维物理状态是不同目标；单帧极端 blur 不应默认唯一决定后面三项。**不能**由该三维旋转例子推出数据协议要求的二维 streak midpoint 也不可辨识：例如一条曝光线段的端点互换会使方向不定，但端点中点保持不变。midpoint 的可测稳定性仍须用本数据集的中心误差、visibility 与 blur-length 条件直接检验；这篇 3DV 工作不构成引入相机标定、三维重建或逆渲染分支的充分理由。
 
 ## 3. 2025–2026 直接近邻补检
 

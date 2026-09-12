@@ -35,6 +35,8 @@
 | [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
 | [自适应搜索与细支撑](../literature/2026-09-12-adaptive-search-support.md) | ASpanFormer主文/补充/作者实现；纯CPU采样几何演示 | 分清连续范围、实际采样、query地址混合与后续全图恢复 |
 | [异常门控与因果解释](../literature/2026-09-12-causal-anomaly-gating.md) | CHAL正式主文/补充推导/固定源码；关键消融原页 | 接受背景异常门控的条件收益，区分它与后门识别、硬候选筛选和显式对应 |
+| [高效对应与预算](../literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP主文/相关附录/作者源码；Briedis主文/复杂度/CuTe清单 | 区分消息压缩、候选限制和算子执行；修正候选覆盖、数值等价及效率归因 |
+| [时间与曝光测量补充](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界) | STARE正式全文；3DV 2026 ultra-fast blur正文与附录 | 区分线性插值误差与理论下界、运行延迟与目标帧误差、三维非唯一与二维中点 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -146,6 +148,8 @@ Devon、SCV、RAFT、MotionSqueeze、SELFY/STSS、WAFT 等早已覆盖这一谱�
 
 一个特别容易出错的地方是候选截断。只用 top-k 更新一个 query，随后仍在全图重新评分，与直接永久删掉 top-k 之外的位置不同。候选覆盖是否成为硬上限，必须看完整数据流；不能仅凭模块名称判断。
 
+[CasP 的细化路径](../literature/2026-09-12-efficient-matching-budgets.md)又补充了一种情况：细层不再补算候选外的 matching entry，但未裁剪的坐标回归仍能越过 cell 边界，粗特征也已携带全局上下文。因此“没有该地址的直接细层匹配”不等于“没有任何信息路径”，也不等于“绝不可能输出该坐标”。召回上界要基于全部分支的完整输出域及评价容差；越界回归是否真的恢复视觉对应则是另一项需要证据的主张。
+
 [ASpanFormer](../literature/2026-09-12-adaptive-search-support.md)使这一区别更具体：自适应局部span仍与最终全图相关并存。其每组query共用平均地址、固定数量样点；本轮的几何演示定位了两个可能环节——独立运动地址被均值混合、扩大范围后样点避开细支撑。演示没有证明真实球错误频率或端到端失败，故当前只把问题从“窗口是否够大”细化为“实际证据是否被采到、后续能否恢复”，不据此直接添加模块。
 
 ### 2. 不做显式相关体的迭代或递推表示
@@ -210,9 +214,13 @@ MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共
 
 有些实现会用窗口、低分辨率 update tokens、稀疏采样或高效 kernel 降低实际成本。这些都需要按真实实现计入，不能既借其效率又忽略它改变了哪一级分辨率。
 
+[高效对应补读](../literature/2026-09-12-efficient-matching-budgets.md)给出具体先例：Efficient LoFTR 压缩 attention 消息却保留末端全图矩阵；CasP 限制细层地址；Briedis 更高效地计算同一批已请求相关值。最后一种是执行改进，不能写成新运动证据；前两种改变了模型接收的信息，也不能只用 kernel FLOPs 描述。各文的硬件、分辨率、精度和粗初始化不同，已在专题中分别记录。
+
 特别注意两个预算差异：**原图访问预算**与**特征计算预算**不是同一个量。RGB-guided adapter 可能不再跑一次大 backbone，却仍会读取高分辨率图像并计算 guidance；冻结特征缓存可以节约研究时间，却不能当成端到端推理免费。
 
 当前开发训练的耗时也不能直接当部署 FPS。最终的高效性贡献需要同硬件、同输入/前瞻、同精度与计时边界的实际比较；当前没有为尚未采用的算法搭建新测速框架。
+
+[STARE 的实时评价](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界)还要求分开目标时刻：因果窗口预测输入末帧，与在当前世界时刻使用最近已算完结果，误差定义不同。该事件相机、GT 初始化 tracker 的 500 Hz 框不能移作本项目真值；其低频插值 RE 也不是所有算法的理论下界。当前保持既定逐帧定位协议，未来有实际实时部署主张时再评价运行延迟。
 
 ## 七、下一阶段该怎样推进
 
