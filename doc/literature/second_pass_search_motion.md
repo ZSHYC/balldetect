@@ -2,7 +2,7 @@
 
 > **问题边界。** 本轮只查一个更窄的问题：一个目标在任何单帧都不够显著时，能否先沿可能轨迹积累证据、再声明候选/目标；在大位移下怎样不穷举所有轨迹；以及这种逻辑与 learned sparse global matching 的关系。它不重复第一轮已写的 OTHR、MOCID、DQAligner、MIST、DeepPro、DMR、CMRTrack、BIRD、MI-DETR、FlowIt、SCV、Devon 或 CVPR 2026 EACVS。
 >
-> **检索与证据规则。** 检索截至 **2026-09-09**，重点窗口为 2024–2026。A = 已读取原始官方全文/PDF的相关方法和实验段；B = 官方出版页/官方全文网页或摘要可访问，但没有逐式审计 PDF；C = 仅官方摘要或书目信息，不能据此推断细节。这里只列 10 项最相关的新增/深化证据，不声称穷尽。
+> **检索与证据规则。** 主体检索截至 **2026-09-09**，重点窗口为 2024–2026；**2026-09-12**在第9节补读FRT与FaXT的光学弱目标全文。A = 已读取原始官方全文/PDF的相关方法和实验段；B = 官方出版页/官方全文网页或摘要可访问，但没有逐式审计 PDF；C = 仅官方摘要或书目信息，不能据此推断细节。主体列10项近邻，增量阅读单独标明，不声称穷尽。
 
 ## 结论先行
 
@@ -232,3 +232,39 @@ NeuralTBD 的 fully annotated long trace 不能由稀疏公开球标签免费得
 10. **MISA: Multiframe Infrared Spatiotemporal Aggregation for Small Target Detection Under Imperfect Interframe Correspondence**. IEEE JSTARS 2026. [IEEE record](https://ieeexplore.ieee.org/abstract/document/11646933/). B.
 
 **未确认 / 刻意未纳入。** 本轮没有把雷达/声呐 TBD 的一般成果误写成 RGB ball 定位的实证；它们仅定义问题和算法空间。MISA、Neural DP、DK-TBD 的全文细节有访问限制，故没有臆测 loss、backbone 或全部实验设置。也没有把已经由其他笔记覆盖的 SCV、Devon 与 EACVS 再次作为“新增”。未进行代码复现、数据下载或跨任务复验；本笔记不能证明上述思想会在网球/羽毛球/乒乓球数据上获益。
+
+## 9. 2026-09-12 补充：直接沿运动假设累积证据
+
+前述TBD近邻之外，本次继续沿[9月10日astro-VAE新稿](2026-09-12-recent-tiny-motion.md#同日增量补检2026-09-08-至-09-12)的直接引用，补读两个光学弱目标来源。目的不是将天文算法照搬到球场，而是检查：**微弱目标必须先建立逐像素对应，才能使用motion吗？** 两篇提供的反例是先按受限路径族累积观测，再产生候选。
+
+### 9.1 单帧拖影：Fast Radon Transform 的收益与离散支撑
+
+Guy Nir、Barak Zackay、Eran O. Ofek，[*Optimal and Efficient Streak Detection in Astronomical Images*](https://arxiv.org/abs/1806.04204v2)，AJ156(5):229，2018；已读v2方法、预处理、模拟/真实实验及附录。缓存为 `outputs/literature/streak-frt-1806.04204v2.*`。
+
+它对PSF展宽的直线做匹配滤波，以短线段的shift-and-add复用，将N×N图的离散长直线搜索从约 `O(N³)` 降为 `O(N² log N)`。灰度先累积、后阈值，避免先把每个弱像素变成二值候选。最优性依赖指定模板、已知PSF和去背景后的独立高斯噪声；不自动覆盖未知形状、结构背景和全模板搜索的检测率。[§II–III、附录A](https://arxiv.org/html/1806.04204v2)
+
+短线搜索读各二分尺度的中间和，端点落在不利分块位置时SNR可减半，长度只是近似；降低候选阈值再局部细搜会增加后续工作。真实盲检有效，但仍需点源/背景处理，且论文的极低误警率来自分布尾部拟合，不是实测了百万张无目标图。[§IV.3、VI–VII](https://arxiv.org/html/1806.04204v2)
+
+它限制“首次沿拖影方向保留弱信号”的主张，同时保留一个具体问题：粗触发、采样覆盖和精细位置不是同一件事。这里的线是**曝光内拖影**，不能当帧间位移；背景线也可被正确检出，却仍不是球。其预处理和方向屏蔽不应直接成为体育球的保留条件。
+
+### 9.2 FaXT：未知起点与速度的四维搜索
+
+T. Nguyen、D. F. Woods、J. Ruprecht、J. Birge，[*Efficient Search and Detection of Faint Moving Objects in Image Data*](https://doi.org/10.3847/1538-3881/ad20e0)，AJ167(3):113，2024。已完整阅读[第一作者提供的九页PDF](https://tamz.umd.edu/publication/nguyen-2024-efficient/)，缓存为 `faxt-nguyen-2024-author.pdf`、`faxt-nguyen-2024.txt`；未运行实现，也未确认arXiv版本。
+
+FaXT在所有 `(x0,y0,dx,dy)` 上累积帧值，**无需GT起点或速度**，之后才筛选四维峰。它递归共享短路径，但其整数路径由二分构造，和VMF逐帧直线插值再取整并不完全相同；不能称为逐数值等价的加速。[作者全文§2–3](https://tamz.umd.edu/publication/nguyen-2024-efficient/)
+
+在每轴速度0–1px/frame、论文所用 `1/N_f` 速度分辨率及二次幂帧数下，Eq.7为 `Q=2N_xN_yN_f(N_f−1)`；各维同尺度增长时为 `O(N⁴)`，VMF为 `O(N⁵)`。最终假设内存仍约 `N_xN_yN_vxN_vy`。高斯点目标模拟中，256³数据约90s对80min，检测率接近。[§2–3](https://tamz.umd.edu/publication/nguyen-2024-efficient/)
+
+TESS盲搜先去静态背景，以128帧累积并用64个CPU节点；2145条轨迹中1997与目录关联，148未关联的性质尚未确定，**93%不能称为precision**。更快目标、进场与非线性轨迹是扩展问题；作者提出预移位或检出后细化，并未证明当前基线已覆盖它们。[§4–5](https://tamz.umd.edu/publication/nguyen-2024-efficient/)
+
+因此它是受限运动族中“先累积、后发现”的强先例，不是高分辨率任意运动的免费全局搜索。短窗口、宽速度范围、反弹和动态背景会改变其可用条件；不能仅靠帧数短就假定该方法适合当前三帧模型，也不能因为来自天文就忽略其计算复用思想。
+
+### 9.3 第一性原理上的三个区分
+
+**路径、证据和身份。** 给定路径 `p_theta(t)`，累积 `E_t(p_theta(t))` 与比较两帧descriptor相似度是不同统计量。前者可使用每帧很弱的目标响应，而不要求存在唯一、稳定的表面点descriptor；它同时依赖路径族和响应的目标含义。正确沿某条运动背景累积也不能自动确认球身份。以上是机制区别，不证明哪种在本地更好。
+
+**运行复用和误警机会。** 对固定观测、固定各模板打分，候选集合 `A` 包含于 `B` 时，有 `max_A score <= max_B score`。在同一阈值下扩大搜索域不会降低空场景的触发概率；共享计算不会消除这些候选。这个结论不需要候选独立，但要求原分数不因候选集改变而重新计算。带联合attention或重新softmax的模型不直接满足此条件。
+
+**检测能量和中心信息。** 已知正确模板时累积SNR提高，不等于未知路径更容易找到，也不等于找到后中点误差足够小。[连续拖影模型的推导与CPU核对](second_pass_measurement.md#25-2026-09-12-补充检测拖影与定位中点需要不同信息)进一步表明：固定单位长度亮度时，延长拖影可增加检测能量和垂轴信息，却不持续增加沿轴中心信息；固定总通量时又是另一组变化。不能用一种SNR图代替严格位置、召回和背景误报。
+
+当前没有新增FRT、FaXT、VAE或轨迹模板训练分支。如果后续实际研究累积，应先明确受限路径族、真实窗口、保留的观测及完整搜索成本，再在同一自动定位协议上检验。现有中心标签只能监督其定义的位置，不能因此生成未标注帧的假真值。

@@ -1,6 +1,6 @@
 # 第二轮证据审查：标签测量语义、可观测量与 2025–2026 直接近邻
 
-**范围与截点。** 本文是对第一轮 `sports_evidence.md` 的补充，主体检索与网页可用性截至 **2026-09-09**，**2026-09-10** 补核 BlurBall 官方 loader、线热图与 evaluator；**2026-09-12** 仅追加两篇与时间观测/曝光可辨识性直接相关的一手全文。只讨论会改变“高速微小球 motion representation”研究设计的事实。第一轮文件保持不变；本附件中的明确修订及证据边界优先，不把论文的模糊表述补成未经证实的物理事实。
+**范围与截点。** 本文是对第一轮 `sports_evidence.md` 的补充，主体检索与网页可用性截至 **2026-09-09**，**2026-09-10** 补核 BlurBall 官方 loader、线热图与 evaluator；**2026-09-12** 追加时间观测、曝光可辨识性与拖影检测的一手全文，以及明确条件下的中心信息推导。只讨论会改变“高速微小球 motion representation”研究设计的事实。第一轮文件保持不变；本附件中的明确修订及证据边界优先，不把论文的模糊表述补成未经证实的物理事实。
 
 **阅读标记。** **[P]** 已读原始论文的相关章节/图表；**[R]** 已读作者官方仓库或项目页；**[A]** 只读摘要或元数据；**[U]** 尚未确认。链接均是原始论文、作者项目页或官方仓库，而非二手汇总。
 
@@ -65,7 +65,7 @@ $$p_1=p_b+l(\cos\theta,\sin\theta),\qquad p_2=p_b-l(\cos\theta,\sin\theta).$$
 
 ### 1.4 Shuttlecock、OpenTTGames、TOTNet：应保留的不确定性
 
-- [当前 Shuttlecock 页面](https://hackmd.io/Nf8Rh1NrSrqNUzmO0sQKZw) 只定义 CSV 与 binary visibility，不定义拖影时刻。它可能继承原 TrackNet 羽毛球约定，却没有一手 release-level 证据；论文必须报告所用下载版本/哈希和本地 manifest，不能把推测写进方法。
+- [当前 Shuttlecock 页面](https://hackmd.io/Nf8Rh1NrSrqNUzmO0sQKZw) 只定义 CSV 与 binary visibility，不定义拖影时刻。它可能继承原 TrackNet 羽毛球约定，却没有一手 release-level 证据；论文应记录发布版本、来源文件名和本地数据索引，不能把推测写进方法。
 - [OpenTTGames](https://lab.osai.ai/) 的真时间索引是数据语义的一部分：事件前后连续帧可作输入，未列出的帧是 unknown；`(-1,-1)` 才是 absent。没有找到 position 的中心/端点定义，也没有找到曝光时刻说明。TTNet 所说的 4-frame 自动标注器表明标签并非全人工，但不足以界定其时序方向或给出全数据误差分布。
 - TOTNet 只对自己新建的 TTA 清楚规定 visible/partial 的 direct center 与 fully occluded 的轨迹插值；它不改变 TrackNet、OpenTT 或 Shuttlecock 原始坐标的物理语义。将 TOTNet 对 Tennis visibility 的二次叙述当作原 TrackNet 的重新定义是不安全的。
 
@@ -134,6 +134,60 @@ Yu 等的 [arXiv:2602.07860 v1 全文](https://arxiv.org/html/2602.07860v1) [P�
 但它的成功条件也同样明确：shape recovery 假定每图的 camera viewpoint 与 blur setting（平移/旋转速度）已知；平移恢复使用 multi-view RGBA 输入，目标函数使用 RGB 与 transparency，真实旋转实验又在受控黑背景中以阈值提取 object alpha。其指标是重渲染 blur 的相似度/shape-recovery 过程，非无初始化球检测或逐帧二维中心误差。作者项目页截至本次补读将代码标为 Coming Soon，故不从未公开实现推断额外细节。
 
 由此对 BlurBall 可安全保留的结论是：拖影轴/长度、帧间有符号位移、完整曝光轨迹与三维物理状态是不同目标；单帧极端 blur 不应默认唯一决定后面三项。**不能**由该三维旋转例子推出数据协议要求的二维 streak midpoint 也不可辨识：例如一条曝光线段的端点互换会使方向不定，但端点中点保持不变。midpoint 的可测稳定性仍须用本数据集的中心误差、visibility 与 blur-length 条件直接检验；这篇 3DV 工作不构成引入相机标定、三维重建或逆渲染分支的充分理由。
+
+### 2.5 2026-09-12 补充：检测拖影与定位中点需要不同信息
+
+Nir、Zackay、Ofek 的 [*Optimal and Efficient Streak Detection in Astronomical Images*](https://arxiv.org/abs/1806.04204v2)（AJ 2018，arXiv v2于2018-10-08修订）从直线经PSF展宽的模型推导匹配滤波检测。这里借同类模型澄清中心定位，**以下 Fisher 信息是本次简化推导，不是该论文的球定位实验，也不是新的算法贡献。** 轨迹搜索机制另见[时序累积补读](second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据)。
+
+#### 条件模型与可推导范围
+
+令 `x` 沿拖影轴、`y` 垂直拖影轴；`g_sigma` 为积分为1的一维高斯，`h_L=1_[-L/2,L/2] * g_sigma`。假设连续域平均观测为
+
+`m(x,y)=xi h_L(x-mu_x) g_sigma(y-mu_y)`，
+
+并叠加空间白高斯噪声，`E[n(r)n(r')]=B delta^(2)(r-r')`，其中 `delta^(2)` 是二维Dirac分布。`xi` 是单位线长通量，完整通量 `Phi=xi L`；`L` 是完整线段长度，`sigma` 是展宽尺度，不能把它们分别偷换成帧间位移或球直径。暂时假设 `L,sigma,xi,B` 和方向已知，只估中点 `mu`，视野无裁切、背景均值已去除。
+
+这是连续域计算，`B` 是噪声协方差的强度；实际像素面积积分、有限采样、彩色压缩、遮挡、非匀速/亮度变化和结构背景均未纳入，不能直接把式子当成几像素体育视频的精度下界。
+
+记
+
+`A(L,sigma)=L erf(L/(2sigma)) - 2sigma/sqrt(pi) [1-exp(-L²/(4sigma²))]`。
+
+它等于 `integral h_L(x)² dx`。给定正确模板时，匹配滤波的信噪比平方与两轴中心 Fisher 信息为
+
+`SNR² = xi² A / (2 sqrt(pi) B sigma)`，
+
+`J_parallel = xi² [1-exp(-L²/(4sigma²))] / (2 pi B sigma²)`，
+
+`J_perp = xi² A / (4 sqrt(pi) B sigma³)`，`J_cross=0`。
+
+推导用到 `J_ab=(1/B) integral (partial_a m)(partial_b m) dxdy`：沿轴导数 `h_L'=g_sigma(x+L/2)-g_sigma(x-L/2)`，主要在两个端点；垂轴导数来自整条拖影的横截面。零交叉项限定于当前对齐坐标与全域积分，在一般传感器坐标下需旋转信息矩阵。对当前模型下无偏或真值处局部无偏的中心估计，`J^-1`给出协方差的Cramér–Rao下界；它不直接约束有偏神经读出，也不声称未知的其他参数已被处理。
+
+#### 为什么可检测性与中点精度会分开
+
+当 `L` 远大于 `sigma`，固定单位长度亮度 `xi` 时，`SNR²` 和 `J_perp` 近似随 `L` 增长，`J_parallel` 却趋于常数。此时总通量 `Phi=xi L` 也在增长，不能说成拖影凭空增加信息。直观原因是：延长内部均匀区域增加检测能量和横向约束，却没有增加新的端点。目标因此可以更容易被检测，同时沿轴中点精度不继续改善。
+
+如果改为固定总通量 `Phi`、固定 `B,sigma`，则长拖影近似满足
+
+`SNR² ~ Phi²/(2 sqrt(pi) B sigma L)`，
+
+`J_parallel ~ Phi²/(2 pi B sigma² L²)`，
+
+`J_perp ~ Phi²/(4 sqrt(pi) B sigma³ L)`。
+
+对应的下界标准差沿轴约随 `L` 增长、垂轴约随 `sqrt(L)` 增长。两种比较固定的量不同，不能把它们混成“拖影越长必然越难／越容易”。实际增加曝光时间还可能同时改变通量、拖影长度和背景噪声；Nir等§II对此另有曝光条件分析，不能套用固定通量结论。[原文§II](https://arxiv.org/html/1806.04204v2#S2)
+
+![固定总通量时，理想连续拖影模型的已知模板信噪比与中点定位信息](../assets/blur-information/continuous-line-information.png)
+
+图为上述公式的计算示意，均相对相同通量、PSF与噪声的无拖影点源归一化。左图是已知正确模板的SNR；右图是两轴CRLB标准差，数值越大代表下界越宽。横轴是 `L/sigma`，不是 `rho`；曲线不含BlurBall样本或模型实测，不表示本项目网络必然达到该界。
+
+这里的已知模板SNR也不是未知位置/方向全图搜索后的误警率。搜索更多模板时要处理最大响应的分布；把正确模板的条件SNR当成自动发现结果，会漏掉这个步骤。
+
+#### 核对与对当前实验的意义
+
+仅用CPU对三组 `(L,sigma)=(0.5,1),(4,1.5),(32,2)` 的平均观测做中心有限差分和数值积分，核对上述SNR²及两轴信息公式；最大相对差约 `5.01e-9`。可重跑 `python outputs/literature/blur-information-check.py`，输入与结果在相邻JSON中。这个数值核对只证明实现与推导一致，没有读取数据、拟合BlurBall参数或评估真实估计器。
+
+对本地研究，它提供一个应保留的解释：沿拖影轴的较大误差可能同时来自成像条件和具体读出，不能一概归为帧间motion丢失。反过来，真实背景、标签与网络都不满足上述理想模型，因而也不能用该推导替已观察到的错误开脱。已经成立的固定读出收益继续有效；历史是否提供额外中点证据仍由正在运行的真实历史/重复当前帧对照决定。
 
 ## 3. 2025–2026 直接近邻补检
 

@@ -47,9 +47,9 @@
 | [高速微小目标近邻](literature/tiny_motion_evidence.md) | 红外、光流、视频检测等领域有哪些直接限制创新主张的先例 |
 | [现代运动与预训练骨干](literature/modern_motion_evidence.md) | 现代 motion、DINOv3 与视频预训练成果能支持哪些定位推论 |
 | [通用对应与时序机制](literature/correspondence_evidence.md) | 高分辨率远搜索、稀疏相关和经典时序算子有哪些前史 |
-| [第二轮：标签与测量](literature/second_pass_measurement.md) | 标签中心、拖影、稀疏监督与可观测量怎样限制实验解释 |
+| [第二轮：标签与测量](literature/second_pass_measurement.md) | 标签中心、稀疏监督与可观测量；补读曝光边界并推导理想拖影的检测与中点信息差异 |
 | [第二轮：表示探针](literature/second_pass_representation.md) | 冻结特征的匹配探针到底测到什么，哪些失败不能直接归因于信息丢失 |
-| [第二轮：时序累积与搜索](literature/second_pass_search_motion.md) | 弱证据积累、track-before-detect 与稀疏全局对应如何挑战偏好的模型路线 |
+| [第二轮：时序累积与搜索](literature/second_pass_search_motion.md) | 弱证据积累、track-before-detect 与稀疏全局对应；补读FRT/FaXT的未知路径搜索、复用和误警代价 |
 | [三帧因果基线核对](literature/2026-09-10-causal-baselines.md) | V4/V5/V6、BlurBall 的时序输出、差分非线性和前瞻边界 |
 | [局部对应的机制先例](literature/2026-09-10-local-correspondence-baselines.md) | MotionSqueeze、SELFY/STSS、TDN与2026年DMR对cost volume和背景解释的限制 |
 | [WASB训练实现边界](literature/2026-09-10-wasb-implementation.md) | 作者公开训练工程的缺口、标签与未来帧语义，以及本地强基线可重建的范围 |

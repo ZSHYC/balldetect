@@ -1,6 +1,6 @@
 # 拖影轴能否约束帧间搜索：已有先例与候选边界
 
-核对日期：2026-09-10。性质：围绕一个候选问题的有界一手文献审查。
+核对日期：2026-09-10；2026-09-12补读Portz光流和SI-DDPM-FMO全文。性质：围绕一个候选问题的有界一手文献审查。
 
 问题来自[BlurBall训练侧轴统计](../experiments/2026-09-10-blurball-axis.md)：曝光内拖影无向轴与短间隔位置差存在联系，这种联系能否帮助有限计算下的correspondence搜索。本文不提出新模型，也不重复已完成的[标注几何核验](second_pass_measurement.md)。
 
@@ -14,11 +14,15 @@
 
 ### Optical Flow in the Presence of Spatially-Varying Motion Blur
 
-Portz、Zhang、Jiang，CVPR 2012，pp.1752–1759。[作者项目及论文](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/)。实际阅读摘要、引言、blur-aware数据项、四帧核构造及局限。
+Portz、Zhang、Jiang，CVPR 2012，pp.1752–1759。[作者项目及论文](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/)。9月10日阅读摘要、引言、blur-aware数据项与核构造；9月12日完成主文及三页算法补充，缓存于 `outputs/literature/blurflow-cvpr2012*.pdf/txt`，未运行实现。
 
-该方法直接在模糊帧之间估计光流，用四帧I0… I3的初始flow及duty cycle构造分段线性模糊核，加入blur-aware匹配；不是把人工GT轴作为输入。其核方向来自跨帧估计，不能视作单帧无向轴已决定运动符号。小于1px的核回退原方法，非分段线性运动会破坏近似。
+它交叉施加两帧的模糊核，使两侧外观近似一致，再求光流；不是先恢复清晰图。核依赖所求位移，因此优化同时考虑“改变采样位置”和“改变模糊核”两条导数。空间变化的卷积一般不交换，文中以局部平滑近似，不能当成物体边界处的恒等式。[主文§4](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/portz-cvpr2012.pdf)
 
-这项工作已经封堵“首次利用blur改善correspondence/flow”。它还指出单帧曝光内运动信息不能单独确定任意相邻帧的准确对应，直接限制将BlurBall轴统计当作帧间位移真值的解释。
+方法需要四帧I0… I3、曝光duty cycle和初始flow，以相邻位移近似核，核小于约1px时回退baseline。若I2是当前目标，额外I3属于前瞻。它用至多240张预模糊图组成网格并插值，减少迭代中的重复滤波，却有显著内存负担；论文640×480报告baseline约40s、额外refinement约90s。[主文§4.1–5、§7–8](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/portz-cvpr2012.pdf)；[插值导数与网格补充](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/content/appendix.pdf)
+
+**更关键的是评价目标。** 作者的spatial error取预测至完整曝光轨迹的最近距离，另用对应时刻的MAD评价时间一致性；合成实验对此有改善。但作者保留了偏置与累积漂移的局限。[主文§6–8](https://pages.cs.wisc.edu/~lizhang/projects/blurflow/portz-cvpr2012.pdf)
+
+**对本项目的推论。** 理想匀速直线下，全部预测同一曝光端点即可使上述距离和时间MAD为零，仍可偏离中点半条拖影。因而几何对应、曝光相位一致与BlurBall中点正确是三个条件；既定中点GT仍可明确评价。这项先例限制“首次利用blur改善correspondence”，却不提供当前三帧因果自动球定位的实证。
 
 ### Exposure Trajectory Recovery from Motion Blur
 

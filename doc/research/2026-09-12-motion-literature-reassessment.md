@@ -31,7 +31,7 @@
 | [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[差分/递归高通](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor正文与作者实现；TDN前置非线性、MCATrack全文 | 区分可逆换基、逐层交互、历史状态、配准和信息压缩；纠正一处PMLR错链 |
 | [Motionformer 补读](../literature/correspondence_evidence.md#5-motionformer-全文补读先保留时间索引再做空间与时间池化) | v2 方法、实验、相关附录和实际 attention 前向 | 核对分帧空间归一化、时间池化、原型近似及历史/修正代码差别，避免把关系组织本身当创新 |
 | [SWIFT 补读](../literature/2026-09-12-warping-without-cost-volume.md) | CVPRW 2026 全文、公式图像与消融；回查 SEA-RAFT MoL 原公式 | 限定粗全局预测与 fine warp 的作用，区分误差分布分量、多地址假设与 no-match；保留实际实现缺口 |
-| [单帧快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | SI-DDPM-FMO 正文、Table 1 与固定评测源码 | 确认 GT 条件 ROI、方向消歧与输出吞吐，区分完整曝光重建和几何中点定位 |
+| [拖影对应与快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | Portz blur-flow主文/算法补充；SI-DDPM-FMO正文、Table 1与固定评测源码 | 区分轨迹距离、曝光时刻一致与中点误差；确认GT条件ROI、方向消歧与输出吞吐 |
 | [候选与干扰物关联](../literature/2026-09-12-distractor-association.md) | KeepTrack ICCV 2021 全文、关键表格与固定作者实现；有界后续检索 | 区分背景对应、球身份、候选未配与在线记忆；把持续误选和状态污染分开 |
 | [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
 | [自适应搜索与细支撑](../literature/2026-09-12-adaptive-search-support.md) | ASpanFormer主文/补充/作者实现；纯CPU采样几何演示 | 分清连续范围、实际采样、query地址混合与后续全图恢复 |
@@ -40,6 +40,7 @@
 | [时间与曝光测量补充](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界) | STARE正式全文；3DV 2026 ultra-fast blur正文与附录 | 区分线性插值误差与理论下界、运行延迟与目标帧误差、三维非唯一与二维中点 |
 | [整体匹配误差与几何后验](../literature/2026-09-12-coarse-fine-uncertainty.md) | 2608.08685 v2正文/补充/源码，后验公式CPU例 | 接受残差校准与几何细化正证据，分清错误排序、coarse-success、球身份及代码版本 |
 | [原生匹配置信度与双图表征](../literature/2026-09-12-native-matching-confidence.md) | PDC/PDC+、RoMa/v2/Ω、PWarpC主文/补充/关键源码；Ω为9月8日新稿 | 区分误差密度、共视、null、实际拒绝与球身份；确认遮挡监督版本差异和跨视图特征条件 |
+| [沿路径累积与拖影定位](../literature/second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据) | Nir等FRT、Nguyen等FaXT全文；另作理想连续拖影的中心信息推导与CPU核对 | 对应不是利用motion的唯一前提；计算复用不消除搜索误警，可检测性也不等于中点精度 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -84,6 +85,10 @@ SI-DDPM-FMO 的单图曝光轨迹恢复还提醒我们：**任务要求的量可
 [RoMa-Ω 的 probe](../literature/2026-09-12-native-matching-confidence.md#45-roma-ω最新的强表征证据仍须分清输入条件)给出直接例子：后层 raw NN 较弱，但受训投影/decoder 能有效利用特征。这里的 feature 已融合图像对，论文所谓 linear probe 也含小 decoder。它支持受限读出失败不能证明信息全失，不支持把受训双图收益全部归给独立单帧 backbone，更不保证本地失败配方可以救回。
 
 本地对固定 logits 改读出已有正证据。因此，当前不能继续把所有严格中点误差解释为帧间 motion 丢失。另一方面，读出改善也没有消除全部错误，不能由此宣布无需时间信息。
+
+[理想连续拖影的推导](../literature/second_pass_measurement.md#25-2026-09-12-补充检测拖影与定位中点需要不同信息)使这一点更具体：固定单位长度亮度时，长拖影的检测SNR和垂轴中心信息可随长度增加，沿轴信息却趋于常数；固定总通量则两轴信息都下降，速率不同。这是已知形状、连续采样与白噪声条件下的解析示例，经CPU积分核对，不能当成真实视频或神经读出的精度界。它支持分别解释检测能量、中心读出和历史增量，不能代替当前对照训练。
+
+[Portz等的blur-flow评价](../literature/2026-09-10-blur-guided-correspondence.md#optical-flow-in-the-presence-of-spatially-varying-motion-blur)还能在曝光轨迹距离与所选时刻MAD都很小时保留共同相位偏差。这不是其指标错误，而是任务目标不同；本项目若使用flow教师，必须另核对数据规定的中心—中心位移，不能把轨迹上某个可靠对应自动当成中点对应。
 
 ### 4. 把当前融合头的限制写成具体函数，而不是只看感受野
 
@@ -230,6 +235,8 @@ MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共
 有些实现会用窗口、低分辨率 update tokens、稀疏采样或高效 kernel 降低实际成本。这些都需要按真实实现计入，不能既借其效率又忽略它改变了哪一级分辨率。
 
 [高效对应补读](../literature/2026-09-12-efficient-matching-budgets.md)给出具体先例：Efficient LoFTR 压缩 attention 消息却保留末端全图矩阵；CasP 限制细层地址；Briedis 更高效地计算同一批已请求相关值。最后一种是执行改进，不能写成新运动证据；前两种改变了模型接收的信息，也不能只用 kernel FLOPs 描述。各文的硬件、分辨率、精度和粗初始化不同，已在专题中分别记录。
+
+[FRT与FaXT](../literature/second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据)另给出无需先逐帧检出的路径累积先例：递归共享线段可降低受限路径族的运算，FaXT仍保留位置与速度的四维搜索及内存负担。对固定每条假设的分数，扩大集合不会降低其最大值，因而在固定阈值下也不会降低无目标输入的触发概率；该推论不要求假设独立，却不直接适用于随候选集合重新打分的attention。省掉重复加法与减少错误候选是两件事，是否适合短窗高速球仍未实测。
 
 特别注意两个预算差异：**原图访问预算**与**特征计算预算**不是同一个量。RGB-guided adapter 可能不再跑一次大 backbone，却仍会读取高分辨率图像并计算 guidance；冻结特征缓存可以节约研究时间，却不能当成端到端推理免费。
 
