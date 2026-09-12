@@ -137,7 +137,7 @@ Yu 等的 [arXiv:2602.07860 v1 全文](https://arxiv.org/html/2602.07860v1) [P�
 
 ### 2.5 2026-09-12 补充：检测拖影与定位中点需要不同信息
 
-Nir、Zackay、Ofek 的 [*Optimal and Efficient Streak Detection in Astronomical Images*](https://arxiv.org/abs/1806.04204v2)（AJ 2018，arXiv v2于2018-10-08修订）从直线经PSF展宽的模型推导匹配滤波检测。这里借同类模型澄清中心定位，**以下 Fisher 信息是本次简化推导，不是该论文的球定位实验，也不是新的算法贡献。** 轨迹搜索机制另见[时序累积补读](second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据)。
+Nir、Zackay、Ofek 的 [*Optimal and Efficient Streak Detection in Astronomical Images*](https://arxiv.org/abs/1806.04204v2)（AJ 2018，arXiv v2于2018-10-08修订）从直线经PSF展宽的模型推导匹配滤波检测。以下用同类模型重推中心信息；**二维运动点源CRLB已有Bouquillon等2017年的直接先例，下文给出单位与极限对应。这不是新的理论或算法贡献，也不是球定位实测。** 轨迹搜索机制另见[时序累积补读](second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据)。
 
 #### 条件模型与可推导范围
 
@@ -182,6 +182,22 @@ Nir、Zackay、Ofek 的 [*Optimal and Efficient Streak Detection in Astronomical
 图为上述公式的计算示意，均相对相同通量、PSF与噪声的无拖影点源归一化。左图是已知正确模板的SNR；右图是两轴CRLB标准差，数值越大代表下界越宽。横轴是 `L/sigma`，不是 `rho`；曲线不含BlurBall样本或模型实测，不表示本项目网络必然达到该界。
 
 这里的已知模板SNR也不是未知位置/方向全图搜索后的误警率。搜索更多模板时要处理最大响应的分布；把正确模板的条件SNR当成自动发现结果，会漏掉这个步骤。
+
+#### 直接理论先例与单位对应
+
+Bouquillon等，[*Characterizing the astrometric precision limit for moving targets observed with digital-array detectors*](https://arxiv.org/abs/1707.01447v1)，A&A606:A27，2017，[正式DOI](https://doi.org/10.1051/0004-6361/201628167)。已读主文§2–5及相关附录；该文在像素计数模型下推导直线拖影的平行/垂直CRLB，并比较采样、噪声、曝光和实际测量。原文缓存为 `outputs/literature/bouquillon-2017-moving-target-astrometry.{pdf,txt}`。
+
+令方形像素边长为 `a`，每像素背景计数方差为 `beta`。在过采样、背景主导且空间均匀的极限，本节连续噪声强度应对应 `B=beta/a²`，不是直接令 `B=beta`。取 `lambda=L/(2sigma)`、固定总通量 `Phi`，两轴无拖影共同方差界为 `V0=8 pi beta sigma^4/(Phi² a²)`。本节两轴方差界相对 `V0` 分别为
+
+`R_parallel=lambda²/[1-exp(-lambda²)]`，
+
+`R_perp=lambda²/[sqrt(pi) lambda erf(lambda)-(1-exp(-lambda²))]`。
+
+小长度展开分别为 `1+lambda²/2+lambda^4/12+…` 和 `1+lambda²/6-lambda^4/180+…`，对应原文式(31)/(38)；大长度对应式(33)/(39)。这确认了同一近似极限的系数与趋势，不能把本节连续高斯模型说成任意像素阵列的精确Poisson界；有限采样须回到原文式(30)/(36)。[原文§4.3及附录A](https://arxiv.org/pdf/1707.01447v1)
+
+噪声条件也确实改变结论：原文过采样、亮源主导且固定总光子时，长拖影的沿轴方差约随 `L` 增长，垂轴方差却不随 `L` 变化，见式(34)/(37)。因此上图的固定白噪声曲线不能替代所有相机条件；普通压缩RGB亮度也不能直接作为这里的背景计数方差。
+
+测量语义还有一个近期直接例子：Wu等的 [*A Centroiding Algorithm for Point-source Trails*](https://arxiv.org/abs/2503.06631)（AJ169:183，2025）将目标定义为曝光中时刻的 `s(0)`，明确非匀速时它可不同于几何中心。方法使用已知PSF与轨迹拟合，复杂轨迹需人工控制点初始化；不是自动球发现。它进一步要求我们保留BlurBall手工线段中点的原定义，而不把拟合得到的物理时刻偷换成源标签。[全文§2–3](https://arxiv.org/pdf/2503.06631)
 
 #### 核对与对当前实验的意义
 

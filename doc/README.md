@@ -47,7 +47,7 @@
 | [高速微小目标近邻](literature/tiny_motion_evidence.md) | 红外、光流、视频检测等领域有哪些直接限制创新主张的先例 |
 | [现代运动与预训练骨干](literature/modern_motion_evidence.md) | 现代 motion、DINOv3 与视频预训练成果能支持哪些定位推论 |
 | [通用对应与时序机制](literature/correspondence_evidence.md) | 高分辨率远搜索、稀疏相关和经典时序算子有哪些前史 |
-| [第二轮：标签与测量](literature/second_pass_measurement.md) | 标签中心、稀疏监督与可观测量；补读曝光边界并推导理想拖影的检测与中点信息差异 |
+| [第二轮：标签与测量](literature/second_pass_measurement.md) | 标签中心、稀疏监督与可观测量；理想拖影模型重推，对照既有二维CRLB和曝光中心定义 |
 | [第二轮：表示探针](literature/second_pass_representation.md) | 冻结特征的匹配探针到底测到什么，哪些失败不能直接归因于信息丢失 |
 | [第二轮：时序累积与搜索](literature/second_pass_search_motion.md) | 弱证据积累、track-before-detect 与稀疏全局对应；补读FRT/FaXT的未知路径搜索、复用和误警代价 |
 | [三帧因果基线核对](literature/2026-09-10-causal-baselines.md) | V4/V5/V6、BlurBall 的时序输出、差分非线性和前瞻边界 |
@@ -85,7 +85,7 @@
 | [异常门控与因果解释](literature/2026-09-12-causal-anomaly-gating.md) | CHAL的背景/时序异常、残差门控、有效消融，以及因果推导与公开实现的边界 |
 | [高效对应与计算预算](literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP、Briedis、SCV与FlowFormer的消息/候选/执行/cost memory路径，区分保存、读到和最终输出 |
 | [整体匹配误差与几何后验](literature/2026-09-12-coarse-fine-uncertainty.md) | 2026年8月新稿的误差尾部校准、CoRe有效消融、背景几何迁移边界与公开后验公式差异 |
-| [原生匹配置信度与双图表征](literature/2026-09-12-native-matching-confidence.md) | PDC、RoMa/v2/Ω与PWarpC的误差密度、共视、null和实际决策；补入9月8日新稿与监督版本差异 |
+| [原生匹配置信度与双图表征](literature/2026-09-12-native-matching-confidence.md) | PDC、RoMa/v2/Ω与PWarpC的误差密度、共视、null；另辨LayeredFlow的多物理层与单目标多候选 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

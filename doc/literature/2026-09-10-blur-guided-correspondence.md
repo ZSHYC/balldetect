@@ -1,6 +1,6 @@
 # 拖影轴能否约束帧间搜索：已有先例与候选边界
 
-核对日期：2026-09-10；2026-09-12补读Portz光流和SI-DDPM-FMO全文。性质：围绕一个候选问题的有界一手文献审查。
+核对日期：2026-09-10；2026-09-12补读Portz光流、SI-DDPM-FMO与OMoBlur/OMDNet全文。性质：围绕一个候选问题的有界一手文献审查。
 
 问题来自[BlurBall训练侧轴统计](../experiments/2026-09-10-blurball-axis.md)：曝光内拖影无向轴与短间隔位置差存在联系，这种联系能否帮助有限计算下的correspondence搜索。本文不提出新模型，也不重复已完成的[标注几何核验](second_pass_measurement.md)。
 
@@ -140,5 +140,17 @@ Liam Salass 等，*Ice Hockey Puck Localization Using Contextual Cues*，CVPRW C
 ### 其他检索命中没有新增决策证据
 
 2025 的 LDINet（Haodong Fan 等，*Journal of Visual Communication and Image Representation* 109:104439，[DOI](https://doi.org/10.1016/j.jvcir.2025.104439)）继续单张 FMO deblatting 的 latent decomposition/interpolation 路线，使用合成前景 blur 与背景条件。实际只读取出版社页面Highlights、摘要、引言/结论片段，未全文深读；其中没有提供自动跨帧球发现或有限搜索逐帧中心定位的证据，未改变上文结论。精确题名与作者代码检索未发现可核实的作者代码链接，不等于证明没有代码。2026 的 YOLO-Ball 仅能从作者期刊页的摘要确认其在自建网球数据上以 box mAP 处理 blur/occlusion，缺少公开数据、像素级中心协议与可复核完整方法证据，不作为当前设计依据。[来源](https://doi.org/10.1177/17543371261423768)。
+
+## 2026-09-12 补检：OMoBlur 的曝光内 flow 由什么监督
+
+Yu等，[*OMoBlur: An Object Motion Blur Dataset and Benchmark for Real-World Local Motion Deblurring*](https://openaccess.thecvf.com/content/CVPR2026/papers/Yu_OMoBlur_An_Object_Motion_Blur_Dataset_and_Benchmark_for_Real-World_CVPR_2026_paper.pdf)，CVPR2026，22626–22635。已读主文和作者关键代码；缓存 `outputs/literature/omoblur-cvpr2026.{pdf,txt}`。这轮定向搜索2024–2026的blurred RGB与flow/correspondence，另筛到需同步滚动/全局快门或专门传感器的来源，未将它们当作现有RGB输入的直接证据，也不声称检索穷尽。
+
+**数据与目标。** OMoBlur将500fps、98%曝光比的RAW帧累积后经ISP生成blur，以中间sharp帧为重建GT；场景为静态背景下的独立物体运动。1920×360是采集端ROI，不是测试时给定目标框。OMDNet测试只读单张blur，训练另有middle/first/last sharp及blur mask。[主文§3–5](https://openaccess.thecvf.com/content/CVPR2026/papers/Yu_OMoBlur_An_Object_Motion_Blur_Dataset_and_Benchmark_for_Real-World_CVPR_2026_paper.pdf)
+
+**核实到的训练路径。** 两组flow将**GT中间清晰图**backward-warp成首/尾图，再与首尾GT比较；并非把预测清晰图作为这两次warp的输入。预测中间图在merge中占三分之一，并另受restoration loss。主文Eq.(9)对首尾正配与交换配对取较小损失，故允许整体方向反转。[主文§4.1、§4.3](https://openaccess.thecvf.com/content/CVPR2026/papers/Yu_OMoBlur_An_Object_Motion_Blur_Dataset_and_Benchmark_for_Real-World_CVPR_2026_paper.pdf)；[固定作者实现的训练分支](https://github.com/yudingchuan/OMDNet/blob/4d0656b36b488c6acffe7fd0057bffa811d9d199/models/deblur_model.py#L355-L391)
+
+Diff-TAM在channel维比较两套attention，不是相邻RGB帧差。FGP由两组二维flow及模长预测融合gate；gate控制恢复图与原blur的混合，未被定义为球身份或对应正确概率。验证调用的GT/mask槽虽填入blur占位，`train=False`分支不读这些槽，不能误称测试需要清晰GT。[模型实现](https://github.com/yudingchuan/OMDNet/blob/4d0656b36b488c6acffe7fd0057bffa811d9d199/models/deblur_model.py#L283-L409)；[验证调用](https://github.com/yudingchuan/OMDNet/blob/4d0656b36b488c6acffe7fd0057bffa811d9d199/validation/post_validation.py#L68-L101)
+
+**实证及迁移判断。** Table2支持所测恢复配方的逐级收益，但增加FGP也引入其监督路径；评价是图像恢复，未报告flow EPE、自动球中心或真实帧间对应。它已经构成“曝光内motion latent指导恢复”的近邻，却没有证明当前公开中心标签足以训练同样的warp目标。无需据此新增数据、去模糊分支或恢复此前已停止的辅助配方；若未来使用类似监督，训练额外图像、时间反转等价和最终中心误差都必须单列。[主文§5.1、§5.3](https://openaccess.thecvf.com/content/CVPR2026/papers/Yu_OMoBlur_An_Object_Motion_Blur_Dataset_and_Benchmark_for_Real-World_CVPR_2026_paper.pdf)
 
 **当前决定。** BlurBall DINO 三帧中点基线仍先按 `l`、可见中心、原图像素误差、FP1/FP2/FN 和帧间 `d_px` 诊断自然残差；不从 MoSA-Det/PLUCC 直接移植状态门控、可变形采样、attention 或人类上下文。未来任何选择先用该条件残差提出可证伪问题，再做与这两项近邻可区分的同预算对照。

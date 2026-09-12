@@ -31,7 +31,7 @@
 | [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[差分/递归高通](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor正文与作者实现；TDN前置非线性、MCATrack全文 | 区分可逆换基、逐层交互、历史状态、配准和信息压缩；纠正一处PMLR错链 |
 | [Motionformer 补读](../literature/correspondence_evidence.md#5-motionformer-全文补读先保留时间索引再做空间与时间池化) | v2 方法、实验、相关附录和实际 attention 前向 | 核对分帧空间归一化、时间池化、原型近似及历史/修正代码差别，避免把关系组织本身当创新 |
 | [SWIFT 补读](../literature/2026-09-12-warping-without-cost-volume.md) | CVPRW 2026 全文、公式图像与消融；回查 SEA-RAFT MoL 原公式 | 限定粗全局预测与 fine warp 的作用，区分误差分布分量、多地址假设与 no-match；保留实际实现缺口 |
-| [拖影对应与快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | Portz blur-flow主文/算法补充；SI-DDPM-FMO正文、Table 1与固定评测源码 | 区分轨迹距离、曝光时刻一致与中点误差；确认GT条件ROI、方向消歧与输出吞吐 |
+| [拖影对应与快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | Portz blur-flow主文/算法补充；SI-DDPM-FMO与OMoBlur主文/关键源码 | 区分曝光内flow、相位一致与中点误差；核实训练清晰帧、时间反转、GT条件ROI与吞吐 |
 | [候选与干扰物关联](../literature/2026-09-12-distractor-association.md) | KeepTrack ICCV 2021 全文、关键表格与固定作者实现；有界后续检索 | 区分背景对应、球身份、候选未配与在线记忆；把持续误选和状态污染分开 |
 | [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
 | [自适应搜索与细支撑](../literature/2026-09-12-adaptive-search-support.md) | ASpanFormer主文/补充/作者实现；纯CPU采样几何演示 | 分清连续范围、实际采样、query地址混合与后续全图恢复 |
@@ -40,7 +40,7 @@
 | [时间与曝光测量补充](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界) | STARE正式全文；3DV 2026 ultra-fast blur正文与附录 | 区分线性插值误差与理论下界、运行延迟与目标帧误差、三维非唯一与二维中点 |
 | [整体匹配误差与几何后验](../literature/2026-09-12-coarse-fine-uncertainty.md) | 2608.08685 v2正文/补充/源码，后验公式CPU例 | 接受残差校准与几何细化正证据，分清错误排序、coarse-success、球身份及代码版本 |
 | [原生匹配置信度与双图表征](../literature/2026-09-12-native-matching-confidence.md) | PDC/PDC+、RoMa/v2/Ω、PWarpC主文/补充/关键源码；Ω为9月8日新稿 | 区分误差密度、共视、null、实际拒绝与球身份；确认遮挡监督版本差异和跨视图特征条件 |
-| [沿路径累积与拖影定位](../literature/second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据) | Nir等FRT、Nguyen等FaXT全文；另作理想连续拖影的中心信息推导与CPU核对 | 对应不是利用motion的唯一前提；计算复用不消除搜索误警，可检测性也不等于中点精度 |
+| [沿路径累积与拖影定位](../literature/second_pass_search_motion.md#9-2026-09-12-补充直接沿运动假设累积证据) | FRT/FaXT、Bouquillon二维CRLB与Wu轨迹中心全文；理想模型重推及CPU核对 | 对应不是利用motion的唯一前提；计算复用不消除搜索误警，可检测性也不等于中点精度 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -87,6 +87,8 @@ SI-DDPM-FMO 的单图曝光轨迹恢复还提醒我们：**任务要求的量可
 本地对固定 logits 改读出已有正证据。因此，当前不能继续把所有严格中点误差解释为帧间 motion 丢失。另一方面，读出改善也没有消除全部错误，不能由此宣布无需时间信息。
 
 [理想连续拖影的推导](../literature/second_pass_measurement.md#25-2026-09-12-补充检测拖影与定位中点需要不同信息)使这一点更具体：固定单位长度亮度时，长拖影的检测SNR和垂轴中心信息可随长度增加，沿轴信息却趋于常数；固定总通量则两轴信息都下降，速率不同。这是已知形状、连续采样与白噪声条件下的解析示例，经CPU积分核对，不能当成真实视频或神经读出的精度界。它支持分别解释检测能量、中心读出和历史增量，不能代替当前对照训练。
+
+这些轴向趋势已有Bouquillon等2017年的二维CRLB先例；本节重推与其弱源、过采样极限一致。亮源计数模型的垂轴界又可不随拖影长度改变，因此不能将特定噪声模型的曲线写成普遍规律。该分析服务于测量解释，不构成新的motion理论贡献。
 
 [Portz等的blur-flow评价](../literature/2026-09-10-blur-guided-correspondence.md#optical-flow-in-the-presence-of-spatially-varying-motion-blur)还能在曝光轨迹距离与所选时刻MAD都很小时保留共同相位偏差。这不是其指标错误，而是任务目标不同；本项目若使用flow教师，必须另核对数据规定的中心—中心位移，不能把轨迹上某个可靠对应自动当成中点对应。
 
@@ -203,6 +205,7 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 | 预测位置误差是否超过阈值 | CoTracker3、Track-On2、CoWTracker uncertainty/confidence | 需要明确阈值尺度、GT 来源和使用方式；不能自动解释为物理对应存在性 |
 | 位置分布在预测邻域有多集中 | TAPNext certainty | 尖锐但错误的候选仍可能自信；集中度是统计量，不是已校准正确率 |
 | 单一预测周围的误差尺度/混合权重 | SEA-RAFT 的同均值 MoL | 两个不同宽度的分量不等于两个不同位移地址，也不自动提供 no-match |
+| 同一像素可见的多个物理表面各自怎样移动 | LayeredFlow / Multi-RAFT | 深度有序的多层真值，不是单个球中心的互斥候选；透明层与曝光时间积分不同 |
 | 预测误差落在给定区域的概率 | PDC-Net 的密度积分 | 默认 Laplace 的方框概率与欧氏圆容差不同；概率含义明确也不等于迁移后已校准 |
 | 共视和小残差条件下的位置风险 | RoMa v2 overlap / covariance | 共视可覆盖动态对象；只在共视且误差小于8px训练的 covariance 不覆盖全部粗匹配失败 |
 | transport 前后是否一致 | PACT gate | 是融合权重，不必有拒绝匹配这个动作 |
@@ -212,6 +215,8 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 来源细节见[点跟踪补读](../literature/2026-09-12-causal-point-tracking.md)、[微小目标补读](../literature/2026-09-12-recent-tiny-motion.md)与[既有位置质量证据](../literature/2026-09-11-localization-quality.md)。
 
 MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共享 flow 均值公式；SWIFT 对该先例的简述不能替代原公式。多分量、多峰、多地址候选和可拒绝对应是不同机制，未来若保留多个 motion hypothesis，必须说明实际保留的是哪一种信息。
+
+[LayeredFlow的多层任务](../literature/2026-09-12-native-matching-confidence.md#六layeredflow多个物理对应不是同一目标的多峰后验)还表明多个位移可分别对应同时存在的物理表面，其四槽baseline不是四个带概率的球位置候选。对本项目，一个标注球中心不因内部多输出就变成多个真实球位移；曝光内时间相位也需另有定义。
 
 [2026 年 8 月整体匹配误差新稿](../literature/2026-09-12-coarse-fine-uncertainty.md)已实测 coarse/fine mixture 相对 fine-only 的改善，并检查 coarse-success 后验。但更好的 NLL 未带来更高的错误排序相关性，CoRe 的几何收益也需与普通 refit 区分。对运动球，即使背景几何准确，其投影残差仍可能包含真实独立运动，不能充当匹配错误真值。该论文的公开代码与 v2 后验公式还有已确认差异；当前只保留为直接近邻，不据此重新启动已停止的集中度配方。
 

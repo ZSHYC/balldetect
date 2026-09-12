@@ -1,6 +1,6 @@
 # 原生匹配置信度：位置误差、共视与无匹配分别怎样学习
 
-日期：2026-09-12。范围：补读 PDC-Net/PDC-Net+、RoMa/RoMa v2、最新 RoMa-Ω 与 PWarpC，回答“没有初始相机几何时，模型能否直接估计对应风险；这种风险与自动球定位是什么关系”。与[整体匹配误差及 CoRe 后验](2026-09-12-coarse-fine-uncertainty.md)互补。
+日期：2026-09-12。范围：补读 PDC-Net/PDC-Net+、RoMa/RoMa v2、最新 RoMa-Ω 与 PWarpC，回答“没有初始相机几何时，模型能否直接估计对应风险；这种风险与自动球定位是什么关系”。另以LayeredFlow区分物理多层与单目标的不确定候选。与[整体匹配误差及 CoRe 后验](2026-09-12-coarse-fine-uncertainty.md)互补。
 
 ## 结论
 
@@ -19,6 +19,7 @@
 | Johan Edstedt 等，*RoMa v2: Harder Better Faster Denser Feature Matching* | [arXiv 2511.15706v3](https://arxiv.org/abs/2511.15706v3)，2026-07-06，标明 ECCV 2026 camera-ready | 主文与附录的结构、监督、covariance、效率及消融，并核对公开 inference 路径 |
 | David Nordström 等，*RoMa-Ω: What Feed-Forward 3D Models Know About Image Matching* | [arXiv 2609.09507v1](https://arxiv.org/abs/2609.09507v1)，2026-09-08，预印本 | 正文与补充的特征条件化、不同 probe、受控训练、动态反例与成本；另读双图输入及匹配源码 |
 | Prune Truong、Martin Danelljan、Fisher Yu、Luc Van Gool，*Probabilistic Warp Consistency for Weakly-Supervised Semantic Correspondences* | [CVPR 2022](https://openaccess.thecvf.com/content/CVPR2022/html/Truong_Probabilistic_Warp_Consistency_for_Weakly-Supervised_Semantic_Correspondences_CVPR_2022_paper.html)；[arXiv v2](https://arxiv.org/abs/2203.04279v2)更新于 2023-10-31 | 正文、正式补充材料与固定 SF-Net 训练/bin/推理路径；以下补充表格按 CVPR 版编号 |
+| Hongyu Wen、Erich Liang、Jia Deng，*LayeredFlow: A Real-World Benchmark for Non-Lambertian Multi-Layer Optical Flow* | [ECCV 2024作者全文](https://layeredflow.cs.princeton.edu/static/files/main.pdf)；[arXiv 2409.05688](https://arxiv.org/abs/2409.05688) | 主文、GT定义、全部表格和固定Multi-RAFT数据/输出/去重路径；未取得所引补充材料 |
 
 PDC 作者代码固定为 [`DenseMatching@b054fe9`](https://github.com/PruneTruong/DenseMatching/tree/b054fe9f7988c70db1e0e7347d0b1bafe135cc27)，2023-04-20。RoMa v2 固定为 [`RoMaV2@95c9968`](https://github.com/Parskatt/RoMaV2/tree/95c9968145c8906b7b59383258e9f73b02853d89)，2026-04-20，早于所读 camera-ready；源码事实和最终论文实验分别引用。原 RoMa 的读出核对使用 [`RoMa@77f8d68`](https://github.com/Parskatt/RoMa/tree/77f8d68803526dcddfd9b7a46bc76125bdc25f15)。
 
@@ -241,7 +242,17 @@ PNeg 取一张不同类别的图 A，将 `(I,A)` 的所有像素以 BCE、目标
 
 [正式补充材料](https://openaccess.thecvf.com/content/CVPR2022/supplemental/Truong_Probabilistic_Warp_Consistency_CVPR_2022_supplemental.pdf)还在相同正对损失下比较不同负损失；PNeg 优于所列 max-score/min-entropy 对照。补充 I.4 的 PF-Pascal sparsification 报告，PWarpC-SF-Net matching-score AUSE **0.0496**，SF-Net matching-score 为 **0.0673**，mapping forward-backward 为 **0.0685**。这些支持语义对应精度与错误排序的改进，未直接评价 bin 的二元概率校准或球检测。
 
-## 六、对本项目研究决策的影响
+## 六、LayeredFlow：多个物理对应不是同一目标的多峰后验
+
+LayeredFlow的层按透明表面深度顺序定义，各层都有自己的二维位移。真实采集经AprilTag测量、移动场景/相机再拍摄，标注稀疏且每个标注像素只给一层；完整多层训练真值来自修改后的ray tracing。不能从这种前后状态推导连续视频的曝光间隔。[§3–5](https://layeredflow.cs.princeton.edu/static/files/main.pdf)
+
+Multi-RAFT共享图像特征/相关体，并用独立context分支输出四组flow；少于四层时重复末层训练，推理按相邻输出距离0.5px去重。它的层数和已知层误差评价，不是对四个互斥地址取best-of-K；输出也没有给出对应概率。Table4支持多层任务上的条件收益，未评价球中心。[§5.2–6.2](https://layeredflow.cs.princeton.edu/static/files/main.pdf)；[固定实现](https://github.com/princeton-vl/LayeredFlow/blob/57ff3f18814d5201ecb440aaf2a04d849938a9d4/MultiRAFT/core/raft.py#L175-L236)和[去重](https://github.com/princeton-vl/LayeredFlow/blob/57ff3f18814d5201ecb440aaf2a04d849938a9d4/MultiRAFT/evaluate.py#L65-L80)。本地原文与源码缓存为 `outputs/literature/layeredflow-*`，未运行算法。
+
+**对本项目的推论。** “一像素永远只有一个物理对应”不是普遍成像事实。但透明表面的多个同时成立真值、单个球中心的竞争候选、同一位移的误差尺度、曝光内不同时间相位，仍是四种不同对象。球拖影是时间积分，不能仅因混合背景就采用透明层GT；LayeredFlow也不能单独证明其机制解决了单目标后验歧义。
+
+因此今后若保留多个motion hypothesis，应说明哪个是条件于球身份的候选、它是否有概率含义、最终怎样选择或拒绝，以及候选保留是否改善自动定位。既有单球中心标签不会因内部输出多个槽而变成多层flow监督；当前不新增物理分层任务。
+
+## 七、对本项目研究决策的影响
 
 可复用的思想已经很具体：直接评估 query 的 cost 分布；让训练中的不确定性不能只靠平滑外推蒙混过关；分开共视、位置误差和目标身份；以现代粗特征进行全局搜索，再读取细空间证据。这些都应作为近邻，而非待宣布的新贡献。
 
