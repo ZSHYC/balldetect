@@ -92,6 +92,8 @@
 - [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)完成；s=2已有跨片段范围压力，但近帧本来可用，尚不足以启动远搜索模型。
 - [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议v2](protocols/blurball-causal-midpoint-v2.md)已锁定；[源内容复核](experiments/2026-09-11-blurball-continuity.md)确认3处内部时间边界，修复后已[完成30epoch与沿轴诊断](experiments/2026-09-12-blurball-midpoint-results.md)，[固定局部读出](experiments/2026-09-12-blurball-local-readout.md)随后完成并通过预设条件，暂缓新blur几何模块。
 
+- [BlurBall完整时序输入控制](experiments/2026-09-12-blurball-temporal-control.md)：在共同读出下重训重复当前帧，区分真实历史的位置与存在增量。
+
 ## 阶段进展
 
 - [2026-09-12：BlurBall完成与局部读出解释](progress/2026-09-12-blurball-readout.md)：自然长拖影细位置偏差、固定模型读出增益与运动机制归因边界。

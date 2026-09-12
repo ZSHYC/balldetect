@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
     args = parser.parse_args()
     if (args.output / 'config.json').exists():
         raise ValueError('输出已有实验配置，不覆盖现存运行')
@@ -51,6 +52,8 @@ def main():
         boundaries = list(csv.DictReader(handle))
     windows, removed = continuous_windows(frames, metadata['windows'], boundaries)
     removed_rows = [frames[metadata['windows'][i][-1]] for i in removed]
+    if args.temporal_input == 'repeat_current':
+        windows = np.repeat(windows[:, -1:], 3, axis=1)
     rows = [frames[i] for i in windows[:, -1]]
     train_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'train'])
     val_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'val'])
@@ -80,7 +83,8 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': 'blurball-causal-midpoint-v2',
+              'protocol': ('blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
+                           else 'blurball-causal-midpoint-v2'),
               'continuity_boundaries': boundaries,
               'excluded_boundary_targets': [{k: r[k] for k in ('game', 'clip', 'original_frame_id')}
                                             for r in removed_rows],
@@ -88,7 +92,8 @@ def main():
               'head': {'input_channels': 576, 'hidden_channels': 32, 'upscale': 8,
                        'num_frames': 3, 'appearance_channels': 576},
               'output_grid_hw': GRID_HW, 'classes': 288*512+1,
-              'input_slots': ['t-2', 't-1', 't'], 'target_slot': 2,
+              'input_slots': (['t', 't', 't'] if args.temporal_input == 'repeat_current'
+                              else ['t-2', 't-1', 't']), 'target_slot': 2,
               'train_targets': len(train_idx), 'val_targets': len(val_idx),
               'loss': 'cross_entropy; V0=no valid visible midpoint; no theta/l supervision',
               'optimizer': {'name': 'AdamW', 'head_lr': 3e-4, 'prefix_lr': 1e-5,

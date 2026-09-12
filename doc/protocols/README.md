@@ -53,3 +53,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [Tennis历史年龄 v1](tennis-history-age-v1.md)：共同当前目标上的较早历史可见性与固定近R2/远R4支持域，仅作元数据诊断。
 - [BlurBall因果中点 v2](blurball-causal-midpoint-v2.md)：排除3处已确认内部时间边界的跨界窗口；模型、4px严格容差与自然拖影分组继承[v1](blurball-causal-midpoint-v1.md)。
 - [BlurBall固定局部读出 v1](blurball-local-readout-v1.md)：固定best6与原q，只比较argmax及15×15局部重心，检验已存在的中点质量。
+- [BlurBall完整时序输入控制 v1](blurball-full-temporal-control-v1.md)：同argmax选优及共同局部重心下，完整重训repeat_current检验真实历史增量。

@@ -1,4 +1,4 @@
-"""固定best checkpoint，以一次验证forward比较argmax和15×15局部重心。"""
+"""固定已选best，以一次验证forward比较argmax和15×15局部重心。"""
 import argparse
 import csv
 import json
@@ -74,6 +74,10 @@ def main(run):
     metadata = json.loads((Path(config['rgb_cache']) / 'metadata.json').read_text())
     frames = metadata['frames']
     windows, _ = continuous_windows(frames, metadata['windows'], config['continuity_boundaries'])
+    # 较早history运行的配置没有temporal_input；它们均使用真实三帧。
+    temporal_input = config.get('temporal_input', 'history')
+    if temporal_input == 'repeat_current':
+        windows = np.repeat(windows[:, -1:], 3, axis=1)
     indices = np.array([i for i, window in enumerate(windows) if frames[window[-1]]['split'] == 'val'])
     rows = [frames[windows[i, -1]] for i in indices]
     with (run / 'val_predictions.csv').open(newline='') as handle:
@@ -94,7 +98,8 @@ def main(run):
         device = torch.device('cuda')
         model = build_dino_model(config['weights'], upscale=8).to(device)
         checkpoint = torch.load(run / 'best.pt', map_location=device, weights_only=True)
-        assert checkpoint['epoch'] == 6, 'Protocol fixes best epoch6'
+        selected_epoch = json.loads((run / 'results.json').read_text())['best_epoch']
+        assert checkpoint['epoch'] == selected_epoch, 'Checkpoint must match saved argmax selection'
         model.load_state_dict(checkpoint['model'])
         model.eval()
         rgb = np.load(Path(config['rgb_cache']) / 'rgb.npy', mmap_mode='r')
@@ -120,7 +125,9 @@ def main(run):
         difference = float(np.max(np.abs(q-original_q)))
         assert difference <= 1e-6 and np.array_equal(q >= .5, original_q >= .5), 'Original q/output decisions differ'
         np.savez(cache_path, window_ids=indices, centers=centers, patches=patches, q=q)
-        info = {'protocol': 'blurball-local-readout-v1', 'source_run': str(run),
+        info = {'protocol': ('blurball-full-temporal-control-v1' if temporal_input == 'repeat_current'
+                             else 'blurball-local-readout-v1'), 'source_run': str(run),
+                'temporal_input': temporal_input,
                 'checkpoint_epoch': checkpoint['epoch'], 'radius_cells': 7, 'temperature': 1,
                 'batch_size': 8, 'precision': 'float32 model/logits; float64 CPU expectation',
                 'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
