@@ -127,7 +127,8 @@ def main(run):
         difference = float(np.max(np.abs(q-original_q)))
         assert difference <= 1e-6 and np.array_equal(q >= .5, original_q >= .5), 'Original q/output decisions differ'
         np.savez(cache_path, window_ids=indices, centers=centers, patches=patches, q=q)
-        info = {'protocol': ('blurball-full-temporal-control-v1' if temporal_input == 'repeat_current'
+        info = {'protocol': (config['protocol'] if config.get('interaction', 'baseline') != 'baseline' else
+                             'blurball-full-temporal-control-v1' if temporal_input == 'repeat_current'
                              else 'blurball-local-readout-v1'), 'source_run': str(run),
                 'training_complete': run_results.get('training_complete', True),
                 'temporal_input': temporal_input,

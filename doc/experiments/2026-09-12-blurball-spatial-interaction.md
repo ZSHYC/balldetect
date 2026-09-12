@@ -1,6 +1,6 @@
 # BlurBall：邻域汇合与非线性的先后顺序
 
-日期：2026-09-12。状态：实施验证，尚未启动正式训练。
+日期：2026-09-12。状态：same_address训练中，cross_address顺序接续。
 协议：[压缩后空间交互v1](../protocols/blurball-spatial-interaction-v1.md)。
 
 本组要检验32通道压缩之后的邻域非线性是否改善细定位。两组四个卷积的顺序、形状、初始化和训练预算相同，只移动第二个GELU。完整函数、最近邻限制和预定判断见协议；旧repeat_current不重训。
@@ -17,7 +17,7 @@
 
 ## 运行设置
 
-Conda `zshihyc`，RTX5070Ti Laptop，float32；两组真实三帧，seed0，各30轮、batch8，其余设置见协议。训练38,854、验证14,192个目标，未缩减任何比赛或batch。正式训练按以下两条命令顺序执行；启动后补记代码提交及实际进程。
+Conda `zshihyc`，RTX5070Ti Laptop，float32；两组真实三帧，seed0，各30轮、batch8，其余设置见协议。训练38,854、验证14,192个目标，未缩减任何比赛或batch。训练代码提交 `45b61ba`；北京时间19:16以独立session启动 `outputs/blurball/spatial_interaction/run_pair.sh`，启动记录 `launch.json` 保存实际命令与时间。启动时父进程PID3341730、same训练PID3341733已核实存活，正式config的目标数、30轮、batch8、interaction与参数数一致。
 
 ```bash
 /home/zshyc/miniforge3/envs/zshihyc/bin/python -u scripts/train_blurball_midpoint.py --rgb-cache data/cache/blurball/rgb_512x288_all_h2 --output outputs/blurball/dino_same_address_seed0 --interaction same_address --epochs 30 --batch-size 8 --seed 0
@@ -25,6 +25,20 @@ Conda `zshihyc`，RTX5070Ti Laptop，float32；两组真实三帧，seed0，各3
 ```
 
 本机另一个项目同时使用GPU，保留其进程。共享资源下的实际训练时间不能作为模型独占GPU的吞吐基准；本次仅据可用显存和运行证据判断是否可执行。
+
+启动脚本依次完成每组训练及固定局部读出；任一步返回非零即停止接续，错误保留在对应run的 `train.log` / `readout.log`，不从best权重重置优化器伪装续训。关闭交互终端不会向独立session自动传递挂断；WSL整体关闭等情况则依原 `last.pt` 完整轮次恢复。上述PID仅是启动事实，当前运行状态须以实际进程和日志为准。
+
+19:17左右已完成全部14,192个目标的epoch0验证并保存 `last.pt`，随后第1轮已有3,200/38,854目标的训练记录。配置、进程及实际日志均已核实；未据此填入最终性能结果。
+
+## 保存预测的配对入口
+
+`scripts/compare_blurball_spatial.py` 复用已有BlurBall指标、真实历史分组、坐标身份检查和状态矩阵，明确以same→cross为方向；只额外加入协议要求的各场d1≥16组。运行前读取两组共同配置、完整逐轮记录和两种读出的原q，若目标错位、共同条件不同或局部读出改变q则停止配对，避免产生不可比数字。不重新解码或模型forward。
+
+```bash
+/home/zshyc/miniforge3/envs/zshihyc/bin/python scripts/compare_blurball_spatial.py --same outputs/blurball/dino_same_address_seed0 --cross outputs/blurball/dino_cross_address_seed0 --output outputs/blurball/spatial_interaction/paired_seed0.json
+```
+
+最小合成例验证了方向、位置救回但仍拒绝、V0误出被抑制及完整V1分母；已有指标公式没有重写。正式配对要等两组实际完成，合成例不作为项目定位结果。
 
 ## 结果与下一步
 
