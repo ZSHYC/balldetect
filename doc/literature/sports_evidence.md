@@ -2,6 +2,8 @@
 
 **范围与截止日：** 仅核验项目蓝图中体育球定位/跟踪链（TrackNet 1--6、WASB、TTNet、TOTNet、BlurBall、LaTBT/`TrackFormer`、RacketVision，以及 TrackNet Tennis / Shuttlecock / OpenTTGames 数据）。检索与网页读取完成于 **2026-09-09**。证据优先级为已读原论文正文（P）、作者/官方数据页或仓库（R）；未下载数据、未运行代码、以及只有摘要的信息明确标为未核验（U）。这不是穷尽综述；额外以 `"sports ball tracking"`, `"tiny ball tracking"`, `"ball detection" + 2025/2026 + arXiv` 检索最新近邻，结果只保留五个与本题直接相关的条目。
 
+**2026-09-12 补充：** [V2/V6 原始来源补证](2026-09-12-tracknet-source-gaps.md)已取得 V2 官方摘要和 V6 十页官方附录，并核对 demo。V6 附录的状态演化主要沿网络尺度，不能等同视频轨迹；其主文、完整训练协议仍未取得。以下表格保留首轮阅读范围，V2/V6 的当前证据边界以该补充为准。
+
 ## 可直接用于立项的结论
 
 1. **不能用“TrackNet 没有 motion”立题。** TrackNet-1 已用连续帧学习轨迹模式；V3 用八帧、多帧热图、背景和轨迹修复；V4 明确使用帧差生成 motion attention；V5（预印本）进一步将无符号差分改为带极性的方向场；V6 已自称面向 fast-moving tiny ball。可成立的缺口只能是更窄的：这些方法没有直接证明“在高分辨率、真球仍可读的细特征上，以受控预算完成大位移、多假设 correspondence search”这一因果链。

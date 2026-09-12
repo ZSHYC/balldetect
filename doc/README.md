@@ -35,6 +35,7 @@
 | [研究审查与反馈 · 2026-09-09](research/高速微小球运动表征_研究审查与反馈_2026-09-09.md) | 第一轮相关工作与对抗性审查，提供初始归因和实验修订 |
 | [第二轮第一性原理与对抗性研究总纲 · 2026-09-10](research/高速微小球运动表征_第二轮第一性原理与对抗性研究总纲_2026-09-10.md) | 成像、可识别性、标签测量、空间表示、搜索与研究取舍的综合论证 |
 | [当前实证对运动问题的修订 · 2026-09-10](research/2026-09-10-empirical-reframing.md) | 依据时序、cost、适配与跨球种诊断修订搜索优先级，区分弱证据、视觉对应与遮挡位置预测 |
+| [训练期间的文献深化与研究重审 · 2026-09-12](research/2026-09-12-motion-literature-reassessment.md) | 将新全文证据与现有实测整合，审查 DINOv3 候选重排、空间上采样、因果记忆与背景机制，不提前选新模块 |
 
 这些历史文件保留原名和原有论述，本次只整理位置并调整相对链接。历史文档中的数据状态、候选实现或校验建议按当时语境阅读；当前数据事实以 `data/` 记录为准，当前协作规则以 [AGENTS.md](../AGENTS.md) 为准。
 
@@ -71,6 +72,10 @@
 | [稀疏中心关系监督](literature/2026-09-11-point-relation-supervision.md) | DINO-Tracker、LoFTR与点跟踪先例如何限定训练期辅助的解释和新颖性 |
 | [热图中点解码](literature/2026-09-12-midpoint-decoding.md) | DSNT、DARK、局部soft-argmax与BCIR对固定hard-CE读出的适用限制 |
 | [任务监督的时序采样](literature/2026-09-12-task-supervised-alignment.md) | BIRD与STSN的混合特征/独立support采样、未来帧、辅助监督和因果改写边界 |
+| [TrackNet原始来源补证](literature/2026-09-12-tracknet-source-gaps.md) | V2官方摘要、V6官方附录和demo实际支持什么，哪些主文协议仍未知 |
+| [高分辨率特征上采样](literature/2026-09-12-feature-upsampling.md) | FeatUp、LoftUp、AnyUp与RaysUp的RGB信息路径、监督、效率和球点迁移边界 |
+| [因果点跟踪与自动球定位](literature/2026-09-12-causal-point-tracking.md) | TAPNext/++、Track-On2的查询初始化、分布读出、DINOv3候选重排与训练时长如何约束创新 |
+| [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet与CoWTracker对差分、transport、背景与无相关体跟踪的限制 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

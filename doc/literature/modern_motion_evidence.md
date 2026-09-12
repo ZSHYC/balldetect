@@ -8,6 +8,8 @@
 
 **2026-09-11局部补读：**本次深化MOSS、Midway、V-JEPA 2.1、What Moves?、MoAlign、COMET、MotionEnhancer、ReMoRa、GMoT与Motion-as-Prompt的可访问全文机制、时间语义和评价边界，并修正末尾空间探针的过强推论；具体缺失的附录/代码及其余条目的阅读限制按各自记录。详见[多阶关系](2026-09-11-higher-order-motion.md)、[预测式运动潜变量](2026-09-11-predictive-motion-latents.md)、[密集视频预训练](2026-09-11-dense-video-pretraining.md)、[区域运动和全景参考](2026-09-11-region-motion-reference.md)、[运动子空间](2026-09-11-motion-subspace.md)、[方向差分](2026-09-11-directional-differences.md)、[扩散注意力教师](2026-09-11-diffusion-motion-teacher.md)、[压缩视频运动](2026-09-11-compressed-motion.md)、[门控运动token](2026-09-11-gated-motion-tokens.md)与[轨迹视觉提示](2026-09-11-trajectory-prompts.md)，不表示已复现这些方法。
 
+**2026-09-12 补充：** [特征上采样全文审查](2026-09-12-feature-upsampling.md)深化 AnyUp v2、RaysUp v1 及 FeatUp/LoftUp 的 RGB 信息路径和代码；[因果点跟踪补读](2026-09-12-causal-point-tracking.md)补入 TAPNext/++ 与采用 DINOv3 的 Track-On2 v2。这些是空间/对应机制的近邻证据，不表示已在球数据上复现。
+
 ## 事实核验表
 
 | 工作 | 状态（截至检索日） | 一手证据所建立的机制 | 对球定位的可迁移价值 | 不能推断 / 创新冲突 |
