@@ -92,6 +92,7 @@
 - [DINOv3 四级空间探针实验](experiments/2026-09-10-spatial-probe.md)：实施验证、运行设置、成绩与解释边界。
 - [全量因果强基线实施](research/2026-09-10-full-baseline-plan.md)：从稀疏探针转入共同任务的完整训练；[HRNet记录](experiments/2026-09-10-full-hrnet.md)、[DINO记录](experiments/2026-09-10-full-dino.md)与[系统比较](experiments/2026-09-11-full-hrnet-dino-comparison.md)。
 - [全量窗口的搜索覆盖与空间支撑](experiments/2026-09-11-search-support.md)：同格三帧融合的实际计算路径、两档局部范围的标签覆盖，以及保存预测的域内外错误。
+- [Shuttlecock 联合支持与极端位移](experiments/2026-09-12-shuttlecock-extreme-motion.md)：训练侧近两帧联合几何覆盖与四例真实帧核对，区分最大标签跳变、真实快速球迹和未确认端点。
 - [完整微调后的细定位分解](experiments/2026-09-11-full-subcell-readout.md)：固定实际预测粗块的四子格oracle能恢复多少误差，以及它为何不足以解释主要精度差距。
 - [全量DINO时序控制结果](experiments/2026-09-11-full-temporal-control.md)：真实历史相对重复当前帧重训的整体增量、困难组救回与无球误报。
 - [位置分布集中度诊断](experiments/2026-09-11-readout-concentration.md)：固定坐标下的局部质量、背景响应及分数排序为何只能提供有限解释。
