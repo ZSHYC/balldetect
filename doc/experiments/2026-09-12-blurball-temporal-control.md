@@ -65,4 +65,4 @@
 /home/zshyc/miniforge3/envs/zshihyc/bin/python scripts/compare_blurball_temporal.py   --history outputs/blurball/dino_midpoint_seed0   --repeat outputs/blurball/dino_repeat_current_seed0   --output outputs/blurball/repeat_vs_history_seed0.json
 ```
 
-截至本次记录，epoch1已处理16,000/38,854个训练目标，累计loss4.5112，进程继续运行。阶段记录不使用未完成epoch的loss推断最终能力，既定30epoch和选优保持。
+首次完整训练轮已完成：epoch1平均训练loss3.55638，验证PCK@4为71.9448%、本地F1@4为69.5839%，该轮含验证耗时1,096.61秒。训练继续按既定30epoch和选优执行；这只确认基本拟合已经发生，不与历史组最终best6提前作结论性比较，也不改变预设判定。

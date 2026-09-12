@@ -11,3 +11,5 @@
 研究决定：接受已有logits的读出解释，保留固定局部重心作为强基线候选，暂缓新的blur几何模块。补充的[解码文献](../literature/2026-09-12-midpoint-decoding.md)表明这种算子已有直接先例。下一问是剩余失败需要哪种时间证据，尚未确立新的motion机制或完成论文归因；实证修订见[研究总判断第18节](../research/2026-09-10-empirical-reframing.md#18-2026-09-12自然拖影与读出细定位困难成立不能直接归给缺失的motion模块)。
 
 同日推进：[完整时序输入控制](../experiments/2026-09-12-blurball-temporal-control.md)已从36bdd7c启动30epoch repeat_current训练，以同argmax选优及共同局部读出估计真实历史增量；GPU真实单batch与正式配置已确认。等待其结果期间，原history保存预测的几何邻近诊断不支持多数远错位停留在旧GT中心，暂不将简单历史位置复制作为主失效机制。
+
+期间补齐[BIRD/STSN任务监督采样](../literature/2026-09-12-task-supervised-alignment.md)的完整方法边界：混合特征重采样与逐support对齐不同，原协议都含未来信息；BIRD还使用STF特征辅助，检得公开仓库尚无可复现网络。不能把这些工作概括为固定小范围、仅检测loss或现成因果三帧基线。当前继续等待输入控制，不预选DCN；若后续采用，须将采样作用与额外容量区分。

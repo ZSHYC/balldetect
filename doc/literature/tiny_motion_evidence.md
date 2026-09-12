@@ -121,6 +121,8 @@
 
 **证据与状态：A。** [ECCV 2018 官方 PDF](https://openaccess.thecvf.com/content_ECCV_2018/papers/Gedas_Bertasius_Object_Detection_in_ECCV_2018_paper.pdf)，[arXiv](https://arxiv.org/abs/1803.05549)。
 
+2026-09-12的[完整方法补读](2026-09-12-task-supervised-alignment.md)明确了pair采样、随机前后support、27帧含未来推理及作者源码未确认的边界；基础3×3采样格不等于offset只能覆盖3×3。下面的任务监督论点保留，不能据此把因果三帧改写称为原论文复现。
+
 * STSN 用跨时间 deformable convolution，从邻帧学空间采样位置，在 object detection loss 下端到端优化，不需 flow supervision；明确目标是抵抗 occlusion/motion blur。
 * 因而“只以定位损失训练的时序 deformable sampler”不是新。更关键的是，检测损失只要求最终框/热图正确，不保证 offset 是同一物体的真实匹配；背景捷径和从未来帧拷贝外观都可能得到同样 loss。
 * 本项目若提出可解释 correspondence，不能只展示 learned offset 可视化。需要有标注两帧中心时的 **oracle correspondence test**：将当前位置或自动候选固定，测历史真中心（带可见性/时间间隔）是否在 search top-K/offset neighbourhood；再分离它与最终 detector 的增益。
@@ -146,7 +148,7 @@
 
 | 工作 | 状态/证据 | 对本项目最重要的影响 |
 |---|---|---|
-| **BIRD**, *Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection* | **A，arXiv:2508.15415**。已读官方 HTML 的方法与消融段；未见本轮可核验正式出版版本。 | 将 local deformable temporal fusion 与 whole-clip forward/backward propagation 合并，显式批评滑窗只用邻帧、整段多次处理的开销。它是“用更远的时间帧补救当前弱目标”的直接反证。球项目若自称 long-range temporal evidence 新颖，必须与此类递归 propagation 相比，并说明是否可 causal、边界如何 reset、是否跨 clip。 |
+| **BIRD**, *Bidirectional Temporal Information Propagation for Moving Infrared Small Target Detection* | **A，arXiv:2508.15415v1**。已读官方全文方法与消融；[2026-09-12补读](2026-09-12-task-supervised-alignment.md)确认检得同名仓库仍无可复现网络，作者归属未由论文确认。 | LTMF先混合三帧再重采样混合特征，完整模型在clip内双向递推并用未来帧；训练另有STF特征辅助，不是只有检测loss。这是远时序传播与任务监督采样的先例，但没有显式逐历史帧对应体，不能直接移作当前因果三帧复现。 |
 | **MI-DETR**, *A Strong Baseline for Moving Infrared Small Target Detection with Bio-Inspired Motion Integration* | **A，arXiv:2603.05071v1，2026-03-05**；已读官方全文方法/实验和作者公开源码的固定提交。仍是预印本。 | 它不是 correspondence/flow，而是廉价、因果、带状态的差分—累积 motion map 加双路融合；它是“显式大范围匹配是否必要”应面对的竞争解释，但不能以其 IR bbox 结果替代 RGB 球中心定位证据。 |
 | **FlowIt** | **A，arXiv:2603.28759v2，2026-05-31**；已读全文关键方法/实验与固定作者源码。作者项目称 BMVC 2026 Oral，论文可读版本仍为预印本。 | 它在 \(1/4\) 特征做 dense all-pairs OT，真有 dustbin 与监督的 confidence/可匹配分数，但最终仍强制输出 dense flow；因此覆盖 global matching、可靠性辅助与 unmatched mass，不等于已验证的球 `no-match` 或 tiny 自动定位。 |
 | **EgoSIS**, *From Factorized Visual Ego-Transitions to Motion-Canonical Spatial Evidence for UAV Reasoning* | **A，arXiv:2609.08938v2，2026-09-09**；已读官方全文方法与实验，仍是预印本。论文未链接作者代码；本次未定位到可确认的作者公开实现。 | 冻结 VideoFlow/MOFNet 双向 flow 后以 Huber-IRLS/MAD 拟合 affine **image-plane proxy**，再把 residual/static-support 与手工可靠性门控用于 VQA 时空证据；它不是相机姿态或物体 motion 的可识别分解，也未验证像素定位、tiny ball 或端到端 flow 成本。 |
