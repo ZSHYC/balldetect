@@ -104,3 +104,7 @@ Efficient LoFTR 聚合 attention 输入、保留原位置残差，但最终仍�
 Briedis 的 CVPR 2026 方法保持已请求 lookup 的数学定义，改变块计算和采样执行；其补充已经公开 CuTe kernel，实际使用 BF16 输入与 FP32 累加。精确算子、浮点结果接近、全局发现和 backward 可用性是不同结论。固定 lookup 大小的线性复杂度不能外推为任意全局高分辨率搜索。
 
 三者都有应当接受的条件收益，专题也记录了 CasP 接入 ELoFTR 的组件消融。当前限制的是宽泛的创新声称，不是预先否定这些方法在球任务上的可用性，也不要求立即全部复现。
+
+同日继续补足 SCV 和 FlowFormer：SCV 采用全局 brute-force top-k 后，再以多尺度局部位移格读取已保存值；FlowFormer 压缩 cost memory 后仍保留 raw cost map，并在每轮结合局部 raw patch 与全局 latent。两者都不能仅凭某一局部步骤推出最终坐标不可达；K 个 learned tokens 也不等于 K 个带地址候选。详见同一专题第五节，更新本文第 1/2 节的早期阅读范围。
+
+[8 月整体匹配误差新稿](2026-09-12-coarse-fine-uncertainty.md)另补校准与 CoRe：其输入是 coarse/fine 分布统计，几何细化还需要初始点投影残差。论文有真实误差和 coarse-success 验证，但不提供球身份、no-match 或任意候选预算下的可靠性保证；固定公开后验实现与 v2 公式的差异也已记录。

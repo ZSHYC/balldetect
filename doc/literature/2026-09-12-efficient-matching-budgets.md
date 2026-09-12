@@ -1,6 +1,6 @@
-# 高效对应的三种不同改变：消息压缩、候选限制与相关值执行
+# 高效对应的不同改变：消息、候选、相关值执行与 cost memory
 
-日期：2026-09-12。本文围绕当前问题“看得细、找得远、计算可承担”，补读 Efficient LoFTR、CasP 和 Briedis 等人的相关体采样工作。主文、相关补充和公开实现的阅读范围如下；未运行这些模型，没有新装依赖、下载权重或改变正在进行的 BlurBall 对照训练。
+日期：2026-09-12。本文围绕当前问题“看得细、找得远、计算可承担”，补读 Efficient LoFTR、CasP 和 Briedis 等人的相关体采样工作；第五节进一步补足 SCV 和 FlowFormer 的原始信息路径。主文、相关补充和公开实现的阅读范围如下；未运行这些模型，没有新装依赖、下载权重或改变正在进行的 BlurBall 对照训练。
 
 ## 结论：不能把不同预算改动都叫作新的 motion representation
 
@@ -130,7 +130,51 @@ RAFT 的某次 lookup 对每个源位置，根据当前 flow 中心读取 target
 
 8K CHARGE 的 335 帧、332 对 forward flow 是作者合成评测；补充 §9.2 和渲染脚本明确关闭 motion blur。高分辨率、全图 EPE 和大位移分组不是 BlurBall 曝光模糊或球中心误差的证据。主文结论又明确只优化 forward，backward 留待后续；本项目若未来端到端训练，不能继承其推理内存作为训练预算。
 
-## 五、这些证据实际改变什么决定
+## 五、SCV 与 FlowFormer：保留稀疏地址，还是压缩关系再按需读取
+
+这两篇此前只有摘要或方法概览，现补读原文和源码。它们直接回答“motion latent 里究竟还保留了什么”，不扩展到整个后续家族。
+
+### SCV：全局 top-k 保存之后，还有一层位移编码
+
+Shihao Jiang et al., *Learning Optical Flow from a Few Matches*，CVPR 2021，pp. 16592–16600；[arXiv 2104.02166 v1，2021-04-05](https://arxiv.org/html/2104.02166v1)，已读全文与作者 [`zacjiang/SCV@9f80991`](https://github.com/zacjiang/SCV/tree/9f809910e17125701b28dc1054fbc7648b801957)（2021-04-08）的 KNN、稀疏相关、位移编码与迭代输出路径。缓存为 `scv-2104.02166v1.{pdf,txt}`、`scv-source/`。
+
+**真正存储的是带地址的匹配值。** 每个 source 在 1/4 feature grid 上对 target 全图选择 top-k，默认 k=8；一次计算相似度并保存地址/值，后续按当前 flow 平移相对位移。源码的候选索引选择在 `no_grad` 中，对选中 feature pair 重新计算可求导内积。不能据此说未选中的 target feature 在整个网络没有梯度，它仍可能被其他 source 选中，骨干参数也共享。[`knn.py`](https://github.com/zacjiang/SCV/blob/9f809910e17125701b28dc1054fbc7648b801957/core/knn.py)、[`sparsenet.py`](https://github.com/zacjiang/SCV/blob/9f809910e17125701b28dc1054fbc7648b801957/core/sparsenet.py)
+
+**稀疏存储不消除候选生成的全局计算。** 原文 §3.1 明确使用 Faiss brute-force exact search，源码调用 `faiss.bfKnn` 和 inner-product metric。对 P 个 source/target 位置，它仍有全对搜索工作；Nk 存储不是整个 pipeline 的线性时间证明。原文还报告当时 Faiss 约 2 GB 的固定开销，故在 1/8 尺度下节省并不明显；这属于当时实现，不是今天所有 KNN 库的固定开销。
+
+**保存在 sparse volume 中，不等于该轮已经传给 GRU。** 每轮把相对候选坐标缩放为五个尺度（1、1/2、1/4、1/8、1/16），双线性 splat 到各自 9×9 位移格，再拼成 405 通道的 motion 输入。多个候选可以落入相同格并累加；超出所有当前窗口的候选不会在这一轮贡献直接相关值。源码先对四个整数邻格筛选，边缘可能只保留部分 splat 权重，不能把它简化成对连续坐标的一次硬圆形半径截断。
+
+但窗口中心会随迭代移动，source context 与邻域 GRU 也仍存在；不能从单轮漏读推导最终 flow 必然失败。更直接的是，原文 §4 已明确说明最终解不必位于初始 top-k 集合。这里的 recurrent iteration 是同一图像对内的更新，不是额外视频帧，也不自动提供长期运动轨迹。
+
+**正、负证据都很接近本项目问题。** 原文明确讨论 small objects moving fast，且 Fig. 5 展示细竹竿的改善。Table 2 在同一 SCV 家族中将 feature 从 1/8 提至 1/4，Sintel clean EPE 1.55→1.29、final 3.07→2.95；KITTI EPE 却由 5.74→6.80。k=1/4/8 的消融支持保留多个候选的价值，但不是每个指标都严格随 k 改善。Fig. 6 又给出模糊头发的失败，作者将其解释为歧义使正确对应未进入 top-k；它是具体定性证据，不是对所有模糊场景的失败率统计。
+
+Table 3 的 correlation-value 字节估算与整网训练显存分开报告；1/4 特征、400×720 crop、batch=1 时，作者测得 RAFT 10.6 GB、SCV 6.1 GB。该事实支持特定设置的实际节省，不代表可忽略索引、Faiss、其他 activation 或本项目 batch 条件。它没有球中心/visibility 指标，也不把通用正确对应自动识别为球。
+
+### FlowFormer：latent 外面仍保留 raw cost
+
+Zhaoyang Huang et al., *FlowFormer: A Transformer Architecture for Optical Flow*，ECCV 2022；[官方正文](https://www.ecva.net/papers/eccv_2022/papers_ECCV/papers/136770672.pdf)、[arXiv 2203.16194 v4，2022-09-21](https://arxiv.org/html/2203.16194v4)、[官方补充](https://drinkingcoder.github.io/publication/flowformer/images/FlowFormer-supp.pdf)。已读正文/补充及 [`FlowFormer-Official@6ba7ea8`](https://github.com/drinkingcoder/FlowFormer-Official/tree/6ba7ea82b45394d3a7a25808399695427c9febd8) 的 encoder、decoder、AGT 和配置。缓存为 `flowformer-eccv2022*` 与 `flowformer-official-6ba7ea8/`。
+
+**先全局构造，再学习压缩。** 1/8 feature grid 首先形成完整四维 all-pairs cost。每个 source 地址各自拥有一张 target cost map；它经过 stride-8 patchification 和 target 位置编码，接受共享的 K 个 learned query 聚合，形成该 source 的 latent memory。默认 K=8、token dimension=128；八个 token 不是 top-8 target 地址，也没有与八个峰一一对应的保证。[`encoder.py`](https://github.com/drinkingcoder/FlowFormer-Official/blob/6ba7ea82b45394d3a7a25808399695427c9febd8/core/FlowFormer/LatentCostFormer/encoder.py)
+
+源码的 patchification 是三层 kernel=6、stride=2 的重叠卷积并增加通道，不是简单的非重叠 8×8 平均。它不再显式枚举每个 target 格点，但不能仅从 stride 下降断言球信息必定丢失；可学习通道仍可能编码细位置。有限 latent 对真实窄峰是否有足够可读性，需要实验，既没有无损保证，也不能凭压缩名称证明丢失。
+
+AGT 先在同一 source 的 latent tokens 内交互，再沿 source 空间网格让同一 latent index 交换信息，并利用 source appearance。source 地址仍由 memory 外层索引保留，target 区域信息则通过 patch 特征与位置编码汇入 latent。它不是把整场景压成一个无地址向量，也不等于建立了显式目标身份。
+
+**默认 decoder 读取两条关系路径。** `data['cost_maps']` 一直保留原始相关图；每轮在当前 `p=x+flow(x)` 周围取 raw 9×9 cost，以其编码和当前位置形成 query，对该 source 的 latent memory 做全局信息检索。默认还把检索结果与 raw patch 拼接后送给 GRU，输出一个 residual flow。[`decoder.py`](https://github.com/drinkingcoder/FlowFormer-Official/blob/6ba7ea82b45394d3a7a25808399695427c9febd8/core/FlowFormer/LatentCostFormer/decoder.py)
+
+所以 compressed memory 不代表整个原始相关图被删除；局部 9×9 也不代表整个网络无法作远距离更新。远处细峰是否得到利用，取决于 feature、latent 检索、迭代位置和最终 raw 读取的共同作用。AGT 的 latent residual 又是另一条保留路径，不能与 raw-cost bypass 混写。
+
+初始全局相关仍保留二次项。完整高分辨率推理若采用补充材料的 paired tiling，则每个 tile 的全局仅针对其实际输入域；跨出该 target tile 的地址不在该次相关图中。是否发生取决于实际裁剪和位移。当前也没有本机证据证明项目输入上的 1/8 all-pairs 必定不可承担，不能以此提前排除基线或强制采用压缩。
+
+**结构收益不能一概归给更大模型。** Table 2 分开了 K/D、骨干预训练与 AGT 的配置；Table 3 又用 small FlowFormer（6.2 M）对 GMA（5.9 M）：Sintel clean/final 为 1.20/2.64 对 1.30/2.74，KITTI 也有改善，并提供扩大 GMA 和更换 Twins 的对照。这是有效的归因证据，应接受其支持完整设计的条件收益；它没有独立检验微小球远峰保留，也没有把 raw bypass 单独作为本项目变量。
+
+### 对本项目的共同约束
+
+SCV 已经保留少数带地址的远距假设，FlowFormer 已经将全局关系压成 memory 后结合局部 raw evidence。不能分别把“多假设”或“全局 latent 加局部细化”写成首次。二者的标准任务都依赖 dense flow 监督；通用 flow 成绩不替代公开球中心标签条件下的自动定位。
+
+本项目更值得检验的是：**候选被产生、被保存、在本轮被读到、被最终用于球定位，是四件不同的事。** 这些环节只有在实际模型中出现时才测；当前不预建四套模块或把所有近邻列为必跑基线。
+
+## 六、这些证据实际改变什么决定
 
 **先把成本算在正确位置。** 若以后实际采用少数地址 lookup，应先复用成熟的按需计算路径。没有必要为了论文动机构造一个低效 P×P 张量，也没有必要现在就移植专用 CuTe kernel。只有本地 profiling 证明相关值执行是瓶颈，专门优化才值得投入。
 
@@ -140,8 +184,8 @@ RAFT 的某次 lookup 对每个源位置，根据当前 flow 中心读取 target
 
 **当前继续完成已有对照。** 本轮没有证据要求立即采用三者之一。BlurBall 真历史对重复当前帧的完整训练与配对评价先完成；之后只围绕实际收益/残留错误选一条有区分力的机制实验，避免为了排除所有理论可能性而复现整套图像匹配谱系。
 
-## 六、最新稿件的覆盖边界
+## 七、最新稿件的覆盖边界
 
 本轮同时定向筛查 2025–2026，包含 2026 年 8–9 月 arXiv 条目；没有做穷尽检索。Briedis 与 CasP 因直接改变本轮预算判断而深读，并补足作为前史的 Efficient LoFTR。
 
-[Semi-Dense Matching Uncertainty Is Not Just Local Confidence（2608.08685）](https://arxiv.org/abs/2608.08685)本轮仅初筛，主题是匹配不确定性；[REDI-Match（2606.24330）](https://arxiv.org/abs/2606.24330)仅初筛，涉及旋转等变蒸馏；EDM（ICCV 2025）暂未深读。它们不被计入本文已核实的机制结论。若实际决策转向匹配可靠性或其他压缩方式，再补相应全文；搜索未命中也不作为不存在的证据。
+初筛后的 [Semi-Dense Matching Uncertainty Is Not Just Local Confidence v2（2608.08685）](2026-09-12-coarse-fine-uncertainty.md)已在同日另行深读，记录整体残差模型、几何输入、有效消融及公开后验公式的版本差异。[REDI-Match（2606.24330）](https://arxiv.org/abs/2606.24330)仍仅初筛，涉及旋转等变蒸馏；EDM（ICCV 2025）暂未深读。后两项不计入已核实的机制结论；搜索未命中也不作为不存在的证据。

@@ -35,8 +35,9 @@
 | [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
 | [自适应搜索与细支撑](../literature/2026-09-12-adaptive-search-support.md) | ASpanFormer主文/补充/作者实现；纯CPU采样几何演示 | 分清连续范围、实际采样、query地址混合与后续全图恢复 |
 | [异常门控与因果解释](../literature/2026-09-12-causal-anomaly-gating.md) | CHAL正式主文/补充推导/固定源码；关键消融原页 | 接受背景异常门控的条件收益，区分它与后门识别、硬候选筛选和显式对应 |
-| [高效对应与预算](../literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP主文/相关附录/作者源码；Briedis主文/复杂度/CuTe清单 | 区分消息压缩、候选限制和算子执行；修正候选覆盖、数值等价及效率归因 |
+| [高效对应与预算](../literature/2026-09-12-efficient-matching-budgets.md) | Efficient LoFTR、CasP、SCV、FlowFormer正文/相关补充/源码；Briedis复杂度与CuTe清单 | 区分消息压缩、候选限制、算子执行与raw/latent路径；修正候选覆盖和效率归因 |
 | [时间与曝光测量补充](../literature/second_pass_measurement.md#24-2026-09-12-补充时间采样与曝光观测的两个边界) | STARE正式全文；3DV 2026 ultra-fast blur正文与附录 | 区分线性插值误差与理论下界、运行延迟与目标帧误差、三维非唯一与二维中点 |
+| [整体匹配误差与几何后验](../literature/2026-09-12-coarse-fine-uncertainty.md) | 2608.08685 v2正文/补充/源码，后验公式CPU例 | 接受残差校准与几何细化正证据，分清错误排序、coarse-success、球身份及代码版本 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -152,6 +153,8 @@ Devon、SCV、RAFT、MotionSqueeze、SELFY/STSS、WAFT 等早已覆盖这一谱�
 
 [ASpanFormer](../literature/2026-09-12-adaptive-search-support.md)使这一区别更具体：自适应局部span仍与最终全图相关并存。其每组query共用平均地址、固定数量样点；本轮的几何演示定位了两个可能环节——独立运动地址被均值混合、扩大范围后样点避开细支撑。演示没有证明真实球错误频率或端到端失败，故当前只把问题从“窗口是否够大”细化为“实际证据是否被采到、后续能否恢复”，不据此直接添加模块。
 
+[SCV/FlowFormer 全文与源码补读](../literature/2026-09-12-efficient-matching-budgets.md)进一步区分“候选被保存”和“本轮已经利用”。SCV 保存全局 top-k 后仍用局部多尺度位移格输入 GRU；FlowFormer 的 learned tokens 不是离散候选，而且每轮仍读取原始相关图的局部 patch。stride 降低不独立证明信息不可恢复，latent 压缩也不表示 raw cost 已被删除。两者已有有效结构消融，却都没有替本项目证明自动球的哪一环是实际瓶颈。
+
 ### 2. 不做显式相关体的迭代或递推表示
 
 TAPNext 通过图像/点 tokens 与 SSM，CoWTracker 通过单地址 warp 后的联合空间时间更新，都能形成长程对应。这足以要求我们的研究保留非 cost-volume 竞争解释。
@@ -196,6 +199,8 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 来源细节见[点跟踪补读](../literature/2026-09-12-causal-point-tracking.md)、[微小目标补读](../literature/2026-09-12-recent-tiny-motion.md)与[既有位置质量证据](../literature/2026-09-11-localization-quality.md)。
 
 MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共享 flow 均值公式；SWIFT 对该先例的简述不能替代原公式。多分量、多峰、多地址候选和可拒绝对应是不同机制，未来若保留多个 motion hypothesis，必须说明实际保留的是哪一种信息。
+
+[2026 年 8 月整体匹配误差新稿](../literature/2026-09-12-coarse-fine-uncertainty.md)已实测 coarse/fine mixture 相对 fine-only 的改善，并检查 coarse-success 后验。但更好的 NLL 未带来更高的错误排序相关性，CoRe 的几何收益也需与普通 refit 区分。对运动球，即使背景几何准确，其投影残差仍可能包含真实独立运动，不能充当匹配错误真值。该论文的公开代码与 v2 后验公式还有已确认差异；当前只保留为直接近邻，不据此重新启动已停止的集中度配方。
 
 因此，未来即便需要可靠性，也应先定义要估计的事件，再选损失和决策。当前没有根据添加一个统称 reliability 的 head。
 
