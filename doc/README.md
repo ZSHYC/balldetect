@@ -75,7 +75,9 @@
 | [TrackNet原始来源补证](literature/2026-09-12-tracknet-source-gaps.md) | V2官方摘要、V6官方附录和demo实际支持什么，哪些主文协议仍未知 |
 | [高分辨率特征上采样](literature/2026-09-12-feature-upsampling.md) | FeatUp、LoftUp、AnyUp与RaysUp的RGB信息路径、监督、效率和球点迁移边界 |
 | [因果点跟踪与自动球定位](literature/2026-09-12-causal-point-tracking.md) | TAPNext/++、Track-On2的查询初始化、分布读出、DINOv3候选重排与训练时长如何约束创新 |
-| [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet与CoWTracker对差分、transport、背景与无相关体跟踪的限制 |
+| [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet、CoWTracker及FreeFlow对变化、transport、背景与对应成本的限制 |
+| [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互、因果末帧窗口与流式缓存，及它们和当前后期融合的差别 |
+| [Taylor与差分基的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor Videos/TDN的前置非线性、实际导出与时间输入如何限制可逆换基解释 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

@@ -4,6 +4,8 @@
 
 **2026-09-12 补充：** [因果点跟踪](2026-09-12-causal-point-tracking.md)已补读 TAPNext/++ 与 Track-On2 的方法、实验和相关附录；[微小目标新近邻](2026-09-12-recent-tiny-motion.md)进一步核对 CoWTracker 无 cost-volume 路线及其注意力成本。它们限制“显式相关体必需”和“无需相关体就整体线性”的两种相反误推。首轮表中的早期阅读深度按原记录保留。
 
+**同日继续补读：** [TSM/GSM/GSF](2026-09-12-lightweight-temporal-routing.md)与[Taylor Videos/TDN](2026-09-12-temporal-difference-representation.md)补足经典轻量机制的全文和实现；本文第 5 节补 Motionformer。新的 [FreeFlow v1](2026-09-12-recent-tiny-motion.md)纳入 9 月 10 日新稿。以下首轮“仅摘要”记录不再代表这些条目的最新阅读深度。
+
 ## 1. 最直接改变创新判断的三项前史
 
 | 工作与原始入口 | 本轮阅读层次 | 对本项目的具体约束 |
@@ -57,3 +59,30 @@ DINOv3 上采样的新稿、What Moves?、V-JEPA 2.1、ReMoRa 等详见现代 mo
 主报告另行核对了 WASB 原始 PDF 数据表：是 **Table 1，PDF 第 7 页**，不是 Table 7；19,835 的协议帧数与 TrackNet 原论文 20,844 的实验帧数属于不同口径。也核对了 TTNet 原文的低分辨率粗定位—原图裁剪精定位，以及 TOTNet 正文对完全遮挡帧采用轨迹一致插值的标签来源。OTHR 的球区域 EPE 数值经原文 Table 2 核对，不能当作真实体育视频结论。
 
 本轮没有全量下载 arXiv 元数据，没有逐篇全文阅读所有外围条目，没有复现代码。最终接收状态无法从出版社确认时，保留预印本/作者声称状态。后续最值得补证的是最终所选算子的最近邻全文与实现，而不是无限增加题名数量。
+
+## 5. Motionformer 全文补读：先保留时间索引，再做空间与时间池化
+
+阅读日期：2026-09-12。Mandela Patrick et al., *Keeping Your Eye on the Ball: Trajectory Attention in Video Transformers*，NeurIPS 2021；[arXiv v2](https://arxiv.org/abs/2106.05392v2)，2021-10-23。已读[方法 §3、主要实验 §4、附录 §6.1--6.2](https://arxiv.org/html/2106.05392v2)，以及作者 `TrajectoryAttention` 的实际前向；未运行模型。
+
+### 原文中真正与当前问题相关的事实
+
+每个空间时间 token 自作 query，先分别在各帧内做空间 softmax，得到每个时间的一份加权 feature；再沿时间注意力池化。这里的 trajectory 指 pairwise 的软匹配支持，不是显式多帧轨迹约束。精确版仍有 $S^2T^2$ 成对成本；Orthoformer 通过少量原型近似。原文默认用 $2\times16\times16$ tubelet，输入 16 帧，属于视频任务。[§3、式 (4)--(6)、(10)](https://arxiv.org/html/2106.05392v2#S3)
+
+不能把它概括为“只做动作分类、完全没有密集证据”：附录还以冻结 attention 传播标签测 DAVIS 2017，J&F 为 60.6，同表 DINO-B/16 为 62.3；这是给定分割标签的传播，不是自动球中心定位。增加采样 stride 的分类实验也同时扩大观察时间跨度，不能单独归因于位移能力。[附录 §6.1](https://arxiv.org/html/2106.05392v2#S6.SS1)
+
+### 作者实现还区分了历史路径与修正路径
+
+[`vit_helper.py` 的 `TrajectoryAttention.forward`](https://github.com/facebookresearch/Motionformer/blob/main/slowfast/models/vit_helper.py#L146)先计算完整 `q_ @ k_.transpose(...)`，重排后每帧独立归一化，再计算时间 attention。它与“先全时空 softmax，再拆帧”的算子不同。
+
+同一实现保留 `use_original_code` 两路：作者注释说明早期实现的时间 value 直接使用聚合后的 `x`，修正路才使用学习投影后的 `v2`。因此准备复用时，必须明确遵循论文公式、历史复现还是作者修正；不能把三者默认为完全一致。本轮只记录该作者明确披露的差异，未改本项目代码、未安装依赖或下载权重。[作者代码相应分支](https://github.com/facebookresearch/Motionformer/blob/main/slowfast/models/vit_helper.py#L242)、[作者使用说明](https://github.com/facebookresearch/Motionformer#training-the-default-motionformer)
+
+### 对本项目的推论
+
+1. **关系的组织方式可以独立于搜索范围。** 对同一对 logits $a_{u,v,t'}$，在每帧内归一化与在所有 $(v,t')$ 上一次归一化，施加了不同的竞争规则。前者每帧先分配单位总质量，再决定时间权重；因此“扩大候选域”不是唯一可研究的改变。这个思想已是明确前史，不能把逐时间保留匹配支持本身写成新贡献。
+2. **软分布不等于一直保留多个可解码位置。** 第一阶段可以同时支持多个位置，但随后把它们汇成 feature；这与维护带地址的多假设集合不同。它既不必强选一个峰，也不保证不会混合球和背景。要主张后一种机制更好，需要真实自动定位证据，不能只拿软/硬二分作为论据。
+3. **没有对应时，逐帧 softmax 仍会分配质量。** 后续时间 attention、残差或其他层可能抑制坏信息，所以不能由此断言系统必然失败；但这也不是显式 no-match 的证明。是否需要拒配应由本地失败与标签语义决定。
+4. **原型数量与目标覆盖不是同一个量。** Orthoformer 选特征方向多样的原型，不等于监督保证每颗 tiny ball 都有原型。固定少量原型可降低算子成本；能否保持少量像素的球证据是另一问题。本轮没有测出覆盖不足，也不据此添加球原型分支。
+
+Motionformer 使用稠密 token 自查询，与 Track-On2 的给定点 query 不同；没有 GT 点初始化并不自动使其成为球发现器。反过来，它说明“自查询 + 分帧全局匹配 + 时间融合”的概念组合早已存在。最终若采用这种关系组织方式，应说明本地自动候选、微小空间支撑和预算约束下具体改变了什么。
+
+固定过去窗口只预测末帧时，窗口内双向交互仍可对末帧因果；若要跨窗口复用逐层时序状态，则须另行处理上下文依赖。原 Motionformer 的视频分类/标签传播结果没有给出本项目逐帧中心的这种部署协议，不应继承其分数或把论文整套训练变成当前必跑基线。

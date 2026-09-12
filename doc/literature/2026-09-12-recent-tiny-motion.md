@@ -1,8 +1,8 @@
-# 近期高速／微小目标 motion 近邻：四条会改变本项目判断的证据
+# 近期高速／微小目标 motion 近邻：五条会改变本项目判断的证据
 
-**目的。** 本文是截至 **2026-09-12** 的定向补检，不是再次罗列已细读的 FlowIt、EgoSIS、MI-DETR、DeepPro、DMR、CMRTrack、BIRD/STSN，也不批准新的模型分支。它只补入四条能实质改变本项目问题表述、对照选择或可主张边界的近邻：一个自动检测加历史硬约束的 tiny-target 系统、一个带伪速度教师的极小目标 transport 系统、一个把背景而非目标作为主表征对象的系统，以及一个在高分辨率下以 warping 替代 cost volume 的 dense point tracker。
+**目的。** 本文是截至 **2026-09-12** 的定向补检，不是再次罗列已细读的 FlowIt、EgoSIS、MI-DETR、DeepPro、DMR、CMRTrack、BIRD/STSN，也不批准新的模型分支。它只补入五条能实质改变本项目问题表述、对照选择或可主张边界的近邻：一个自动检测加历史硬约束的 tiny-target 系统、一个带伪速度教师的极小目标 transport 系统、一个把背景而非目标作为主表征对象的系统、一个在高分辨率下以 warping 替代 cost volume 的 dense point tracker，以及一项两帧 dense-flow 的局部--全局 cross-attention 反例。
 
-**检索边界。** 本轮在 arXiv 的 `sports ball detection`、`racket sports tracking`、`small target video motion`、`small object motion`、`long-range correspondence` 等主题检索中按提交／更新日期排序，并用题名追查一手论文、正式会议页或作者仓库。重点查看 2026 年 7--9 月更新和此前笔记未完整阅读的直接近邻。搜索结果没有证明不存在其他工作；以下仅是此范围内足以约束当前研究决定的最小证据集。
+**检索边界。** 本轮在 arXiv 的 `sports ball detection`、`racket sports tracking`、`small target video motion`、`small object motion`、`long-range correspondence` 等主题检索中按提交／更新日期排序，并用题名追查一手论文、正式会议页或作者仓库。重点查看 2026 年 7--9 月更新和此前笔记未完整阅读的直接近邻。9 月 12 日又以 `submittedDate` 定向筛选 9 月 10--12 日的新稿，并对直接题名作版本页核对；这不是旧稿修订的完整枚举，关键词零结果也不能证明不存在其他工作。以下仅是此范围内足以约束当前研究决定的最小证据集。
 
 ## 阅读范围、版本与结论先行
 
@@ -12,10 +12,11 @@
 | Guo et al., *Following the Flow* / PACT | [arXiv HTML v1](https://arxiv.org/html/2606.22378v1) 全文、实验与消融；2026-06-21。作者 [仓库](https://github.com/fulongcai/PACT) 声称 ECCV 2026 接收，但本轮只见 README，未见可审计源码。 | event-stream 小目标分割／定位；在 8 秒事件窗中预测速度场、transport feature；不以 GT query 初始化，输出密集分割。 | “沿运动场运输弱证据 + transport residual 作可靠性”已有很近的 tiny-object 先例；但其 velocity teacher 来自同一实例的前景事件匹配，不能由球中心标签无歧义替代。 |
 | Zhang et al., *Beyond Motion Cues and Structural Sparsity* / TenRPCANet | [arXiv HTML v2](https://arxiv.org/html/2509.07654v2) 全文、主要表格与消融；v2，2026-08-05。论文未给作者代码链接，本轮未把检索未命中写成“没有代码”。 | 多帧红外小目标 mask 与可见光空间碎片；8 帧等权、一次输出窗口所有帧；不需 GT 初始化、没有显式 correspondence／flow。 | 强烈反驳“微小高速目标必须首先建立目标 correspondence”的预设：背景的低秩／自相似可先成为主要判别证据；该假设在球场摇摄、球员与变焦条件下是否仍有用尚未被此论文证明，且其协议非因果。 |
 | Lai et al., *CoWTracker: Tracking by Warping instead of Correlation* | [arXiv HTML v1](https://arxiv.org/html/2602.04877v1) 全文、附录运行／消融；2026-02-04。作者 [代码](https://github.com/facebookresearch/cowtracker) 提供推理接口，本轮未作代码复现。 | dense point tracking；参考帧每个像素都是 query，所有 target frame 共同用时空 attention 更新；无 GT point query，但仍不输出“哪个点是球”。 | 高分辨率 weak evidence 与大位移不必然要求显式 cost volume；高分辨率 iterative warping 是必要的竞争机制。不过它是大 backbone、全密集轨迹、离线窗口，不是可直接移植的自动球定位方案。 |
+| Bargatin et al., *FreeFlow: A Bias-free Hierarchical Transformer for Optical Flow Estimation* | [arXiv HTML v1](https://arxiv.org/html/2609.11486v1) 方法、训练、主要结果与附录关键消融；v1，2026-09-10。 | 两帧稠密光流；每个像素输出 flow 与训练期不确定性参数，不提供球候选、球类别、可见性或 no-match 语义。 | “不用显式 cost volume”仍可做跨帧匹配，但实际是 cross-attention 的成对交互和昂贵 dense-flow 监督；其高分辨率结果不能外推为自动球定位或有限算力的轻量机制。 |
 
-前三篇是 tiny-target／自动发现路线的主要补充；CoWTracker 只是“有限预算下何种 correspondence 形式有必要”的方法学反证，不能被误写成体育球 baseline。这里的 **A** 只表示本轮读到了论文方法和实验关键段，不表示本项目已经复现或认可作者指标。
+前三篇是 tiny-target／自动发现路线的主要补充；CoWTracker 与 FreeFlow 是“有限预算下何种 correspondence 形式有必要”的方法学反证，不能被误写成体育球 baseline。这里的 **A** 只表示本轮读到了论文方法和实验关键段，不表示本项目已经复现或认可作者指标。
 
-从这四篇合起来得到的第一性原理修正是：
+从这五篇合起来得到的第一性原理修正是：
 
 1. `frame difference`、dense flow、trajectory gate、feature transport 与 correspondence 是不同变量；已有系统往往混合它们才能取得最终 tracking 分数。
 2. 真正仍待实证的不是“时间信息是否有用”，而是本项目公开球标签下，**当前球位置的视觉证据何时必须由跨位置匹配补足**，何时简单变化、背景建模或历史筛选已经解释全部收益。
@@ -120,9 +121,29 @@ CoWTracker 是“高分辨率、large displacement、有限 cost”矛盾的最�
 
 **当前决定。** 将 CoWTracker 作为未来若要拒绝高分辨率 cost volume 时的必要文献对照，而不下载／复现其模型。任何轻量球方法若主张“warping-only”，还须实测初始零位移如何跨越真实球的大 displacement，并与当前 repeat-current／history 介入结果相连；不能借用 CoWTracker 的 dense tracking 指标作替代证据。
 
-## 5. 综合后的实验和论文纪律
+## 5. FreeFlow：没有显式 cost volume 仍不是低成本球定位
 
-四项证据给出的可执行判断不是“再加四个 baseline”。它们列出不同提案可能面对的竞争解释，以及在该解释与具体提案真正相关时应测什么：
+### 实际阅读、编码与跨帧路径
+
+Vladislav Bargatin et al., *FreeFlow: A Bias-free Hierarchical Transformer for Optical Flow Estimation*，是 [arXiv:2609.11486v1（2026-09-10）](https://arxiv.org/abs/2609.11486v1)，页面注明 ECCV 2026 接收；本节实际阅读作者 [HTML 正文](https://arxiv.org/html/2609.11486v1) 的方法 §3、训练／主要结果 §4 和附录的 patch／架构消融。它输入**两帧** RGB，预测每个像素的 dense optical flow；没有自动球候选、球类别、逐帧球中心、visibility 或 no-match 输出，不能按任务名称成为本项目球检测 baseline。
+
+其所谓“无 flow-specific component”不是两个 frame feature 各自独立后直接回归。每帧先经共享 encoder 做 8×8 non-overlapping patch token；decoder 反复以第一帧 `F¹` 为 query、第二帧 `F²` 为 key/value 进行 cross-attention，再解码为每像素 flow。论文的决定性 [式 (2)](https://arxiv.org/html/2609.11486v1#S3) 是 `Z=Decoder(F¹,F²)`；[式 (4)](https://arxiv.org/html/2609.11486v1#S3) 明写 `softmax(Q₁K₂ᵀ) V₂`。所以它取消的是**显式存储／处理的 correlation volume**，不是取消跨帧成对相似度或远处匹配；不能把其结果写成“attention 不做 all-pairs matching”。
+
+每个 encoder／decoder layer 依次采用 window、shifted-window、global attention。window 将 token map 划为 4×4 个窗口；shifted window 使相邻窗交流；global block 在 stride-2 下采样的 grid 做 full attention、再转置卷积上采样。[方法 §3.1](https://arxiv.org/html/2609.11486v1#S3) 的“2× lower spatial resolution”是**高、宽各除以 2，token 数为原来的 1/4**，不是只少一半 token；full-attention 的成对项因此约为原全局 grid 的 1/16，作者称其与 16 个原分辨率 window 的总 attention 成本量级相当。它仍是 `QKᵀ` 型二次 interaction，只是把全局交互放到较粗 grid，并靠重复局部／跨窗块保留细节。
+
+### 监督、实验与可主张边界
+
+Flow head 从最终 stride-8 feature 通过卷积和 stride-8 transpose convolution 预测二维 flow 加三个 Mixture-of-Laplace 参数。[方法 §3.1](https://arxiv.org/html/2609.11486v1#S3) 与 [附录式 (9)--(10)](https://arxiv.org/html/2609.11486v1#A2) 显示 Mixture-of-Laplace 是以**稠密 flow GT**训练的监督损失；附加参数表达预测 flow 的混合权重／尺度不确定性。它不是“这对球候选不存在视觉对应”的标签，不能改称 no-match，也没有自动发现候选后拒绝输出的评测。
+
+作者先用 ARKitScenes、MegaDepth、3DStreetView 的 cross-view completion 预训练，再在 TartanAir、Things、Sintel、KITTI、HD1K 混合 flow 数据上微调；主比较是 Spring、Sintel、KITTI 的 dense-flow EPE／outlier。[训练表 2](https://arxiv.org/html/2609.11486v1#S4) 与 [结果表 4](https://arxiv.org/html/2609.11486v1#S4) 没有体育球、微小目标分组或球中心指标。它还以 2×上采样输入做 Sintel/KITTI 提交，最大版本为 231M 参数；[表 7](https://arxiv.org/html/2609.11486v1#A4) 的 1080p 8×8 小版是 35M、约 144 ms，16×16 匹配时间版本仍为 279M／2.91 GB。该计时和训练分布不能换算为本项目 DINO、三帧、解码计入、12GB GPU 或自动球定位的端到端效率。
+
+### 对本项目的决定
+
+FreeFlow 加固而不改变已有判断：显式 cost volume、warp 和迭代都不是学习跨帧 correspondence 的必要算子；若未来提案只是“局部 attention + shifted window + 粗尺度 global attention”，其模块组合已有强近邻，必须靠实际的球类剩余失败、自动发现路径和同预算实验说明差异。反过来，FreeFlow 没有提供“dense flow 全图准确，所以几像素球区域准确”或“模型不显式构建 cost volume，所以轻量”的证据。本轮不据此增加 flow teacher、全局 attention 支路或新训练；它只成为今后若主张非 cost-volume relation mechanism 时必须说明的近邻。
+
+## 6. 综合后的实验和论文纪律
+
+五项证据给出的可执行判断不是“再加五个 baseline”。它们列出不同提案可能面对的竞争解释，以及在该解释与具体提案真正相关时应测什么：
 
 | 可能待区分的解释 | 最近近邻 | 与具体提案相关时的诊断 | 不能借用的结论 |
 |---|---|---|---|
@@ -130,6 +151,7 @@ CoWTracker 是“高分辨率、large displacement、有限 cost”矛盾的最�
 | 沿估计运动运输弱证据 | PACT | 候选或关系是否在真实目标出现时可达；transport 前后 candidate recall、位置误差、拒绝后 fallback 行为 | dense event-instance velocity 不能由单个球中心伪造。 |
 | 背景结构／稳定上下文已解释收益 | TenRPCANet | 在背景竞争、camera-motion proxy、位移与可见性分组上查看益处；同一真球的 current-frame 可读性 | IR／星图的低秩假设和 8 帧离线窗口不自动适用于体育镜头。 |
 | 不显式相关体也能大位移细定位 | CoWTracker | 明确初始化、每轮 search/warp 地址、预算、因果时间范围；自动发现与给定点 track 分开 | dense all-pixel track 不是 ball detector，confidence 不是 no-match。 |
+| local--global cross-attention 已可学习 dense correspondence | FreeFlow | 指明跨帧 attention 的 token 尺度、全局 grid、实际成对成本与 dense-flow 教师；以自动球中心指标而非 dense flow 代替 | 不显式 correlation volume 不等于无 `QKᵀ` 成对交互、低成本或球区域准确。 |
 
 因此，后续每个具体提案都应明确其待证机制、最近的竞争解释和最小可区分实验，而不是预先把 correspondence 规定为唯一贡献，也不是要求每个提案逐一击败所有不相干的 baseline。若提案研究高分辨率 relation evidence，应保持自动逐帧球中心、时间范围、GT 初始化与伪标签的边界清楚；若提案研究背景、候选或 readout，则相应采用能区分该机制的对照。当前真实 history vs repeat-current 结果会决定哪一条问题值得继续，而不是由本页文献预先决定。
 
@@ -140,4 +162,5 @@ CoWTracker 是“高分辨率、large displacement、有限 cost”矛盾的最�
 - PACT 的作者仓库在本轮页面上仍写代码／权重将于 2026-09-01 发布，但可见内容不足以审计；不把 README 的预告写成已复现实作。正式 ECCV 版也未从会议论文页逐页核验。
 - TenRPCANet 和 Frame Dynamics 未在本轮复现；前者未取得作者代码，后者论文给出的链接需要在真正准备复现时再确认可用性与数据许可。搜索未命中不是“没有实现”的证据。
 - CoWTracker 已有公开推理仓库，却使用 VGGT、DPT、raw-image U-Net、dense full-frame field及 H100 评测；其显存、窗口与因果部署面均未映射到当前机器，故目前没有安装任何依赖或权重。
+- FreeFlow 只核对作者论文的模型、监督与 benchmark；没有运行其代码、下载权重或把 dense-flow 预训练／高分辨率计时映射成本项目配置。
 - 本文没有重读已在其他专题完整审查的 FlowIt、EgoSIS、MI-DETR、DeepPro、DMR、CMRTrack、BIRD/STSN，也没有把 RacketVision、TT4D 的已记录数据事实重写。它们仍是互补证据，不能因本页新近邻而被排除。

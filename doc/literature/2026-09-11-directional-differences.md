@@ -2,13 +2,15 @@
 
 日期：2026-09-11。范围：只补读 COMET，回答其 Taylor 式差分、正反序优化和成本究竟建立了什么；不复现、不把视频 MLLM 改造成球定位方案。
 
+2026-09-12 补充：[Taylor Videos/TDN 全文核对](2026-09-12-temporal-difference-representation.md)明确了原始 Taylor 算子与公开导出路径，并纠正本文末尾原先指向另一篇论文的 PMLR 链接。本次同时收窄下文“必要竞争解释”的适用条件；不重新安排已被完整特征线性混合涵盖的差分实验。
+
 ## 结论先行
 
 COMET 的一手证据支持一个较窄、但应认真保留的竞争解释：**在不计算 flow 或跨空间候选匹配的条件下，带时间方向的像素变化和外观—时间融合可以改善视频语义的动作/时序推理。** 它不支持“已经得到球的跨帧位移”、不支持“高阶 Taylor 响应是物理速度/加速度”，也没有 tiny ball、逐帧中心、密集定位或在线延迟的实验。
 
 因此，旧表格把“COMET-style 差分”写成“必须竞争的简单基线”需要收紧：
 
-* 若一个球定位机制声称收益来自跨帧 evidence，**同一可见窗口、同一 backbone/定位头预算下的廉价方向敏感时间变化对照**是有价值的必要竞争解释；否则无法知道复杂 correspondence 是否只是获得了普通 temporal-change capacity。这个对照可以是有符号一阶差分、有限差分堆叠或相同帧序的轻量 temporal fusion，具体取决于待检验机制，不能事后挑最有利者。
+* 若候选机制的解释需要区分显式 correspondence 与普通时间变化，应选择能区分这两者的廉价时序对照。**是否需要另跑一个模型，取决于已有基线是否已经覆盖该函数与输入。** 在下述自由线性混合条件成立时，已有完整三帧特征已经涵盖固定 signed-difference 换基，不额外新增重复对照；只有前置非线性、受约束分支或交互层级等实际改变了待比较机制，才另行考虑。
 * 这**不等于必须复刻完整 COMET**。其两套 ViT、四层 cross-attention、CoT video-QA 微调和 GRPO 都服务于视频语言推理，输入/监督/输出与球中心定位不同。也不等于每个实验都必须采用 Taylor 五阶响应或倒序损失：后者的原论文奖励构造依赖文字问答，不能从中心标签自动推出。
 * 差分基线失败只说明该指定的变化读出未够用；成功也只说明时间变化可竞争，仍不能分辨同一球还是背景、球员、场线、相机摇摄所造成的变化。它应作为对应方法的对手，不能因不输出 displacement 就被排除。
 
@@ -104,4 +106,4 @@ TC-GRPO 对同一个文字 prompt $(x,\mathcal V)$，从正序视频采 $N_f$ �
 
 1. [COMET arXiv 摘要与版本记录（v1）](https://arxiv.org/abs/2608.21030)。
 2. [COMET 官方 arXiv HTML 全文：Taylor representation、fusion、TPD/TC-GRPO、实验和表 1--4](https://arxiv.org/html/2608.21030v1)。
-3. [Taylor Videos for Action Recognition（COMET 引用的 Taylor 表示来源）](https://proceedings.mlr.press/v235/wang24ac.html)。该来源只解释先行 Taylor-video 概念；本笔记的 COMET 机制与数字均以上述 COMET v1 为准。
+3. [Taylor Videos for Action Recognition（COMET 引用的 Taylor 表示来源）](https://proceedings.mlr.press/v235/wang24ck.html)。该来源只解释先行 Taylor-video 概念；本笔记的 COMET 机制与数字均以上述 COMET v1 为准。

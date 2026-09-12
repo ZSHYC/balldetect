@@ -8,26 +8,31 @@
 
 这并不要求先排除所有可能解释。正确的推进方式是：从本地实际残留错误选一个具体机制问题，找最接近的先例，做一个能改变判断的对照。复杂模型不因模块多而成为研究，简单模型也不因模块少而自动缺乏研究价值。
 
-本轮最影响判断的五件事如下。
+本轮最影响判断的发现如下。
 
 1. **Track-On2 是此前需要补强的直接近邻。** 它已采用 DINOv3、多尺度特征、全图候选分类、top-k 重排、细位置回归与因果记忆；因此，这种模块组合本身不够。它依赖给定 query，给我们的研究空间是自动发现及其条件下的证据利用，而不是忽略其匹配机制。[Track-On2 v2](https://arxiv.org/html/2509.19115v2#S3)
 2. **TAPNext++ 使“先改架构”的理由更弱。** 同一架构改变训练时长和数据分布，可以改善长时状态与重出现；它没有证明本地三帧模型也应增加记忆，只是阻止我们从失败直接推断函数类不足。[TAPNext++](https://arxiv.org/html/2604.10582v1#S3)
 3. **AnyUp/RaysUp 的“空间恢复”包含额外 RGB 路径。** 它们并非仅从低分辨率特征做逆变换。若用于球定位，测得的是整个 RGB-guided adapter 的效果，不能把所有增益归给原 backbone 保留了更多细节。[AnyUp](https://arxiv.org/html/2510.12764v2#S4)、[RaysUp](https://arxiv.org/html/2606.22749v1#S3)
 4. **“没有 cost volume”不等于“不能建对应”，也不等于“线性成本”。** TAPNext、WAFT、CoWTracker 提供前一种反例；它们的全局注意力、细特征和多轮更新又限制后一种效率表述。[TAPNext](https://arxiv.org/html/2504.05579v2#S3)、[WAFT](https://arxiv.org/html/2506.21526v3)、[CoWTracker](https://arxiv.org/html/2602.04877v1#S3)
 5. **TrackNetV6 的可读材料已多于 demo，但仍不是完整复现证据。** 官方附录解释了跨网络尺度的 decoder 状态演化；这不能被误读为跨视频时间的球轨迹。主文与完整训练协议仍有访问缺口。[官方附录](https://github.com/Gi-gigi/TrackNetV6/blob/main/assets/Supplementary/Appendix.pdf)、[本轮来源说明](../literature/2026-09-12-tracknet-source-gaps.md)
+6. **经典轻量时序机制仍有必须读清的差别。** TSM 的逐层搬运、GSM/GSF 的输入条件门控、Taylor 的灰度幂乘与时间汇聚，不能统称为一次线性帧差。另一方面，也不能仅凭某条路径含非线性就声称相对完整网络的函数族严格扩大。当前更具体的待证问题是时间交互发生在哪层、如何压缩和组织关系。[轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)、[Taylor/TDN](../literature/2026-09-12-temporal-difference-representation.md)
 
 ## 二、本轮究竟补了什么，而哪些仍未知
 
-新增证据按研究问题组织，完整来源与阅读范围保存在以下四份专题中。
+新增证据按研究问题组织，完整来源与阅读范围保存在以下专题中。
 
 | 专题 | 本轮新增阅读 | 对实际决策的作用 |
 |---|---|---|
 | [体育原始来源缺口](../literature/2026-09-12-tracknet-source-gaps.md) | TrackNetV2 官方摘要、V6 十页官方附录与 demo；追查正式主文 | 防止把版本名、尺度演化或 MIMO 输出误写为完整 motion/因果机制；保留不能复核的协议 |
 | [空间上采样](../literature/2026-09-12-feature-upsampling.md) | AnyUp v2、RaysUp v1 正文/附录/代码；FeatUp、LoftUp 近邻 | 区分 coarse feature、当前 RGB guidance、坐标/射线先验与外部监督，限制“恢复信息”的归因 |
 | [因果点跟踪](../literature/2026-09-12-causal-point-tracking.md) | TAPNext v2、TAPNext++ v1、Track-On2 v2 方法/实验/相关附录；TAP 官方发布路径 | 确认 DINOv3+候选重排前史，区分给定点、自动球、分布输出、记忆与训练范围 |
-| [新增微小目标近邻](../literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet v2、CoWTracker v1 | 补入历史过滤、事件 transport、背景建模与无相关体跟踪四种竞争解释 |
+| [新增微小目标近邻](../literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet v2、CoWTracker v1、FreeFlow v1 | 补入历史过滤、事件 transport、背景建模、无相关体跟踪和跨注意力光流的竞争解释 |
+| [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[Taylor/TDN](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor 正文与作者实现；补清 TDN 前置非线性 | 区分末层可逆换基、逐层时序交互、输入条件门控和丢信息的变化表示；纠正一处 PMLR 错链 |
+| [Motionformer 补读](../literature/correspondence_evidence.md#5-motionformer-全文补读先保留时间索引再做空间与时间池化) | v2 方法、实验、相关附录和实际 attention 前向 | 核对分帧空间归一化、时间池化、原型近似及历史/修正代码差别，避免把关系组织本身当创新 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
+
+同日增量检索补到了 **2026-09-10 发布的 FreeFlow v1**，已读其方法、训练、主要结果和相关附录。其两帧 local/shifted/global cross-attention 进一步限制“无 cost volume 就没有成对匹配”的误推；没有球中心实证。本次按新提交日期的筛查与定向版本检索，也没有发现会改变当前训练分支的更新体育球近邻，但没有遍历全部旧稿修订。[FreeFlow 原文](https://arxiv.org/html/2609.11486v1)、[检索与适用范围](../literature/2026-09-12-recent-tiny-motion.md)
 
 **真实缺口要保留。** V2 原始正文和 V6 主文尚未取得可读作者/出版社全文，不能据摘要、demo 或第三方复现补出 split、容差、损失和完整时间协议。DQAligner/MIST 的代码阅读也不自动变成论文全文阅读。若后续机制恰与这些工作相邻，应继续补原始证据；这不阻止当前已授权基线继续训练。
 
@@ -62,6 +67,28 @@ TAP 类 tracker 更进一步：它通常从给定物体表面点开始保持对�
 例如，冻结线性探针失败可能说明该读出不够合适；GT query 匹配成功可能绕开了自动发现；全局 all-to-all 候选中有真值可能仍排不过背景；热图有正确邻域质量也可能因 argmax 出现严格容差误差。这些是不同的失败。
 
 本地对固定 logits 改读出已有正证据。因此，当前不能继续把所有严格中点误差解释为帧间 motion 丢失。另一方面，读出改善也没有消除全部错误，不能由此宣布无需时间信息。
+
+### 4. 把当前融合头的限制写成具体函数，而不是只看感受野
+
+源码给出了一个比“没有 motion module”更准确的描述。当前每帧独立经过同一个 ConvNeXt 前缀，三帧特征拼接后按帧做 GroupNorm，再经过 `1×1 Conv(576→32) → GELU → 3×3 Conv → PixelShuffle`；另有全图均值的 absence 读出。[实际模型组装](../../scripts/train_tennis_heatmap.py)、[逐帧编码](../../src/ballmotion/backbone_probe.py)、[读出头](../../src/ballmotion/probe.py)
+
+令 $z(v)$ 为**已经分别归一化后**的三帧拼接特征，$u$ 是粗格位置，$s$ 是 PixelShuffle 的子格通道。位置 logit 可写为
+
+$$
+h(v)=\operatorname{GELU}(Wz(v)+b),\qquad
+\ell_{u,s}=b_s+\sum_{\delta\in\{-1,0,1\}^2}a_{s,\delta}^{\top}h(u+\delta).
+$$
+
+这里有两项确定的结构事实。
+
+- **第一处跨帧交互发生在前缀之后。** 同一地址的三帧特征先由 $W$ 联合线性混合，随后经 GELU 形成同址非线性交互；不同粗地址的 $h$ 再由线性空间卷积相加。把 $z(v)$ 当作这段读出算子的自由输入时，不同地址之间的 logit 混合二阶导数为零。因此，这个头不是对任意 $z$ 都能表达跨地址乘积 $\langle z_t(u),z_{t-1}(u+\delta)\rangle$ 的通用关系算子。
+- **576 到 32 是实际的通道压缩。** 线性投影有非平凡零空间；但这只说明它会舍弃一些输入方向，不能推出舍弃的正好是球、motion 或当前任务所需的信息。增加宽度可能改变容量，也可能完全没有用。
+
+上述推导刻意限定在归一化后的 feature-to-logit 子函数。实际原图到输出并不满足“地址之间完全独立”：每个前缀特征已有大空间支撑，GroupNorm 依赖全图统计，最终 softmax、argmax 和存在决策也会耦合输出位置。网络还可以学习把有用的历史邻域信息编码到同一地址。因此，**不能由这个式子宣称当前模型看不到大位移、不能产生类似匹配的决策，或显式 correspondence 必然更好。** 名义支撑与这些限制的区别见[已有源码支撑分析](../experiments/2026-09-11-search-support.md)。
+
+它只让后续假设更具体：如果残留错误确实涉及历史信息利用，值得区分的是“跨地址非线性交互的方式/发生层级”和“同一信息经过何种压缩”，而不只是把搜索半径设得更大。TSM/GSM/GSF 的逐层时间路由、STSN 的任务监督采样、关系分布等是不同的近邻，不能全部叫作扩大感受野。当前没有据此启动新结构或宽度扫描；表达能力差异还不是实测瓶颈。
+
+同理，若仅在完整 $z$ 后把三帧改写成“当前帧 + 两个完整 signed differences”，固定可逆线性变换可被自由的 $W$ 吸收；其后的 GELU 不破坏位置 logit 等价。对整个位置加 absence 输出的等价，还需让 absence 的线性权重同步吸收该变换。这里要求变换后不重新归一化，也不丢通道。若差分发生在 RGB、非线性前缀或 GroupNorm 之前，或差分另走受约束/非线性路径，则需要重新分析实际函数，不能套用同一个证明。函数族相同也不保证有限步训练、初始化和 AdamW 轨迹相同；这仍不足以为当前研究重新安排一个已判定缺乏机制区分力的差分实验。
 
 ## 四、本地实验给文献设了哪些约束
 
@@ -112,6 +139,8 @@ Devon、SCV、RAFT、MotionSqueeze、SELFY/STSS、WAFT 等早已覆盖这一谱�
 TAPNext 通过图像/点 tokens 与 SSM，CoWTracker 通过单地址 warp 后的联合空间时间更新，都能形成长程对应。这足以要求我们的研究保留非 cost-volume 竞争解释。
 
 但也不能把这些方法简化成几个免费的偏移量。它们仍需要强特征、空间/时间交互与训练。若未来改成轻量三帧因果版本，应称机制适配，并重新测量该版本；不能继承原论文长视频、未来上下文或大骨干的分数。
+
+一个时间语义上的补充是：**固定输入 `[t−2,t−1,t]` 只预测末帧 `t`，并不要求窗口内部每一层都单向。** 历史 slot 在内部看到该窗口较晚 slot，仍未看到预测目标 `t` 之后的帧；它可以对末帧因果。但这些时序特征依赖整个窗口，不能未经分析就当成独立逐帧 feature 跨窗口复用。逐帧持久 state 的流式实现则需要另行满足时间依赖与缓存条件。不能把“无前瞻定位”和“全部中间状态都能增量缓存”设为同一个要求。
 
 ### 3. 先建背景再发现小目标
 
