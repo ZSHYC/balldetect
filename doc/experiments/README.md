@@ -57,3 +57,4 @@
 - [2026-09-11：BlurBall自然模糊定位](2026-09-11-blurball-midpoint.md)：中点基线实现与早期历史，记录真实PTS缓存及源内容边界修复。
 - [2026-09-11：BlurBall源内容连续性](2026-09-11-blurball-continuity.md)：三处内部时间突变的可见证据、六个跨界窗口排除与原统计限制。
 - [2026-09-12：BlurBall基线完成与沿轴误差](2026-09-12-blurball-midpoint-results.md)：最佳epoch6、完整分组、沿轴探索与固定源帧证据。
+- [2026-09-12：BlurBall固定局部读出](2026-09-12-blurball-local-readout.md)：同best6与q下，局部重心通过全体和多比赛预设条件，修正部分沿轴偏差。
