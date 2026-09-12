@@ -78,6 +78,7 @@
 | [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet、CoWTracker及FreeFlow对变化、transport、背景与对应成本的限制 |
 | [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互、因果末帧窗口与流式缓存，及它们和当前后期融合的差别 |
 | [Taylor与差分基的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor Videos/TDN的前置非线性、实际导出与时间输入如何限制可逆换基解释 |
+| [SWIFT的分尺度warping](literature/2026-09-12-warping-without-cost-volume.md) | 粗全局预测、细尺度采样、两帧因果语义与实际消融，区分MoL误差分量和多地址假设 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

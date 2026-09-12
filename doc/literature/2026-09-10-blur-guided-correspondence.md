@@ -38,11 +38,33 @@ TbD面对fast moving object，包括体育中的高速球，通过盲去模糊�
 
 ### Single-Image Deblurring, Trajectory and Shape Recovery of Fast Moving Objects With Denoising Diffusion Probabilistic Models
 
-Radim Spetlik等，WACV 2024，pp.6857–6866。[正式论文](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf)、[作者代码](https://github.com/radimspetlik/SI-DDPM-FMO)。实际阅读摘要、§1及仓库README任务/数据说明，未声称完整复现。
+Radim Spetlik等，WACV 2024，pp.6857–6866。[正式论文](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf)、[作者代码](https://github.com/radimspetlik/SI-DDPM-FMO)。2026-09-10 初读限摘要、§1及README；2026-09-12 已升级为下述全文与关键源码补读，未复现模型。
 
 该方法以单张模糊图生成快速物体的子帧轨迹与形状，使用合成FMO训练。论文明确单帧无法确定轨迹方向，物体与背景也存在歧义；推理不需要GT轴或邻帧。仓库所述完整训练数据需要自行生成，不能因为有代码就当成本项目现成廉价基线。
 
 它是单帧FMO轨迹恢复的直接现代先例，未提供有限预算下的跨帧ball correspondence证据。本项目当前也不因此引入扩散模型。
+
+#### 2026-09-12 补读：单帧 FMO temporal super-resolution 的真实输入与评测边界
+
+**阅读升级与来源。** 本次读完 [WACV 2024 正式论文](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf) §3--§5、[作者 README](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/README.md)和官方 benchmark runner；源码固定于 `9e5afcba`，不下载权重或数据。根代理复读方法、Table 1 图像与 ROI/方向源码；PDF 和文本保留在 `outputs/literature/siddpm-fmo-wacv2024.{pdf,txt}`。原 README 的 arXiv 引用实际指向旧 DeFMO，不将其误作 SI-DDPM-FMO 的预印本版本；本文以 WACV 正式版本为准。
+
+**事实（输出与曝光内时间）。** 给定一张含 FMO 的 RGB crop，模型从噪声生成 `K=24` 组 residual image 与 alpha mask；论文 Eq.(15) 用输入图加上“各时间 alpha 的平均值 × 该子帧残差”合成外观，轨迹取 alpha-mask 质心。配置为 `256×256`、100 个 diffusion step。为与高帧率评测对齐，论文将每三张生成子帧平均成一张；公开代码还按 `nsplits` 支持两张一组，所以不能把 24 个输出都称作独立实测时刻。[论文 §3、§5](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf)；[评测中的采样、时间平均及质心](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/fmo_deblurring_benchmark.py#L137-L231)。这是曝光积分内的 temporal super-resolution，并不是相邻视频帧的 object correspondence。
+
+**事实（时间方向）。** 作者明确说单张模糊图的时间方向不可判定。FMO benchmark 的 TIoU 对估计轨迹和其完整反转都计算，再取较大者；外观评测也以高帧率 GT 决定是否翻转生成序列。[方向同步和 TIoU 代码](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/benchmark/loaders_helpers.py#L224-L231)，[TIoU 的正反最大化](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/benchmark/reporters.py#L181-L186)。这是**评价时使用 GT 消除方向歧义**，不是推理时已知的运动正负号，也不能拿来约束后续帧的球位置。
+
+**事实（是否需要背景、ROI 或初始化）。** SI-DDPM-FMO 网络本身以单张 FMO 图为条件，不额外输入背景估计；比较的 SI-DeFMO baseline 才从单图生成背景再送入 DeFMO。可是公开 benchmark runner 并非全图自动检测：它从 `GroundTruthProcessor` 取 GT trajectory、半径和 box，再用高帧率 GT 与背景收紧 `bbox_tight`，将该 ROI 扩展、crop、resize 后才调用模型。[runner](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/benchmark/benchmark_loader.py#L46-L83)与[ROI 构造](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/benchmark/loaders_helpers.py#L161-L186)。因此论文证明的是**已知 FMO 区域内**的单图去模糊/轨迹恢复，不是从复杂整帧自动发现球或给多候选关联。
+
+**事实（训练与真实评测）。** 训练为合成数据：Blender 渲染 ShapeNet 的 50 个类别、DTD texture、VOT background 与 6D trajectory，论文报告 50,000 张训练图；作者 README 说明完整 24-timestamp 训练集约 1 TB、需自行生成且受 ShapeNet license 限制。[论文 §4](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf)，[作者数据说明](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/README.md#L50-L77)。真实评测使用 FMO benchmark：TbD 的 240 fps 原始视频经时间平均为 30 fps，并配有高帧率 appearance、mask 与完整轨迹；TbD-3D 和 Falling Objects 也用高帧率真值做评测。网络没有额外输入高帧率 RGB，但上述 ROI 构造依赖高帧率 GT 与背景，因此端到端评测仍有 GT 条件，不能笼统称为全程只用一张原始图。
+
+**事实（多样本和选择）。** 本次读到的正式实验和官方 `fmo_deblurring_benchmark.py` 路径为每个输入调用一次 diffusion sampling，未发现将多次 DDPM samples 以 GT 挑 best 的路径。配置中的通用 `num_samples: 100` 未被该评测路径读取，故不能据此声称论文做了多样本 best-of-N。反之，**方向** best-of-two 是明确存在的 GT 辅助评测选择。未检查的 demo/分支不能据此断言完全没有其它采样用法。
+
+**事实（实际计算）。** 经 Table 1 原 PDF 列对齐核对，SI-DDPM-FMO 为 **5 fps 的生成图像吞吐**；`0.001 fps` 属于 TbD-3D，不能错移到本方法。表注定义的是每秒生成多少图像，不能直接解释成每秒处理 5 个完整输入视频帧；本地尚未测量实际延迟。论文报告多 GPU 训练，README 要求自行生成大型合成集。主线暂不采用它的依据是任务、输入与监督条件不同，以及引入整套曝光重建需要额外论证；不能用误读出的极慢速度否定它。[正式表1](https://openaccess.thecvf.com/content/WACV2024/papers/Spetlik_Single-Image_Deblurring_Trajectory_and_Shape_Recovery_of_Fast_Moving_Objects_WACV_2024_paper.pdf#page=6)、[作者训练说明](https://github.com/radimspetlik/SI-DDPM-FMO/blob/9e5afcba5fdcd95884b5132595da341283bcd33c/README.md#L43-L67)。
+
+**推论（对本项目真正的约束）。** 恢复出的 alpha-mask 质心只有在 FMO 已被正确裁入 ROI、生成 mask 与真球而非背景 streak 对齐时才是有用的球中心候选；该链条并不证明自动发现、absence 判断或逐帧中心容差正确。它更强地限制“单帧拖影恢复曝光内轨迹/形状”这种宽泛新颖性，却不构成大位移跨帧 correspondence、可用方向 sign 或无 oracle 自动定位的证据。
+
+**另一个不能跳过的推论。** 时间方向不确定，不等于 BlurBall 标注中点不可定位。若目标定义为两个拖影端点 `a,b` 的几何中点，`(a+b)/2` 在交换端点后不变。完整曝光轨迹、方向和形状的恢复比估计这个中点要求更多；不能把前者的不可辨识性或计算量直接转嫁给后者。背景竞争、端点本身是否可辨、遮挡和标注定义仍可能限制中点估计，这些需要真实图像与当前任务评价。
+
+**当前研究决定。** 保持“不把扩散模型接入当前主线”。若将来研究单帧 blur 轴，按图像可得的**无方向**曝光内证据处理；若另借历史判方向，需明确新增的时间证据。未来模型有硬候选时再分开测候选正确/错误条件；直接 dense 输出则测其实际定位路径。不把 benchmark 的 GT ROI、方向翻转选择或高帧率评测真值带入正常推理。
 
 ### MoTDiff: High-resolution Motion Trajectory estimation from a single blurred image using Diffusion models
 

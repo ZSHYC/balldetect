@@ -29,6 +29,8 @@
 | [新增微小目标近邻](../literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet v2、CoWTracker v1、FreeFlow v1 | 补入历史过滤、事件 transport、背景建模、无相关体跟踪和跨注意力光流的竞争解释 |
 | [轻量路由](../literature/2026-09-12-lightweight-temporal-routing.md)与[Taylor/TDN](../literature/2026-09-12-temporal-difference-representation.md) | TSM/GSM/GSF、Taylor 正文与作者实现；补清 TDN 前置非线性 | 区分末层可逆换基、逐层时序交互、输入条件门控和丢信息的变化表示；纠正一处 PMLR 错链 |
 | [Motionformer 补读](../literature/correspondence_evidence.md#5-motionformer-全文补读先保留时间索引再做空间与时间池化) | v2 方法、实验、相关附录和实际 attention 前向 | 核对分帧空间归一化、时间池化、原型近似及历史/修正代码差别，避免把关系组织本身当创新 |
+| [SWIFT 补读](../literature/2026-09-12-warping-without-cost-volume.md) | CVPRW 2026 全文、公式图像与消融；回查 SEA-RAFT MoL 原公式 | 限定粗全局预测与 fine warp 的作用，区分误差分布分量、多地址假设与 no-match；保留实际实现缺口 |
+| [单帧快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | SI-DDPM-FMO 正文、Table 1 与固定评测源码 | 确认 GT 条件 ROI、方向消歧与输出吞吐，区分完整曝光重建和几何中点定位 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -47,6 +49,8 @@
 因此，模型可能“找到了球的可见亮部”但不符合中点监督，也可能“预测中了遮挡位置”却没有当前视觉对应。前者需要区分图像证据与标签读出，后者需要承认历史推断。任何一类都不应笼统记为 motion 提取失败。
 
 TAP 类 tracker 更进一步：它通常从给定物体表面点开始保持对应身份，而球的几何中心或拖影中点未必是随旋转保持身份的表面点。把 tracker 作为教师、基线或诊断前，必须先说清它正在追什么。[TAP 任务说明](https://github.com/google-deepmind/tapnet#tap-vid)
+
+SI-DDPM-FMO 的单图曝光轨迹恢复还提醒我们：**任务要求的量可以比完整运动更容易识别。** 其公开评测使用 GT 辅助 ROI 和正反方向选择，不能直接作为自动球检测；但反过来，时间方向不确定也不证明拖影中点不可估计，因为端点中点 `(a+b)/2` 对交换 `a,b` 不变。不能为了定位中点默认先恢复完整轨迹、方向和外观。[原文与评测路径核对](../literature/2026-09-10-blur-guided-correspondence.md)
 
 ### 2. 五种不同的时间相关量
 
@@ -142,6 +146,8 @@ TAPNext 通过图像/点 tokens 与 SSM，CoWTracker 通过单地址 warp 后的
 
 但也不能把这些方法简化成几个免费的偏移量。它们仍需要强特征、空间/时间交互与训练。若未来改成轻量三帧因果版本，应称机制适配，并重新测量该版本；不能继承原论文长视频、未来上下文或大骨干的分数。
 
+[SWIFT](../literature/2026-09-12-warping-without-cost-volume.md)进一步给出具体分工：1/16 跨帧 attention 回归粗 flow，1/16、1/8 继续全局交互，1/4 改用局部 CNN。单次 warp 按一个位移中心采样，不代表整个模型被该初值永久截断；反之，论文也未证明数像素球能获得可靠粗预测。其最终消融同时减少 AGA 迭代并增加 fine CNN，只能支撑联合配置，不能写成高分辨率层的独立收益。
+
 一个时间语义上的补充是：**固定输入 `[t−2,t−1,t]` 只预测末帧 `t`，并不要求窗口内部每一层都单向。** 历史 slot 在内部看到该窗口较晚 slot，仍未看到预测目标 `t` 之后的帧；它可以对末帧因果。但这些时序特征依赖整个窗口，不能未经分析就当成独立逐帧 feature 跨窗口复用。逐帧持久 state 的流式实现则需要另行满足时间依赖与缓存条件。不能把“无前瞻定位”和“全部中间状态都能增量缓存”设为同一个要求。
 
 ### 3. 先建背景再发现小目标
@@ -159,11 +165,14 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 | 给定点是否可见 | TAPNext/Track-On2 visibility | 与“自动候选是否是球”不同；数据的 V0/unknown 也未必就是该 visibility |
 | 预测位置误差是否超过阈值 | CoTracker3、Track-On2、CoWTracker uncertainty/confidence | 需要明确阈值尺度、GT 来源和使用方式；不能自动解释为物理对应存在性 |
 | 位置分布在预测邻域有多集中 | TAPNext certainty | 尖锐但错误的候选仍可能自信；集中度是统计量，不是已校准正确率 |
+| 单一预测周围的误差尺度/混合权重 | SEA-RAFT 的同均值 MoL | 两个不同宽度的分量不等于两个不同位移地址，也不自动提供 no-match |
 | transport 前后是否一致 | PACT gate | 是融合权重，不必有拒绝匹配这个动作 |
 | 候选是否符合历史运动先验 | Frame Dynamics 的轨迹过滤 | 可能提高最终轨迹分数，但不证明当前视觉证据充分 |
 | 某一候选对确实没有可用对应 | 匹配中的 no-match/dustbin 类设计 | 需要定义候选对、标签与回退路径，不能把所有缺标签当负对应 |
 
 来源细节见[点跟踪补读](../literature/2026-09-12-causal-point-tracking.md)、[微小目标补读](../literature/2026-09-12-recent-tiny-motion.md)与[既有位置质量证据](../literature/2026-09-11-localization-quality.md)。
+
+MoL 行依据 [SEA-RAFT §3.2](https://arxiv.org/html/2405.14793v1#S3.SS2)的共享 flow 均值公式；SWIFT 对该先例的简述不能替代原公式。多分量、多峰、多地址候选和可拒绝对应是不同机制，未来若保留多个 motion hypothesis，必须说明实际保留的是哪一种信息。
 
 因此，未来即便需要可靠性，也应先定义要估计的事件，再选损失和决策。当前没有根据添加一个统称 reliability 的 head。
 

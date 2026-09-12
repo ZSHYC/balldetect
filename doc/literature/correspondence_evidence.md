@@ -43,7 +43,7 @@
 | 工作 | 核验层次 | 判断 |
 |---|---|---|
 | [FlowIt: Global Matching via Hierarchical Transformers and Optimal Transport for Optical Flow](https://arxiv.org/abs/2603.28759)；v1 2026-03-30，v2 2026-05-31 | 官方题名、版本与摘要 | 全局匹配、最优传输与置信引导细化的近邻；未据摘要断言其准确复杂度或 tiny-ball 性能 |
-| [SWIFT](https://openaccess.thecvf.com/content/CVPR2026W/ECV/html/Wang_SWIFT_Efficient_Warping-Only_Optical_Flow_via_Scale-Specialized_Refinement_CVPRW_2026_paper.html) | CVPR 2026 workshop 官方摘要检索结果；页面直接访问受限 | 效率路线补充；暂不推导未读正文的算子细节 |
+| [SWIFT](https://openaccess.thecvf.com/content/CVPR2026W/ECV/html/Wang_SWIFT_Efficient_Warping-Only_Optical_Flow_via_Scale-Specialized_Refinement_CVPRW_2026_paper.html) | 2026-09-12 已补读官方 PDF 方法、实验及表格；所链仓库尚无实现 | 1/16 全局粗 flow 加多尺度 warp；低分辨率 attention 不等于高分辨率远搜索免费，公式/训练描述缺口见[专项笔记](2026-09-12-warping-without-cost-volume.md) |
 | [MARCO](https://arxiv.org/abs/2604.18267)；2026-04-20 | 原文 HTML 摘要与方法概览 | 语义对应的局部监督泛化与细化近邻；不是跨帧球实例对应证据 |
 | [NSFlow](https://arxiv.org/abs/2609.06074)；2026-09-05 | 官方摘要 | 可微神经/符号稀疏光流，用于视觉里程计；保留查重，非直接球检测基线 |
 | [EgoSIS](https://arxiv.org/abs/2609.08938)；2026-09-08 | 官方摘要 | 相机参考、残差与可靠性概念的近期先例；原任务 UAV 问答，其切镜机制不进入本项目 |
