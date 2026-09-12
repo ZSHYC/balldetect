@@ -81,6 +81,7 @@
 | [SWIFT的分尺度warping](literature/2026-09-12-warping-without-cost-volume.md) | 粗全局预测、细尺度采样、两帧因果语义与实际消融，区分MoL误差分量和多地址假设 |
 | [KeepTrack候选与干扰物关联](literature/2026-09-12-distractor-association.md) | 候选图、dustbin、已初始化身份与在线记忆怎样限制自动球发现和持续错误的解释 |
 | [背景运动条件化与物理解释](literature/2026-09-12-coherent-motion-conditioning.md) | DMR完整监督/条件消融、跟拍的绝对运动与相对残差，及OTHR结构/损失归因 |
+| [自适应搜索与细支撑](literature/2026-09-12-adaptive-search-support.md) | ASpanFormer的地址池化、固定样点、自适应跨度与全图恢复，以及可复算的几何反例 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 

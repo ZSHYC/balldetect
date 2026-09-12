@@ -33,6 +33,7 @@
 | [单帧快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | SI-DDPM-FMO 正文、Table 1 与固定评测源码 | 确认 GT 条件 ROI、方向消歧与输出吞吐，区分完整曝光重建和几何中点定位 |
 | [候选与干扰物关联](../literature/2026-09-12-distractor-association.md) | KeepTrack ICCV 2021 全文、关键表格与固定作者实现；有界后续检索 | 区分背景对应、球身份、候选未配与在线记忆；把持续误选和状态污染分开 |
 | [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
+| [自适应搜索与细支撑](../literature/2026-09-12-adaptive-search-support.md) | ASpanFormer主文/补充/作者实现；纯CPU采样几何演示 | 分清连续范围、实际采样、query地址混合与后续全图恢复 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -143,6 +144,8 @@ Devon、SCV、RAFT、MotionSqueeze、SELFY/STSS、WAFT 等早已覆盖这一谱�
 若以后采用这条路线，问题应具体到：自动候选产生后，哪些真球在预算内没有得到有效历史支持；某种关系编码为什么能减少背景竞争；这种改善是否落到严格中心位置。仅列出 `(u, delta, Delta)` 相似度公式不构成贡献。
 
 一个特别容易出错的地方是候选截断。只用 top-k 更新一个 query，随后仍在全图重新评分，与直接永久删掉 top-k 之外的位置不同。候选覆盖是否成为硬上限，必须看完整数据流；不能仅凭模块名称判断。
+
+[ASpanFormer](../literature/2026-09-12-adaptive-search-support.md)使这一区别更具体：自适应局部span仍与最终全图相关并存。其每组query共用平均地址、固定数量样点；本轮的几何演示定位了两个可能环节——独立运动地址被均值混合、扩大范围后样点避开细支撑。演示没有证明真实球错误频率或端到端失败，故当前只把问题从“窗口是否够大”细化为“实际证据是否被采到、后续能否恢复”，不据此直接添加模块。
 
 ### 2. 不做显式相关体的迭代或递推表示
 
