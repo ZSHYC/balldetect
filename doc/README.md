@@ -69,6 +69,7 @@
 | [门控运动token](literature/2026-09-11-gated-motion-tokens.md) | GMoT的软空间池化、相邻差分和完整微手势训练配方能够支持哪些定位主张 |
 | [轨迹视觉提示](literature/2026-09-11-trajectory-prompts.md) | Motion-as-Prompt的query覆盖、相机补偿、全视频选帧和画线怎样依赖上游跟踪 |
 | [稀疏中心关系监督](literature/2026-09-11-point-relation-supervision.md) | DINO-Tracker、LoFTR与点跟踪先例如何限定训练期辅助的解释和新颖性 |
+| [热图中点解码](literature/2026-09-12-midpoint-decoding.md) | DSNT、DARK、局部soft-argmax与BCIR对固定hard-CE读出的适用限制 |
 
 这里是专题证据笔记，不是已复现模型的列表。论文状态、检索截止日期和阅读深度以各笔记正文为准；整理文件不等于重新验证了全部论文。
 
@@ -89,7 +90,7 @@
 - [可见中心端点辅助](experiments/2026-09-11-endpoint-auxiliary.md)：三臂已完成；依据[锁定协议](protocols/tennis-endpoint-auxiliary-v1.md)，条件匹配改善但自动定位退步，停止该辅助配方。
 - [固定模型的当前帧细节读出](experiments/2026-09-11-frozen-detail-readout.md)：[固定协议](protocols/tennis-frozen-detail-readout-v1.md)的三seed六次训练全部完成；native平均PCK@8稍高、F1@16低于pooled，未通过联合复核条件，结束该配方。
 - [历史年龄与可用支持域](experiments/2026-09-11-history-age.md)：[共同目标协议](protocols/tennis-history-age-v1.md)完成；s=2已有跨片段范围压力，但近帧本来可用，尚不足以启动远搜索模型。
-- [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议v2](protocols/blurball-causal-midpoint-v2.md)已锁定；[源内容复核](experiments/2026-09-11-blurball-continuity.md)确认3处内部时间边界，修复后重新建立自动定位与拒绝分组基线。
+- [BlurBall自然模糊定位](experiments/2026-09-11-blurball-midpoint.md)：[因果中点协议v2](protocols/blurball-causal-midpoint-v2.md)已锁定；[源内容复核](experiments/2026-09-11-blurball-continuity.md)确认3处内部时间边界，修复后已[完成30epoch与沿轴诊断](experiments/2026-09-12-blurball-midpoint-results.md)，下一项为[固定局部读出](protocols/blurball-local-readout-v1.md)。
 
 ## 阶段进展
 

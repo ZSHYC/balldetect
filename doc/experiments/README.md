@@ -54,5 +54,6 @@
 - [2026-09-11：完整HRNet与DINO配对](2026-09-11-full-hrnet-dino-comparison.md)：区分位置精度、存在拒绝、背景干扰与真实历史增量，包含分层结果和固定样例。
 - [2026-09-11：完整DINO时序输入控制](2026-09-11-full-temporal-control.md)：重新训练重复当前帧，记录CUDA数值检查、实际输入路径及完整对照结果。
 - [2026-09-11：位置分布集中度](2026-09-11-readout-concentration.md)：已完成固定检查点诊断，区分分散响应、背景选择与分数排序。
-- [2026-09-11：BlurBall自然模糊定位](2026-09-11-blurball-midpoint.md)：中点基线已启动，记录真实PTS缓存、源内容边界修复及训练观察。
+- [2026-09-11：BlurBall自然模糊定位](2026-09-11-blurball-midpoint.md)：中点基线实现与早期历史，记录真实PTS缓存及源内容边界修复。
 - [2026-09-11：BlurBall源内容连续性](2026-09-11-blurball-continuity.md)：三处内部时间突变的可见证据、六个跨界窗口排除与原统计限制。
+- [2026-09-12：BlurBall基线完成与沿轴误差](2026-09-12-blurball-midpoint-results.md)：最佳epoch6、完整分组、沿轴探索与固定源帧证据。
