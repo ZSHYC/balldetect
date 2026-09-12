@@ -112,3 +112,15 @@
 本次补齐了 `correspondence_evidence.md` 中 TSM/GSM/GSF 原先仅摘要的缺口，并以作者公开实现核对具体算子。没有复现，没有读取封存测试标签，没有比较当前 DINOv3 prefix 内插模块的实际工程难度，也没有针对 2026 年新论文重新进行题名穷尽检索；这些均不是本问题所需证据。
 
 后续若选择任一方案，应重新核对目标 backbone 的具体 block/归一化结构和可插入位置；不能假设 ResNet/BN-Inception 的作者实现可无损搬到 ConvNeXt 或 ViT。
+
+## 同日补充：因子化卷积中的非线性与优化解释
+
+这项有界补读由正在运行的[BlurBall空间交互对照](../experiments/2026-09-12-blurball-spatial-interaction.md)触发，只核对两篇官方正文，没有扩展模型清单或改变训练协议。
+
+**事实，R(2+1)D。** *A Closer Look at Spatiotemporal Convolutions for Action Recognition* 的§3.5与Fig.2采用先空间2D、后时间1D的分解，并选择中间宽度使参数量约匹配3D卷积。作者并列提出中间多一次ReLU与更易优化两项解释；Fig.3及§4.2展示整个分解模型较低的训练/测试误差。Table2的18层R3D/R(2+1)D参数为33.4M/33.3M，不能称逐参数完全相同。该比较没有固定所有卷积后只移动一个激活，故不能把整体收益单独归给ReLU。[CVPR 2018官方正文](https://openaccess.thecvf.com/content_cvpr_2018/papers/Tran_A_Closer_Look_CVPR_2018_paper.pdf)
+
+**事实，S3D。** *Rethinking Spatiotemporal Feature Learning* 的§4.4、Fig.6同样采用空间 `[1,k,k]` 后时间 `[k,1,1]` 的因子化；Table2/3比较I3D与S3D时，参数、FLOPs和结构同时变化。作者以降低过拟合解释部分收益，但这些表没有只移动非线性位置的控制，不能替代本项目的same/cross比较。[ECCV 2018官方正文](https://openaccess.thecvf.com/content_ECCV_2018/papers/Saining_Xie_Rethinking_Spatiotemporal_Feature_ECCV_2018_paper.pdf)
+
+**对本次的推论。** 分解运算间的非线性及其优化收益有明确前史，简单的激活位置对照本身不应被包装成论文创新。当前P/A/S/R都是二维卷积，三帧只在P输入通道中拼接；两臂没有交换空间核与时间核，也没有实现原R(2+1)D/S3D。若cross优于same，只能支持这套32通道压缩后配方的非线性位置选择；它仍同时改变可实现函数与优化路径，不能把二者再分开归因。上述动作分类结果没有球中心、微小空间支撑或真实球位移证据，不能推导其在BlurBall上的效果。
+
+**对研究决策的影响。** 维持已经锁定的单配对，不新增R(2+1)D/S3D整网训练。保存逐轮训练loss与验证raw位置/F1，用于观察拟合和输出状态，但不以“训练误差更低”证明学会了对应。若结果阳性，继续寻找定位任务特有的失败边界与证据；本项不单独承担motion representation的论文贡献。

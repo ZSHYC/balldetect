@@ -76,7 +76,7 @@
 | [高分辨率特征上采样](literature/2026-09-12-feature-upsampling.md) | FeatUp、LoftUp、AnyUp与RaysUp的RGB信息路径、监督、效率和球点迁移边界 |
 | [因果点跟踪与自动球定位](literature/2026-09-12-causal-point-tracking.md) | TAPNext/++、Track-On2的查询初始化、分布读出、DINOv3候选重排与训练时长如何约束创新 |
 | [近期微小目标机制补检](literature/2026-09-12-recent-tiny-motion.md) | Frame Dynamics、PACT、TenRPCANet、CoWTracker及FreeFlow对变化、transport、背景与对应成本的限制 |
-| [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互、因果末帧窗口与流式缓存，及它们和当前后期融合的差别 |
+| [轻量时序路由](literature/2026-09-12-lightweight-temporal-routing.md) | TSM/GSM/GSF的逐层交互与因果语义；另补R(2+1)D/S3D对非线性、因子化与优化归因的边界 |
 | [差分与递归高通的边界](literature/2026-09-12-temporal-difference-representation.md) | Taylor/TDN的前置运算，以及MCATrack的线性递归、历史与配准怎样限制可逆换基解释 |
 | [SWIFT的分尺度warping](literature/2026-09-12-warping-without-cost-volume.md) | 粗全局预测、细尺度采样、两帧因果语义与实际消融，区分MoL误差分量和多地址假设 |
 | [KeepTrack候选与干扰物关联](literature/2026-09-12-distractor-association.md) | 候选图、dustbin、已初始化身份与在线记忆怎样限制自动球发现和持续错误的解释 |
