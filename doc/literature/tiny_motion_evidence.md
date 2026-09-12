@@ -4,7 +4,7 @@
 >
 > **阅读深度。** A = 已读官方全文/官方 PDF 的方法与实验关键段；B = 已读官方摘要和官方作者仓库 README，足以限定主张，未逐式审计；C = 仅核对官方书目信息/摘要，不能据此复述实现细节。链接均为原始论文、出版方或作者官方仓库；仓库不能替代论文证据。
 
-2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文、FlowIt v2全文与固定作者源码，以及 EgoSIS v2 全文的定向补读，修订见§1.5、§1.7、§2.3、§2.4及所链专题。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
+2026-09-10至11日局部更新：MOCID已补读官方全文方法与实验；DQAligner、MISTNet已补读固定作者源码，全文仍不可访问。2026-09-11又完成DeepPro arXiv v5全文及固定源码、CMRTrack v1全文、FlowIt v2全文与固定作者源码，以及 EgoSIS v2 全文的定向补读，修订见§1.5、§1.7、§2.3、§2.4及所链专题。2026-09-12进一步核对OTHR表2并完整补读DMR，见§1.1、§1.6。其余条目维持原阅读范围，没有据局部更新宣称全库重检。
 
 ## 0. 先给结论：哪些表述已经不能作为创新
 
@@ -28,17 +28,24 @@
 
 ### 1.1 OTHR / FlyingTO — tiny optical flow 的最强“不要把 loss 和结构混在一起”反证
 
-**证据与状态：A。** [IJCAI 2025 正式论文页](https://www.ijcai.org/proceedings/2025/136) 与 [官方 PDF](https://www.ijcai.org/proceedings/2025/0136.pdf)；[作者仓库](https://github.com/JaneEliot/OTHR)。官方页称对象小于 100 pixels，并把 OTHR 接到 RAFT/FlowFormer；仓库 README 只明确提供 FlyingTO **sample** 的下载入口，不能假设完整数据已经可无障碍复现。
+**证据与状态：A；2026-09-12补齐表格核验。** [IJCAI 2025正式论文](https://www.ijcai.org/proceedings/2025/0136.pdf)；[作者仓库](https://github.com/JaneEliot/OTHR)。本次读完相关方法与实验，并直接查看PDF表2及图5，替换原先“未逐格复核”的状态。仓库目前只有README和FlyingTO样本入口，未取得作者模型实现或完整补充材料，未本地复现。
 
-* 它针对的问题正是普通 flow 在 tiny object 上失败；论文指出多尺度 pyramid 对大位移有效，但对 tiny object 没有显著优势（PDF p.2）。OTHR 利用明/暗极性、方向和时间延迟构造方向选择性运动算子，再接入已有 flow network。
-* 它不等价于球中心定位：监督是稠密光流，评测也含 tiny object 邻域的 flow 指标；球数据多为中心点，不能把一个中心位移复制为对象 patch 的稠密 flow 真值。
-* 它是对“只加方向算子/前景 loss 就是贡献”的强反证。原蓝图摘录的 Table 2 数值应在正式写作前重新从 PDF 表格逐格转录；本轮已读 PDF 的相关工作与方法段，但**未逐单元格复核该表**，所以不在此把具体 EPE 数字作为二次证据。
+OTHR 对图像滤波后的明/暗响应施加空间偏移、时间延迟和乘积相关，形成方向选择性运动特征，再与图像输入结合接入 RAFT/FlowFormer。乘积作用于图像响应，不应把公式里的滤波符号当成只对原始核数组相乘；也不能把这个非线性时空算子简化成当前晚融合线性层前的一次可逆帧差换基。图5含八个方向，但正文/公开实现尚不足以锁定可复现的离散时间输入范围。算子复杂度说明也不能代替整个光流系统的实测成本。
 
-**对设计的压力测试。**
+**表2真正支持的归因。** 以下均为对象面积小于100 pixels子集的前景 `EPE_obj`，越低越好；固定前景损失权重β=2，保留 clean/noise 两列：
 
-1. 若方法加入 polarity / direction filter，必须和“同样参数的普通卷积/差分”、对象平衡 loss 分开 2×2 消融；否则可能只是监督重新分配。
-2. 不能拿全图 EPE 或背景匹配精度证明球对应有效。应报告中心邻域（仅在有可信中心时）的候选召回、真中心 rank、点误差和假阳性。
-3. OTHR 的对象阈值（<100 pixels）不是球直径标注；本项目不能把它外推为自己的球尺寸统计。
+| 方法 | Clean | Noise |
+|---|---:|---:|
+| RAFT，β=2 | 0.23293 | 0.25013 |
+| RAFT + OTHR，β=2 | 0.19548 | 0.24610 |
+| FlowFormer，β=2 | 0.13592 | 0.14927 |
+| FlowFormer + OTHR，β=2 | 0.12742 | 0.14959 |
+
+摘要的22.03%和83.50%分别对应未重加权的RAFT 0.25072→完整配置0.19548、FlowFormer 0.77245→完整配置0.12742。这两组比较**同时改变运动输入与损失**。特别是FlowFormer只改β=2就达到0.13592，所以不能把83.50%全归给OTHR结构。固定损失后仍有正收益；但FlowFormer噪声列有小幅反向变化，论文未给重复种子不确定性，不能据此宣布普遍退化或显著差异。表中带△的RAFT是未在FlyingTO微调的官方权重，不应与上述微调行混用。[表2与§4.5](https://www.ijcai.org/proceedings/2025/0136.pdf)
+
+**任务边界。** FlyingTO 是合成小目标光流数据，正文§4.5明确提到目标稀疏、小、速度低；它不直接证明真实体育大位移条件已经解决。`EPE_local`来自扩张后的目标邻域，包含背景，不能当成纯球区域误差；面积阈值也不是球直径。其有稠密光流监督，本项目只有中心标签时不能把中心位移复制到整个patch。
+
+**对设计的实际压力。** 若将来同时加入方向/对应机制和前景重加权，必须分清二者的作用，并以自动中心定位或可信中心对应评价，不能仅报告全图光流。先接受固定损失下已有的机制收益，再检查它在球任务、输入时间范围和计算预算下是否成立；本次补读不触发新增OTHR分支。
 
 ### 1.2 MOCID — motion context 与 frame displacement 已是正式 tiny-target 检测主线
 
@@ -87,13 +94,13 @@
 
 ### 1.6 DMR — camera/background coherent motion 与 local anomaly 的最直接概念冲突
 
-**证据与状态：A（但仅预印本）。** [arXiv HTML v1，2026-06-13](https://arxiv.org/html/2606.15286) 已读摘要、动机、方法概览和关键公式；没有正式会议/期刊版本可据此声称。
+**证据与状态：A；2026-09-12补读完整方法、监督、实验和消融，仍为预印本。** [arXiv v1，2026-06-13](https://arxiv.org/abs/2606.15286v1)。未确认正式出版或作者实现，未本地复现。详细的证据范围、条件消融和推理修正见[背景运动条件化专题](2026-09-12-coherent-motion-conditioning.md)。
 
-* DMR 的核心观察是背景运动在空间上 global coherent，而 tiny target 呈 sparse localized anomaly；它以 pretrained optical-flow prior 显式 branch 建 coherent motion，以 deformable alignment 隐式 branch 建 target-sensitive local motion，再以两者一致性压制背景 false response。
-* 这已经覆盖“camera/global motion 与 object/local motion decoupling”“用全局运动先验指导局部对齐”“背景一致的假警应抑制”的实质表述。即使球项目不用 IR，也必须引用它并说明域与监督差异。
-* **最强反证/警告：** 对体育球，球的图像运动并不必是“全局背景流的局部异常”：相机跟球时球可近乎静止；滚动快门、变焦、视差、球在空中与场地平面不同深度，都会令“global coherent + sparse residual”不成立。故不得监督或解释为物理 `object motion = observed flow - camera flow`，除非有额外可验证的几何/相机证据。
+* 预训练光流支持显式运动分支，最高分辨率FPN上的变形对齐构成隐式分支，再以条件交互处理背景干扰。监督包含自监督对应与检测目标，不应写成只有检测监督；该dense检测路径也没有必需的当前硬候选输入。
+* 这覆盖了“背景运动指导目标局部对齐”的实质概念，且有检测消融与速度/背景变化分组。应接受条件收益，不能以红外场景不同或没有球实验为由忽略先例；框mAP、图像变化量与球中心误差、相机位移仍不可互换。
+* **纠正原笔记：** 相机平移跟球时，球绝对图像位移可以接近零，但背景通常非零，球相对背景的残差依然明显。只有球的流接近同址背景期望流时，残差才小。连续缩放/旋转可相干却有非零流梯度；背景代理误差也可制造假残差。这些都限制物理解释，不证明软条件化必然失效。
 
-**可保留的较窄问题。** 可以把 global motion 仅作为一个**可拒绝的视觉上下文/背景干扰描述符**：它不得是球存在的必要条件；在 current-frame appearance 支路独立输出的前提下，测试它是否降低候选中背景线、广告、球员衣服的错误对应。没有收益便删除该分支。
+**可保留的窄问题。** 背景运动可以作为上下文改善自动定位，但不应被设为球身份或球存在的充分必要条件。当前仅有持续背景误选的诊断，尚未测出需要这种分支；先完成已锁定的真实历史/重复当前帧对照，再依据具体失败决定是否验证。
 
 ### 1.7 CMRTrack — reliability 不是新词，counterfactual target-erased history 是很近的训练先例
 
@@ -225,7 +232,7 @@
 
 **冲突。** DMR 是最直接的 small-target detector 先例；EgoSIS 是最新 pose-free **image-plane proxy** transition/residual/reliability factorization；传统 global motion compensation 更早已存在。
 
-**第一性原理限制。** 画面运动不是球 object motion。对于非共面球、透视、rolling shutter、变焦，单一 2D homography/flow 只可描述部分背景；球相对背景残差是观测性特征，不是几何分解真值。相机跟球时，所需的 correspondence 甚至可以接近零位移。因此把 residual 设为 detect 的必要条件会系统性伤害最需要的序列。
+**第一性原理限制（2026-09-12修正）。** 画面位移与相对背景残差必须分开：相机平移跟球可以令球绝对位移接近零，但背景仍在移动，故不能据此推出残差小。只有球流接近同址背景期望流时，残差才小；所以大残差不应被设为球存在的必要条件。连续缩放/旋转可具有相干但非零梯度的流，视差或遮挡又可能使背景代理失准。残差是二维观测描述，不是物理相机/物体分解真值；这并不否定它作为软上下文的潜在检测收益。推导见[专题](2026-09-12-coherent-motion-conditioning.md#四修正相机跟球的推理)。
 
 **推荐状态。** 第一篇主线不把 camera residual 放入核心贡献；把它放成预注册的可选分析：用粗 background transition/flow 的 robust fit 生成 `support quality` 和 `residual magnitude`，在静态与明显运动相机 clip 分桶。只有当它在每个 bucket 都能减少明确类型的 false correspondence，才保留。不要声称相机 motion recovery，更不能使用不可获得的 camera ground truth。
 

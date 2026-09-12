@@ -32,6 +32,7 @@
 | [SWIFT 补读](../literature/2026-09-12-warping-without-cost-volume.md) | CVPRW 2026 全文、公式图像与消融；回查 SEA-RAFT MoL 原公式 | 限定粗全局预测与 fine warp 的作用，区分误差分布分量、多地址假设与 no-match；保留实际实现缺口 |
 | [单帧快速物体恢复补读](../literature/2026-09-10-blur-guided-correspondence.md) | SI-DDPM-FMO 正文、Table 1 与固定评测源码 | 确认 GT 条件 ROI、方向消歧与输出吞吐，区分完整曝光重建和几何中点定位 |
 | [候选与干扰物关联](../literature/2026-09-12-distractor-association.md) | KeepTrack ICCV 2021 全文、关键表格与固定作者实现；有界后续检索 | 区分背景对应、球身份、候选未配与在线记忆；把持续误选和状态污染分开 |
+| [背景运动条件化](../literature/2026-09-12-coherent-motion-conditioning.md)与[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证) | DMR v1全文/关键表格，OTHR正式全文/结构与损失消融 | 纠正绝对运动与背景残差的混淆，区分运动机制、监督与物理解释 |
 
 本轮同时检查近期条目和旧条目的新版本，没有把“首稿日期新”作为相关性的替代。新增阅读包括 2026 年发布或更新的论文，但并非每篇都在九月首发。更早已全文深化的 What Moves?、COMET、Motion-as-Prompt 等九月/八月条目继续有效，见[现代 motion 证据及其专题链接](../literature/modern_motion_evidence.md)。不重复抄写它们来扩大本轮数量。
 
@@ -160,6 +161,10 @@ TenRPCANet 表明，小目标任务可以从背景低秩与自相似入手，而
 对体育来说，连续相机运动、人体和球拍会改变背景条件；本文没有证据判断这个假设在本地成立或不成立。错误分组只提供相关性，不能替代真实背景基线的反事实。也没有必要为了排除一个理论上可能的解释就立刻训练低秩网络。
 
 [KeepTrack](../literature/2026-09-12-distractor-association.md)给出另一种具体机制：基座产生多个候选，再关联目标与干扰物的身份。其已初始化 tracker 对照显示关联有条件收益，应当接受；它使用的首帧实例身份与持久状态却不属于当前自动定位输入。更根本地，背景点与历史中的自身可能具有正确对应，但它仍不是球。因而“匹配是否可靠”“候选是否是球”“是否继续同一身份”应分开。现有连续错位诊断没有测量特征匹配，不能把这条逻辑推论冒充实测；也不能仅因背景持续而引入静态抑制或记忆模块。
+
+[DMR补读](../literature/2026-09-12-coherent-motion-conditioning.md)进一步表明，背景运动条件化已经有直接的小目标检测先例与条件消融收益。这里同时修正旧笔记的一处推理：平移跟拍能让球绝对图像位移为零，却不能推出球相对运动背景的残差为零；真正条件是球流接近同址背景期望流。连续变焦、旋转也不必满足流梯度近零。因而可以研究背景代理对定位的帮助，但不能把它当成物理运动分解或球身份真值。
+
+[OTHR表2](../literature/tiny_motion_evidence.md#11-othr--flyingto--tiny-optical-flow-的最强不要把-loss-和结构混在一起反证)补读则给出一个归因提醒：摘要的大幅提升同时改变方向运动输入和前景损失；固定损失后仍有较小的条件收益。后续如果本项目同时改运动机制与监督，应分开验证。两项补读均不改变当前已锁定的BlurBall时序训练配置。
 
 ### 4. 置信度、可见性与 no-match
 
