@@ -60,3 +60,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall原三帧候选对应 v1](blurball-candidate-correspondence-v1.md)：固定两层描述符，以候选query对历史全图格匹配，分开条件对应与无GT支持读出。
 - [BlurBall历史单帧球证据 v1](blurball-history-ball-evidence-v1.md)：原三帧内复用历史单帧预测，固定双历史支持与原排序回退，分开球身份和对应的错误。
 - [BlurBall冻结候选残差读出 v1](blurball-candidate-residual-v1.md)：current/同址/软对应三条件共享零初始化残差和固定候选，保留当前分数，只有可达位置产生训练loss。
+- [BlurBall候选残差读出 v2](blurball-candidate-residual-v2.md)：保持v1数据/模型/优化，仅改为可接受4px候选集合概率监督，固定last评估训练精定位。

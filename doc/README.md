@@ -91,6 +91,7 @@
 
 ## 协议与实验
 
+- [集合监督与对应增量](experiments/2026-09-13-blurball-candidate-set-supervision.md)：只改监督后训练精定位恢复，同址历史成为较强对照；全图软池化仍未获独立增益，明确其空间地址丢失。
 - [可学习候选残差与监督问题](experiments/2026-09-13-blurball-candidate-residual.md)：三个条件各30轮完成，软对应未胜出；训练集也随soft CE优化丢失精位置，下一步先检验位置监督。
 - [历史球证据与硬筛损失](experiments/2026-09-13-blurball-history-ball-evidence.md)：复用单帧预测仍净破坏611个4px位置，分开历史定位、对应失败和精位置损失，停止历史top1硬筛。
 - [候选视觉对应与身份竞争](experiments/2026-09-13-blurball-candidate-correspondence.md)：原三帧中球query存在条件对应，稳定干扰物却赢得最高相似度，约束“匹配可靠即球可靠”的解释。
