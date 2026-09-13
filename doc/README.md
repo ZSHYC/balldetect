@@ -45,6 +45,8 @@
 
 新增：[球类物理先验与适用条件](literature/2026-09-13-ball-physics-priors.md)，覆盖三维重建、物理候选关联、2026联合损失与BlurBall最新相关段落。
 
+前瞻专题：[输入长度与MIMO滑窗步长](literature/2026-09-13-future-context-attribution.md)，核对TrackNetV5和BlurBall的真实时间输入，避免将 `steps=1/3` 误认作输入帧数消融。
+
 | 笔记 | 要解决的问题 |
 |---|---|
 | [体育方法与数据协议](literature/sports_evidence.md) | TrackNet 系列及其他球定位工作到底使用了什么输入、标签和划分 |
