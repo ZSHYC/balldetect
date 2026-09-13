@@ -91,6 +91,7 @@
 
 ## 协议与实验
 
+- [真实输入的有限候选覆盖](experiments/2026-09-13-blurball-candidate-coverage.md)：次候选保留部分球位置，oracle上限同时暴露细定位与候选遗漏的限制。
 - [固定权重历史输入诊断](experiments/2026-09-13-blurball-history-input-probe.md)：重复当前输入未修复既定失败，约束后续候选证据检查。
 - [空间交互对照的失败拆分](experiments/2026-09-13-blurball-spatial-failures.md)：区分raw远错位与实际输出，约束下一步历史输入诊断。
 - [BlurBall训练I/O效率检查](experiments/2026-09-12-blurball-io-efficiency.md)：确认无重复解码，实测随机RGB读取等待并验证单批CPU预取，保留模型和训练语义。

@@ -61,7 +61,8 @@
 - [2026-09-12：BlurBall固定局部读出](2026-09-12-blurball-local-readout.md)：同best6与q下，局部重心通过全体和多比赛预设条件，修正部分沿轴偏差。
 - [2026-09-12：BlurBall连续错误](2026-09-12-blurball-error-persistence.md)：固定保存预测的六状态连续段与预选图，区分固定亮点、球网、运动前景和孤立错位。
 - [2026-09-12：BlurBall完整时序输入控制](2026-09-12-blurball-temporal-control.md)：重复当前帧重训，固定历史状态/位移/l分组和架构判定。
-- [2026-09-12：BlurBall压缩后空间交互](2026-09-12-blurball-spatial-interaction.md)：同预算移动GELU，记录真实batch验证与两组完整训练。
+- [2026-09-12：BlurBall压缩后空间交互](2026-09-12-blurball-spatial-interaction.md)：同预算移动GELU，记录真实batch验证与最佳权重开发配对。
 - [2026-09-12：BlurBall训练I/O效率](2026-09-12-blurball-io-efficiency.md)：实际解码/重复编码与读取等待检查、CPU单批预取和数值正确性验证。
 - [2026-09-13：空间交互失败拆分](2026-09-13-blurball-spatial-failures.md)：match21的raw退步主要进入拒绝状态，完整连续段与固定正反向图例。
 - [2026-09-13：固定权重历史输入诊断](2026-09-13-blurball-history-input-probe.md)：完整推理干预未修复202个固定错误中的200个，并造成全体明显退化。
+- [2026-09-13：真实输入的有限候选覆盖](2026-09-13-blurball-candidate-coverage.md)：固定202例中K16覆盖185例16px、117例4px，区分候选排序、细位置与预算遗漏。

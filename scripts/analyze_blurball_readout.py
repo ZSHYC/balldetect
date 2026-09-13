@@ -20,16 +20,22 @@ from train_tennis_heatmap import build_dino_model, write_predictions
 
 def local_patches(spatial):
     """空间argmax附近固定半径7；图像外不贡献质量。"""
-    batch, height, width = spatial.shape
+    width = spatial.shape[-1]
     peak = spatial.flatten(1).argmax(1)
     center = torch.stack((peak % width, peak // width), dim=1)
+    return center, patches_at_centers(spatial, center[:, None])[:, 0]
+
+
+def patches_at_centers(spatial, centers):
+    """从原logit图提取B×K个15×15窗口，图像外不参与重心。"""
+    batch, height, width = spatial.shape
     offset = torch.arange(-7, 8, device=spatial.device)
-    y = center[:, 1, None, None] + offset[None, :, None]
-    x = center[:, 0, None, None] + offset[None, None, :]
+    y = centers[:, :, 1, None, None] + offset[None, None, :, None]
+    x = centers[:, :, 0, None, None] + offset[None, None, None, :]
     valid = (y >= 0) & (y < height) & (x >= 0) & (x < width)
-    patch = spatial[torch.arange(batch, device=spatial.device)[:, None, None],
+    patch = spatial[torch.arange(batch, device=spatial.device)[:, None, None, None],
                     y.clamp(0, height - 1), x.clamp(0, width - 1)]
-    return center, patch.masked_fill(~valid, -torch.inf)
+    return patch.masked_fill(~valid, -torch.inf)
 
 
 def barycenters(center, patches):
@@ -41,13 +47,18 @@ def barycenters(center, patches):
                                      (mass * offset[None, :, None]).sum(axis=(1, 2))))
 
 
-def batch_readout(model, rgb, batch_windows, device):
-    """复用批内源帧编码，按原时间槽顺序返回argmax邻域和原q。"""
+def batch_logits(model, rgb, batch_windows, device):
+    """复用批内源帧编码，按原时间槽顺序返回完整logits。"""
     unique, inverse = np.unique(batch_windows, return_inverse=True)
     features = model.encode(torch.from_numpy(rgb[unique]).to(device))
     features = features[torch.from_numpy(inverse).to(device)].reshape(
         len(batch_windows), 3 * features.shape[1], *features.shape[-2:])
-    logits = model.head(features)
+    return model.head(features)
+
+
+def batch_readout(model, rgb, batch_windows, device):
+    """返回argmax邻域和原q，供固定读出与输入干预共用。"""
+    logits = batch_logits(model, rgb, batch_windows, device)
     center, patch = local_patches(logits[:, :-1].reshape(-1, 288, 512))
     return center, patch, 1 - logits.softmax(1)[:, -1]
 
