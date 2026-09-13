@@ -98,3 +98,8 @@ python scripts/analyze_blurball_readout.py outputs/blurball/five_frame_context/c
 实施提交`e2ba179`后，已于2026-09-13 14:36（Asia/Shanghai）启动顺序任务。独立进程运行`outputs/blurball/five_frame_context/run_pair.sh`，启动记录在同目录`launch.json`，主进程PID3936244；首臂center5子进程PID3936247。实际配置确认输入`t−2:t+2`、target_slot2、12轮、batch4及共同37,590/13,912目标。
 
 首次观察时进程正在全量epoch0验证，随后进入训练；causal5尚在顺序任务后续，未声称已完成。各臂`train.log`与`history.jsonl`记录实际进展，退出状态保存在`exit_status.txt`。两臂完成后才作正式比较，单批检查及GT诊断不替代训练结果。
+
+
+随后已观察到center5完成epoch0全量验证并进入epoch1，首个训练进度记录为1,600/37,590目标、累计loss8.29160。该值只说明训练正常推进，不是验证定位收益。
+
+两臂完成后的比较入口已准备：`python outputs/blurball/five_frame_context/compare.py`。它只读保存预测，核对共同身份/标签、实际完成轮次及主要训练配置；分别比较argmax和fixed-local，报告原位置与正确输出的救回/破坏、q变化和逐比赛/拖影分组。旧cross只抽取共同目标作参考。新增计数已用CPU手算样例验证；正式比较尚未运行，不自动将任何GT拟合率写入模型成绩。
