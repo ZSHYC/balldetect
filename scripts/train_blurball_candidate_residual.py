@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'src'))
 sys.path.insert(0, str(ROOT/'scripts'))
 from ballmotion.blurball import evaluate_blurball
-from ballmotion.candidate_readout import CandidateResidualReadout, candidate_targets
+from ballmotion.candidate_readout import CandidateResidualReadout, candidate_set_loss, candidate_targets
 from compare_blurball_temporal import _group_masks, continuous_windows
 from rerank_blurball_candidates import groups
 from train_tennis_heatmap import write_predictions
@@ -41,6 +41,7 @@ def main():
     parser.add_argument('--features', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--condition', choices=('current', 'stationary', 'correspondence'), required=True)
+    parser.add_argument('--loss', choices=('soft', 'set'), default='soft')
     parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
     if args.output.exists() and not args.resume:
@@ -74,19 +75,24 @@ def main():
                         else torch.from_numpy(np.load(directory/f'{args.condition}.npy')).to(device))
         gt = np.array([[r['x_raw'], r['y_raw']] for r in rows[split]])
         vis = np.array([r['visibility_raw'] == 1 for r in rows[split]])
-        mask = vis & (np.linalg.norm(d['xy']-gt[:, None], axis=-1).min(1) < 4)
+        positive = np.linalg.norm(d['xy']-gt[:, None], axis=-1) < 4
+        mask = vis & positive.any(1)
         d['supervised'] = torch.as_tensor(mask, device=device)
         if split == 'train':
-            d['targets'] = candidate_targets(torch.from_numpy(d['xy']), torch.from_numpy(gt)).float().to(device)
+            d['positive'] = torch.as_tensor(positive, device=device)
+            if args.loss == 'soft':
+                d['targets'] = candidate_targets(torch.from_numpy(d['xy']), torch.from_numpy(gt)).float().to(device)
     assert len(rows['train']) == 38854 and len(rows['val']) == 14192
     model = CandidateResidualReadout().to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=.01)
-    config = {'protocol': 'blurball-candidate-residual-v1', 'features': str(args.features.resolve()),
+    config = {'protocol': f'blurball-candidate-residual-v{1 if args.loss == "soft" else 2}',
+        'features': str(args.features.resolve()),
         'condition': args.condition, 'seed': 0, 'epochs': 30, 'batch_size': 256,
         'optimizer': {'name': 'AdamW', 'lr': 3e-4, 'weight_decay': .01},
         'candidate_source': manifest['candidate_sources'], 'source_epoch': 3,
         'visual_support': ['t-2', 't-1', 't'], 'q': 'fixed cross', 'coordinate': 'fixed candidate local_xy',
-        'loss': 'candidate soft-target CE, sigma4px, current V1 and min_error<4 only',
+        'loss': ('candidate soft-target CE, sigma4px, current V1 and min_error<4 only' if args.loss == 'soft'
+                 else 'negative log probability of candidate error<4 set, current V1 and min_error<4 only'),
         'selection': 'maximum val TP4, then raw correct4, earliest incl epoch0',
         'targets': {s: len(rs) for s, rs in rows.items()},
         'supervised_targets': {s: int(d['supervised'].sum()) for s, d in data.items()},
@@ -150,7 +156,8 @@ def main():
                 continue
             optimizer.zero_grad(set_to_none=True)
             logits = model(train['query'][ids], train['history'][ids], train['scores'][ids])
-            loss = -(train['targets'][ids][mask]*F.log_softmax(logits[mask], dim=1)).sum(1).mean()
+            loss = (candidate_set_loss(logits[mask], train['positive'][ids][mask]) if args.loss == 'set'
+                    else -(train['targets'][ids][mask]*F.log_softmax(logits[mask], dim=1)).sum(1).mean())
             if not torch.isfinite(loss):
                 raise ValueError('candidate训练loss非有限')
             loss.backward()
@@ -176,6 +183,18 @@ def main():
         torch.save(state, args.output/'last.pt')
         print(f'{args.condition} epoch {epoch}/30 loss={record["train_loss"]:.5f} '
               f'val TP4={rank(metrics)[0]} raw4={rank(metrics)[1]} best={best_epoch}', flush=True)
+    # 在加载best之前读固定last，区分训练位置改善与验证选优效果。
+    last = torch.load(args.output/'last.pt', map_location=device, weights_only=True)
+    assert last['epoch'] == 30
+    model.load_state_dict(last['model'])
+    last_xy, last_ids = predict(model, data['train'])
+    last_train = evaluate_blurball(rows['train'], last_xy, data['train']['q'], grouped=False)
+    supervised = data['train']['supervised'].cpu().numpy()
+    accepted = data['train']['positive'].cpu().numpy()[np.arange(len(last_ids)), last_ids]
+    last_train_supervised = {'n': int(supervised.sum()),
+                             'correct4': int((supervised & accepted).sum()),
+                             'pck4': float(accepted[supervised].mean())}
+    np.save(args.output/'last_train_selected.npy', last_ids.astype(np.uint8))
     best = torch.load(args.output/'best.pt', map_location=device, weights_only=True)
     model.load_state_dict(best['model'])
     val_xy, selected = predict(model, data['val'])
@@ -187,6 +206,7 @@ def main():
     masks = _group_masks(rows['val'], frames, windows['val'])
     result = {'config': config, 'completed_epochs': 30, 'best_epoch': best_epoch,
               'best_reproduced': True, 'best_val': final_metrics,
+              'last_train': last_train, 'last_train_supervised': last_train_supervised,
               'elapsed_seconds_training_validation_and_final_predictions': elapsed_prior+time.perf_counter()-started,
               'peak_allocated_mib_including_loaded_cache': torch.cuda.max_memory_allocated()/2**20,
               'groups': groups(rows['val'], val_xy, data['val']['q'], data['val']['xy'][:, 0], masks,

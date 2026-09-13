@@ -22,3 +22,9 @@ def candidate_targets(xy, gt):
     """4px固定尺度的候选软标签；可监督帧筛选由训练入口负责。"""
     distance2 = (xy-gt[:, None]).square().sum(-1)
     return (-(distance2-distance2.min(-1, keepdim=True).values)/32).softmax(-1)
+
+
+def candidate_set_loss(logits, positive):
+    """负对数可接受候选集合概率；调用方仅传入有正例的可见帧。"""
+    scores = logits-logits.max(dim=1, keepdim=True).values
+    return (scores.logsumexp(1)-scores.masked_fill(~positive, -torch.inf).logsumexp(1)).mean()

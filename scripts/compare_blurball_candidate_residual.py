@@ -30,11 +30,13 @@ def main():
         xy = {'cross': f['local_xy'][:, 0]}
         q = f['q']
     epochs = {}
+    protocols = set()
     for condition in ('current', 'stationary', 'correspondence'):
         path = args.root/condition
         result = json.loads((path/'results.json').read_text())
         assert result['completed_epochs'] == 30 and result['best_reproduced']
         assert result['config']['condition'] == condition and result['config']['source_epoch'] == 3
+        protocols.add(result['config']['protocol'])
         saved, xy[condition], confidence = read_predictions(path/'val_predictions.csv')
         _validate_saved_rows(rows, saved, path/'val_predictions.csv')
         np.testing.assert_array_equal(confidence, q)
@@ -49,7 +51,8 @@ def main():
     masks['fixed/match21_lost16'] = visible21 & (same_error < 16) & (cross_error >= 16)
     masks['fixed/match21_rescued16'] = visible21 & (same_error >= 16) & (cross_error < 16)
     assert masks['fixed/match21_lost16'].sum() == 202 and masks['fixed/match21_rescued16'].sum() == 74
-    result = {'protocol': 'blurball-candidate-residual-v1', 'targets': len(rows), 'best_epochs': epochs,
+    assert len(protocols) == 1, '不能把不同训练目标的条件混成同一组'
+    result = {'protocol': protocols.pop(), 'targets': len(rows), 'best_epochs': epochs,
               'comparisons': {}}
     for before, after in [('cross', 'current'), ('cross', 'stationary'), ('cross', 'correspondence'),
                           ('current', 'correspondence'), ('stationary', 'correspondence')]:

@@ -3,10 +3,25 @@ import unittest
 import torch
 from torch.nn import functional as F
 
-from ballmotion.candidate_readout import CandidateResidualReadout, candidate_targets
+from ballmotion.candidate_readout import CandidateResidualReadout, candidate_set_loss, candidate_targets
 
 
 class CandidateReadoutTest(unittest.TestCase):
+    def test_set_loss_rewards_total_acceptable_mass_with_correct_gradient(self):
+        logits = torch.tensor([[.2, .3, .5]]).log().requires_grad_()
+        loss = candidate_set_loss(logits, torch.tensor([[True, True, False]]))
+        torch.testing.assert_close(loss, torch.tensor(2.).log())
+        loss.backward()
+        torch.testing.assert_close(logits.grad, torch.tensor([[-.2, -.3, .5]]))
+
+    def test_set_loss_ignores_redistribution_within_acceptable_candidates(self):
+        positive = torch.tensor([[True, True, False]])
+        first = torch.tensor([[.1, .5, .4]]).log()
+        second = torch.tensor([[.3, .3, .4]]).log()
+        torch.testing.assert_close(candidate_set_loss(first, positive), candidate_set_loss(second, positive))
+        torch.testing.assert_close(candidate_set_loss(first+10000, positive),
+                                   candidate_set_loss(first, positive), atol=1e-3, rtol=0)
+
     def test_zero_initialization_keeps_unary_and_can_learn(self):
         torch.manual_seed(0)
         model = CandidateResidualReadout(channels=2, hidden=3)
