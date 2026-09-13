@@ -6,6 +6,27 @@ from torch.nn import functional as F
 from .tennis import grid_targets
 
 
+def candidate_costs(features, current_xy, image_wh):
+    """当前候选query与近、远两帧全部原生格的centered cosine。"""
+    if features.ndim != 5 or features.shape[1] != 3 or features.dtype != torch.float32:
+        raise ValueError("features must be float32 Bx3xCxHxW")
+    batch = features.shape[0]
+    if current_xy.ndim != 3 or current_xy.shape[0] != batch or current_xy.shape[2] != 2:
+        raise ValueError("current_xy must be BxKx2")
+    if image_wh.shape != (batch, 2):
+        raise ValueError("image_wh must be Bx2")
+
+    centered = features - features.mean((-2, -1), keepdim=True)
+    xy = current_xy.to(device=features.device, dtype=features.dtype)
+    wh = image_wh.to(device=features.device, dtype=features.dtype)
+    grid = 2 * (xy + .5) / wh[:, None] - 1
+    query = F.grid_sample(centered[:, 2], grid[:, :, None], mode="bilinear",
+                          padding_mode="border", align_corners=False)
+    query = F.normalize(query[..., 0].transpose(1, 2), dim=-1)
+    keys = F.normalize(centered[:, (1, 0)].flatten(-2), dim=2)
+    return torch.einsum("bkc,bdcn->bdkn", query, keys).clamp(-1, 1)
+
+
 def native_endpoint_cells(frames, windows, grid_hw=(36, 64)):
     """非VC1用网格末尾的无效哨兵；不改变主任务的VC2/3位置标签。"""
     xy = np.asarray([[row["x_raw"], row["y_raw"]] for row in frames], dtype=float)
