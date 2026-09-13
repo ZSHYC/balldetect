@@ -6,8 +6,8 @@ from torch.nn import functional as F
 from .tennis import grid_targets
 
 
-def candidate_costs(features, current_xy, image_wh):
-    """当前候选query与近、远两帧全部原生格的centered cosine。"""
+def candidate_tokens(features, current_xy, image_wh):
+    """当前坐标处三帧采样，以及near/far原生格key；均去空间均值后L2归一化。"""
     if features.ndim != 5 or features.shape[1] != 3 or features.dtype != torch.float32:
         raise ValueError("features must be float32 Bx3xCxHxW")
     batch = features.shape[0]
@@ -20,11 +20,30 @@ def candidate_costs(features, current_xy, image_wh):
     xy = current_xy.to(device=features.device, dtype=features.dtype)
     wh = image_wh.to(device=features.device, dtype=features.dtype)
     grid = 2 * (xy + .5) / wh[:, None] - 1
-    query = F.grid_sample(centered[:, 2], grid[:, :, None], mode="bilinear",
+    sampled = F.grid_sample(centered.flatten(0, 1),
+                          grid[:, None, :, None].expand(-1, 3, -1, -1, -1).flatten(0, 1), mode="bilinear",
                           padding_mode="border", align_corners=False)
-    query = F.normalize(query[..., 0].transpose(1, 2), dim=-1)
+    sampled = F.normalize(sampled[..., 0].transpose(1, 2), dim=-1)
+    sampled = sampled.reshape(batch, 3, current_xy.shape[1], features.shape[2])
     keys = F.normalize(centered[:, (1, 0)].flatten(-2), dim=2)
+    return sampled, keys
+
+
+def candidate_costs(features, current_xy, image_wh):
+    """当前候选query与近、远两帧全部原生格的centered cosine。"""
+    sampled, keys = candidate_tokens(features, current_xy, image_wh)
+    query = sampled[:, 2]
     return torch.einsum("bkc,bdcn->bdkn", query, keys).clamp(-1, 1)
+
+
+def candidate_pooled_features(features, current_xy, image_wh):
+    """固定温度0.1的全局软对应汇聚，与同地址历史共享当前query与原生key。"""
+    sampled, keys = candidate_tokens(features, current_xy, image_wh)
+    query = sampled[:, 2]
+    costs = torch.einsum("bkc,bdcn->bdkn", query, keys).clamp(-1, 1)
+    weights = (costs / .1).softmax(-1)
+    pooled = torch.einsum("bdkn,bdcn->bdkc", weights, keys)
+    return query, sampled[:, (1, 0)], pooled
 
 
 def native_endpoint_cells(frames, windows, grid_hw=(36, 64)):
