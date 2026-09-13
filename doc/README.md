@@ -91,6 +91,7 @@
 
 ## 协议与实验
 
+- [可学习候选残差与监督问题](experiments/2026-09-13-blurball-candidate-residual.md)：三个条件各30轮完成，软对应未胜出；训练集也随soft CE优化丢失精位置，下一步先检验位置监督。
 - [历史球证据与硬筛损失](experiments/2026-09-13-blurball-history-ball-evidence.md)：复用单帧预测仍净破坏611个4px位置，分开历史定位、对应失败和精位置损失，停止历史top1硬筛。
 - [候选视觉对应与身份竞争](experiments/2026-09-13-blurball-candidate-correspondence.md)：原三帧中球query存在条件对应，稳定干扰物却赢得最高相似度，约束“匹配可靠即球可靠”的解释。
 - [候选的因果时序重排](experiments/2026-09-13-blurball-candidate-temporal.md)：训练侧选到零强度，低残差常速收益被高残差和不可见历史条件的损失抵消。
