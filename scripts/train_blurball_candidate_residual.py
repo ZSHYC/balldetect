@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'src'))
 sys.path.insert(0, str(ROOT/'scripts'))
 from ballmotion.blurball import evaluate_blurball
-from ballmotion.candidate_readout import CandidateResidualReadout, candidate_set_loss, candidate_targets
+from ballmotion.candidate_readout import CandidateResidualReadout, candidate_match_inputs, candidate_set_loss, candidate_targets
 from compare_blurball_temporal import _group_masks, continuous_windows
 from rerank_blurball_candidates import groups
 from train_tennis_heatmap import write_predictions
@@ -27,7 +27,8 @@ def predict(model, data):
     ids = []
     for start in range(0, len(data['xy']), 256):
         sl = slice(start, start+256)
-        ids.append(model(data['query'][sl], data['history'][sl], data['scores'][sl]).argmax(1).cpu().numpy())
+        ids.append(model(data['query'][sl], data['history'][sl], data['scores'][sl],
+                         data['matching'][sl] if 'matching' in data else None).argmax(1).cpu().numpy())
     ids = np.concatenate(ids)
     return data['xy'][np.arange(len(ids)), ids], ids
 
@@ -40,18 +41,29 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--features', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--condition', choices=('current', 'stationary', 'correspondence'), required=True)
+    parser.add_argument('--condition', choices=('current', 'stationary', 'correspondence', 'scores_only', 'addressed'), required=True)
     parser.add_argument('--loss', choices=('soft', 'set'), default='soft')
+    parser.add_argument('--matches-cache', type=Path)
     parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
     if args.output.exists() and not args.resume:
         raise ValueError('已有训练目录需要明确resume，不能覆盖')
+    use_matches = args.condition in ('scores_only', 'addressed')
+    if use_matches:
+        assert args.matches_cache is not None and args.loss == 'set'
+    else:
+        assert args.matches_cache is None
     torch.set_num_threads(4)
     torch.manual_seed(0)
     rng = np.random.default_rng(0)
     device = torch.device('cuda')
     manifest = json.loads((args.features/'manifest.json').read_text())
     assert manifest['checkpoint_epoch'] == 3 and manifest['channels'] == 96 and manifest['temperature'] == .1
+    if use_matches:
+        matches_manifest = json.loads((args.matches_cache/'manifest.json').read_text())
+        assert matches_manifest['representation'] == 'top_matches'
+        for key in ('source_run', 'checkpoint_epoch', 'candidate_sources', 'grid_hw'):
+            assert matches_manifest[key] == manifest[key], key
     run = Path(manifest['source_run'])
     source_config = json.loads((run/'config.json').read_text())
     metadata = json.loads((ROOT/manifest['rgb_cache']/'metadata.json').read_text())
@@ -70,9 +82,21 @@ def main():
                            'scores': torch.as_tensor(f['peak_logits'], device=device)}
         d = data[split]
         d['query'] = torch.from_numpy(np.load(directory/'query.npy')).to(device)
+        history_name = 'stationary' if use_matches else args.condition
         d['history'] = (torch.zeros((len(rows[split]), 2, 16, 96), device=device)
                         if args.condition == 'current'
-                        else torch.from_numpy(np.load(directory/f'{args.condition}.npy')).to(device))
+                        else torch.from_numpy(np.load(directory/f'{history_name}.npy')).to(device))
+        if use_matches:
+            match_dir = args.matches_cache/split
+            np.testing.assert_array_equal(np.load(match_dir/'current_frame_ids.npy'), windows[split][:, -1])
+            match_scores = torch.from_numpy(np.load(match_dir/'scores.npy')).to(device)
+            cells = torch.from_numpy(np.load(match_dir/'cells.npy')).to(device)
+            wh = torch.tensor([[r['width'], r['height']] for r in rows[split]], device=device)
+            d['matching'] = candidate_match_inputs(match_scores, cells,
+                torch.as_tensor(d['xy'], dtype=torch.float32, device=device), wh, manifest['grid_hw'])
+            if args.condition == 'scores_only':
+                d['matching'].reshape(len(rows[split]), 16, 2, 16, 3)[..., 1:] = 0
+            del match_scores, cells
         gt = np.array([[r['x_raw'], r['y_raw']] for r in rows[split]])
         vis = np.array([r['visibility_raw'] == 1 for r in rows[split]])
         positive = np.linalg.norm(d['xy']-gt[:, None], axis=-1) < 4
@@ -83,7 +107,7 @@ def main():
             if args.loss == 'soft':
                 d['targets'] = candidate_targets(torch.from_numpy(d['xy']), torch.from_numpy(gt)).float().to(device)
     assert len(rows['train']) == 38854 and len(rows['val']) == 14192
-    model = CandidateResidualReadout().to(device)
+    model = CandidateResidualReadout(matching_features=96 if use_matches else 0).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=.01)
     config = {'protocol': f'blurball-candidate-residual-v{1 if args.loss == "soft" else 2}',
         'features': str(args.features.resolve()),
@@ -101,6 +125,11 @@ def main():
         'cache_load_seconds': time.perf_counter()-loaded,
         'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'code_changes': ['src/ballmotion/candidate_readout.py', 'scripts/train_blurball_candidate_residual.py']}
+    if use_matches:
+        config.update(protocol='blurball-candidate-addresses-v1',
+                      matches_cache=str(args.matches_cache.resolve()),
+                      matching='ranked top16 cosine, dx/W, dy/H; scalar block unscaled',
+                      coordinates_enabled=args.condition == 'addressed')
     args.output.mkdir(parents=True, exist_ok=True)
     records = []
     start_epoch = 1
@@ -120,6 +149,8 @@ def main():
         previous = json.loads((args.output/'config.json').read_text())
         for key in ('features', 'condition', 'seed', 'epochs', 'batch_size', 'optimizer', 'loss'):
             assert previous[key] == config[key], f'resume配置不符: {key}'
+        if use_matches:
+            assert previous['matches_cache'] == config['matches_cache']
         state = torch.load(args.output/'last.pt', map_location=device, weights_only=True)
         model.load_state_dict(state['model'])
         optimizer.load_state_dict(state['optimizer'])
@@ -155,7 +186,8 @@ def main():
                 skipped += 1
                 continue
             optimizer.zero_grad(set_to_none=True)
-            logits = model(train['query'][ids], train['history'][ids], train['scores'][ids])
+            logits = model(train['query'][ids], train['history'][ids], train['scores'][ids],
+                           train['matching'][ids] if use_matches else None)
             loss = (candidate_set_loss(logits[mask], train['positive'][ids][mask]) if args.loss == 'set'
                     else -(train['targets'][ids][mask]*F.log_softmax(logits[mask], dim=1)).sum(1).mean())
             if not torch.isfinite(loss):

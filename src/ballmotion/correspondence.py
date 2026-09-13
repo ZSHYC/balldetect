@@ -36,6 +36,12 @@ def candidate_costs(features, current_xy, image_wh):
     return torch.einsum("bkc,bdcn->bdkn", query, keys).clamp(-1, 1)
 
 
+def top_candidate_matches(costs):
+    """保留16个原生格；并列优先较低地址，分数和地址始终绑定。"""
+    cells = costs.argsort(dim=-1, descending=True, stable=True)[..., :16]
+    return costs.gather(-1, cells), cells
+
+
 def candidate_pooled_features(features, current_xy, image_wh):
     """固定温度0.1的全局软对应汇聚，与同地址历史共享当前query与原生key。"""
     sampled, keys = candidate_tokens(features, current_xy, image_wh)

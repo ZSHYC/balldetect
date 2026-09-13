@@ -61,3 +61,5 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall历史单帧球证据 v1](blurball-history-ball-evidence-v1.md)：原三帧内复用历史单帧预测，固定双历史支持与原排序回退，分开球身份和对应的错误。
 - [BlurBall冻结候选残差读出 v1](blurball-candidate-residual-v1.md)：current/同址/软对应三条件共享零初始化残差和固定候选，保留当前分数，只有可达位置产生训练loss。
 - [BlurBall候选残差读出 v2](blurball-candidate-residual-v2.md)：保持v1数据/模型/优化，仅改为可接受4px候选集合概率监督，固定last评估训练精定位。
+
+- [BlurBall候选对应地址 v1](blurball-candidate-addresses-v1.md)：相同前16匹配分数下开关二维位移，检验地址相对纯分数的增量；复用已有外观缓存。
