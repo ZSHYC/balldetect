@@ -47,6 +47,8 @@
 
 前瞻专题：[输入长度与MIMO滑窗步长](literature/2026-09-13-future-context-attribution.md)，核对TrackNetV5和BlurBall的真实时间输入，避免将 `steps=1/3` 误认作输入帧数消融。
 
+候选训练专题：[视觉身份与候选来源](literature/2026-09-13-candidate-training-distribution.md)，用DCR与Stacked Generalization区分局部分类先例、训练残差偏差和按比赛交叉拟合的成本边界。
+
 | 笔记 | 要解决的问题 |
 |---|---|
 | [体育方法与数据协议](literature/sports_evidence.md) | TrackNet 系列及其他球定位工作到底使用了什么输入、标签和划分 |

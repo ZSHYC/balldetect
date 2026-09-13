@@ -99,4 +99,6 @@ train分母31,887，val分母11,432。训练总体平均初始loss为0.175957。
 
 ## 产物与成本范围
 
+进一步的[候选训练文献审查](../literature/2026-09-13-candidate-training-distribution.md)将上述建议限定为条件性诊断：DCR已有独立局部分类纠正误报的先例；交叉拟合可以改变修正器所见错误，但也改变源模型训练量和候选覆盖，不能默认作为修复或直接宣称新颖。
+
 `outputs/blurball/spatial_interaction/candidate_addresses/`新增`visual_competition.py`、`visual_selection.json`、`error_distribution.py`和`error_distribution.json`；图像在本页链接的assets目录。全部统计使用原缓存、候选、真实索引和现有连续边界。未运行新模型训练，未增加内容哈希，未改变数据标签或原预测。
