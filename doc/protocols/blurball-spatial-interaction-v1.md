@@ -60,3 +60,9 @@ absence仍为 `Linear(mean(GN(z))) + log(位置格数)`，但q是联合softmax�
 训练前检查真实区别是否被实现：相同seed初始张量与参数/MAC一致；自由z的跨地址混合导数一零一非零；原缺失logit、PixelShuffle形状及V1/V0梯度正确。再用实际完整batch8检查全模型loss/梯度有限、初始化一致、目标数和显存可用；失败则修实现，不启动正式运行。只验证本次变化，不重跑数据发布审计。
 
 实现、实际命令、进程与结果见[实验记录](../experiments/2026-09-12-blurball-spatial-interaction.md)。输出分别为 `outputs/blurball/dino_same_address_seed0/` 和 `outputs/blurball/dino_cross_address_seed0/`；共享一次性启动/验证记录放 `outputs/blurball/spatial_interaction/`。不添加依赖、哈希或实验管理框架。
+
+## 2026-09-13用户执行调整
+
+用户要求：若cross最佳轮次很靠前，则停止后续训练并直接推进。核实best为epoch3、epoch4–21连续18轮未超过后，结束剩余训练，使用原best3完成全部预测和固定读出。same实际30轮、cross实际完成21轮，原配置、日志及权重保留。
+
+上述v1保留为原先锁定的方案；本次后续结果标为开发比较。另核对共同epoch0–21选优和固定epoch21的argmax：两组保存best是否仍是该共同范围内的原F1最优，由分析入口直接验证。共同范围是用户调整后明确的分析条件，不改称训练前预设；cross没有epoch30结果，不能填入原固定epoch30配对。其余全部比赛/目标、时间窗口、读出、q、容差和条件群体保持。实际取舍见实验记录。

@@ -142,7 +142,12 @@ def main(run):
                 'peak_allocated_mib': torch.cuda.max_memory_allocated()/2**20}
         if not info['training_complete']:
             info['reference_protocol'] = info['protocol']
-            info['protocol'] = 'exploratory-interrupted-temporal-control'
+            info['protocol'] = ('blurball-spatial-interaction-development'
+                                if config.get('interaction', 'baseline') != 'baseline'
+                                else 'exploratory-interrupted-temporal-control')
+            info['completed_epochs'] = run_results['completed_epochs']
+            if 'stop_reason' in run_results:
+                info['stop_reason'] = run_results['stop_reason']
         (output / 'config.json').write_text(json.dumps(info, indent=2) + '\n')
     grid_xy = barycenters(centers, patches)
     dimensions = np.array([[r['width'], r['height']] for r in rows])
