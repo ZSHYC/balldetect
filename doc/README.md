@@ -91,6 +91,7 @@
 
 ## 协议与实验
 
+- [空间交互对照的失败拆分](experiments/2026-09-13-blurball-spatial-failures.md)：区分raw远错位与实际输出，约束下一步历史输入诊断。
 - [BlurBall训练I/O效率检查](experiments/2026-09-12-blurball-io-efficiency.md)：确认无重复解码，实测随机RGB读取等待并验证单批CPU预取，保留模型和训练语义。
 - [BlurBall压缩后空间交互](experiments/2026-09-12-blurball-spatial-interaction.md)：依据时序条件结果推进的同预算非线性位置对照；设置见[协议v1](protocols/blurball-spatial-interaction-v1.md)。
 - [实验协议说明](protocols/README.md)：协议文件的内容、命名和何时锁定。
