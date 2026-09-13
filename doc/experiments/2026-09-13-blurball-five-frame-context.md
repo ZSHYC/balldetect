@@ -91,3 +91,10 @@ python scripts/analyze_blurball_readout.py outputs/blurball/five_frame_context/c
 诊断产物为`outputs/blurball/context_feasibility/summary.json`与`gt_context_predictions.npz`，保存共同身份及拟合位置，避免改变阈值时重做拟合。真实单批证据为`outputs/blurball/five_frame_context/preflight.json`，一次性脚本也在对应输出目录。正式运行将保存实际代码版本、命令、config、history、best/last与预测。
 
 模型效果尚未得出。完成两臂共同验证之后，再根据位置、检测、逐比赛及救回/破坏决定物理路线，不先填预期增益。
+
+
+## 正式启动记录
+
+实施提交`e2ba179`后，已于2026-09-13 14:36（Asia/Shanghai）启动顺序任务。独立进程运行`outputs/blurball/five_frame_context/run_pair.sh`，启动记录在同目录`launch.json`，主进程PID3936244；首臂center5子进程PID3936247。实际配置确认输入`t−2:t+2`、target_slot2、12轮、batch4及共同37,590/13,912目标。
+
+首次观察时进程正在全量epoch0验证，随后进入训练；causal5尚在顺序任务后续，未声称已完成。各臂`train.log`与`history.jsonl`记录实际进展，退出状态保存在`exit_status.txt`。两臂完成后才作正式比较，单批检查及GT诊断不替代训练结果。
