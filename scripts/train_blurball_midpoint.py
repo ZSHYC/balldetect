@@ -1,4 +1,4 @@
-"""BlurBall原生因果三帧的DINOv3中点定位基线，不使用blur标签训练。"""
+"""BlurBall三帧基线及共同目标五帧上下文的DINOv3中点定位训练。"""
 import argparse
 import copy
 from concurrent.futures import ThreadPoolExecutor
@@ -16,16 +16,75 @@ from torch.nn import functional as F
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
-from ballmotion.blurball import continuous_windows, evaluate_blurball, source_coordinates
+from ballmotion.blurball import (continuous_windows, evaluate_blurball, source_coordinates,
+                                 temporal_windows)
 from ballmotion.tennis import grid_targets
 from train_tennis_heatmap import build_dino_model, model_input, predict, write_predictions
 
 GRID_HW = (288, 512)
+FIVE_FRAME_OFFSETS = {
+    'causal5': (-4, -3, -2, -1, 0),
+    'center5': (-2, -1, 0, 1, 2),
+}
 
 
 def compact(metrics):
     return {k: metrics[k] for k in ('location', 'detection4', 'author_detection4',
                                     'detection8', 'visibility')}
+
+
+def prepare_training_windows(frames, cached_windows, boundaries, window, temporal_input):
+    """构造实际模型输入；五帧两臂固定使用自然窗口的共同目标集合。"""
+    cached_windows = np.asarray(cached_windows, dtype=np.int64)
+    if window is None:
+        windows, removed_positions = continuous_windows(frames, cached_windows, boundaries)
+        target_slot = 2
+        info = {'excluded_target_indices': cached_windows[removed_positions, -1]}
+    else:
+        base_targets = cached_windows[:, -1]
+        natural = {}
+        excluded = {}
+        for name, offsets in FIVE_FRAME_OFFSETS.items():
+            arm_windows, arm_excluded = temporal_windows(
+                frames, base_targets, offsets, boundaries)
+            target_slot_for_arm = offsets.index(0)
+            natural[name] = arm_windows
+            excluded[name] = arm_excluded
+            if not np.array_equal(arm_windows[:, target_slot_for_arm],
+                                  base_targets[~np.isin(base_targets, arm_excluded)]):
+                raise ValueError(f'{name}窗口未保持缓存目标顺序')
+        excluded_union = np.union1d(excluded['causal5'], excluded['center5'])
+        common_targets = base_targets[~np.isin(base_targets, excluded_union)]
+        offsets = FIVE_FRAME_OFFSETS[window]
+        target_slot = offsets.index(0)
+        windows = natural[window]
+        windows = windows[np.isin(windows[:, target_slot], common_targets)]
+        if not np.array_equal(windows[:, target_slot], common_targets):
+            raise ValueError('五帧窗口没有对齐到共同目标顺序')
+
+        def counts(targets):
+            split = [frames[index]['split'] for index in targets]
+            return {'all': len(targets),
+                    **{name: split.count(name) for name in sorted(set(split))}}
+
+        info = {
+            'base_targets': counts(base_targets),
+            'natural_targets': {
+                name: counts(value[:, FIVE_FRAME_OFFSETS[name].index(0)])
+                for name, value in natural.items()
+            },
+            'common_targets': counts(common_targets),
+            'excluded_target_indices': {name: value for name, value in excluded.items()},
+        }
+    rows = [frames[index] for index in windows[:, target_slot]]
+    if temporal_input == 'repeat_current':
+        windows = np.repeat(windows[:, target_slot:target_slot + 1], windows.shape[1], axis=1)
+    return windows, rows, target_slot, info
+
+
+def target_id(frames, index):
+    row = frames[int(index)]
+    return {key: row[key] for key in ('game', 'clip', 'original_frame_id')}
 
 
 def prefetched_batches(rgb, windows, order, batch_size):
@@ -72,11 +131,15 @@ def main():
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--window', choices=tuple(FIVE_FRAME_OFFSETS))
     parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
     parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address'),
                         default='baseline')
     parser.add_argument('--resume', action='store_true', help='从输出目录的last.pt恢复完整轮次状态')
     args = parser.parse_args()
+    if args.window is not None and (args.interaction != 'cross_address'
+                                    or args.temporal_input != 'history'):
+        parser.error('五帧context-v1协议要求 --interaction cross_address --temporal-input history')
     if args.resume:
         if not (args.output / 'last.pt').exists() or not (args.output / 'config.json').exists():
             raise ValueError('续训需要原config.json和完整last.pt；仅best.pt不能无缝恢复')
@@ -95,16 +158,16 @@ def main():
         raise ValueError('开发源帧范围需要精确为match00–21')
     with args.boundaries.open(newline='') as handle:
         boundaries = list(csv.DictReader(handle))
-    windows, removed = continuous_windows(frames, metadata['windows'], boundaries)
-    removed_rows = [frames[metadata['windows'][i][-1]] for i in removed]
-    if args.temporal_input == 'repeat_current':
-        windows = np.repeat(windows[:, -1:], 3, axis=1)
-    rows = [frames[i] for i in windows[:, -1]]
+    cached_windows = np.asarray(metadata['windows'], dtype=np.int64)
+    cached_rows = [frames[index] for index in cached_windows[:, -1]]
+    if (sum(row['split'] == 'train' for row in cached_rows) != metadata['train_targets']
+            or sum(row['split'] == 'val' for row in cached_rows) != metadata['val_targets']):
+        raise ValueError('缓存目标划分计数与元信息不一致')
+    windows, rows, target_slot, window_info = prepare_training_windows(
+        frames, cached_windows, boundaries, args.window, args.temporal_input)
     train_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'train'])
     val_idx = np.array([i for i, r in enumerate(rows) if r['split'] == 'val'])
-    if (len(train_idx) + sum(r['split'] == 'train' for r in removed_rows) != metadata['train_targets']
-            or len(val_idx) + sum(r['split'] == 'val' for r in removed_rows) != metadata['val_targets']
-            or not len(train_idx) or not len(val_idx)):
+    if not len(train_idx) or not len(val_idx):
         raise ValueError('目标划分与缓存不一致')
     rgb = np.load(args.rgb_cache / 'rgb.npy', mmap_mode='r')
     if rgb.shape != (len(frames), 3, 288, 512) or rgb.dtype != np.uint8:
@@ -119,28 +182,33 @@ def main():
     device = torch.device('cuda')
     weights = ROOT / ('models/pretrained/dinov3/lvd1689m/'
                       'dinov3_convnext_tiny_pretrain_lvd1689m-21b726bb.pth')
-    model = build_dino_model(weights, upscale=8, interaction=args.interaction).to(device)
+    num_frames = windows.shape[1]
+    channels = 192 * num_frames
+    model = build_dino_model(weights, upscale=8, interaction=args.interaction,
+                             num_frames=num_frames).to(device)
     optimizer = torch.optim.AdamW([
         {'params': model.head.parameters(), 'lr': 3e-4, 'name': 'head'},
         {'params': model.prefix.parameters(), 'lr': 1e-5, 'name': 'prefix'},
     ], weight_decay=.01)
     config = {**{k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()
-                 if k != 'resume'},
+                 if k != 'resume' and not (k == 'window' and v is None)},
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': ('blurball-spatial-interaction-v1' if args.interaction != 'baseline' else
+              'protocol': ('blurball-five-frame-context-v1' if args.window is not None else
+                           'blurball-spatial-interaction-v1' if args.interaction != 'baseline' else
                            'blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
                            else 'blurball-causal-midpoint-v2'),
               'continuity_boundaries': boundaries,
-              'excluded_boundary_targets': [{k: r[k] for k in ('game', 'clip', 'original_frame_id')}
-                                            for r in removed_rows],
               'model': 'DINOv3 ConvNeXt-Tiny stages0–1 + random SpatialProbe',
-              'head': {'input_channels': 576, 'hidden_channels': 32, 'upscale': 8,
-                       'num_frames': 3, 'appearance_channels': 576},
+              'head': {'input_channels': channels, 'hidden_channels': 32, 'upscale': 8,
+                       'num_frames': num_frames, 'appearance_channels': channels},
               'output_grid_hw': GRID_HW, 'classes': 288*512+1,
-              'input_slots': (['t', 't', 't'] if args.temporal_input == 'repeat_current'
-                              else ['t-2', 't-1', 't']), 'target_slot': 2,
+              'input_slots': (["t"] * num_frames if args.temporal_input == 'repeat_current'
+                              else ([f't{offset:+d}' if offset else 't'
+                                     for offset in FIVE_FRAME_OFFSETS[args.window]]
+                                    if args.window is not None else ['t-2', 't-1', 't'])),
+              'target_slot': target_slot,
               'train_targets': len(train_idx), 'val_targets': len(val_idx),
               'loss': 'cross_entropy; V0=no valid visible midpoint; no theta/l supervision',
               'optimizer': {'name': 'AdamW', 'head_lr': 3e-4, 'prefix_lr': 1e-5,
@@ -153,6 +221,18 @@ def main():
               'device': torch.cuda.get_device_name(), 'torch_version': str(torch.__version__),
               'precision': 'float32; no AMP', 'augmentation': None,
               'timing_scope': 'RGB mmap + H2D + online model train/evaluation; excludes RGB cache creation'}
+    if args.window is None:
+        config['excluded_boundary_targets'] = [
+            target_id(frames, index) for index in window_info['excluded_target_indices']]
+    else:
+        config['five_frame_cohort'] = {
+            **{key: value for key, value in window_info.items()
+               if key != 'excluded_target_indices'},
+            'excluded_target_ids': {
+                name: [target_id(frames, index) for index in indices]
+                for name, indices in window_info['excluded_target_indices'].items()
+            },
+        }
     if args.interaction == 'baseline':
         config.pop('interaction')
     args.output.mkdir(parents=True, exist_ok=True)

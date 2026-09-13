@@ -95,6 +95,7 @@
 
 ## 协议与实验
 
+- [五帧因果与双向上下文](experiments/2026-09-13-blurball-five-frame-context.md)：真实窗口/目标排除GT诊断、共同目标的两臂视觉实验与未来观测归因；执行[协议v1](protocols/blurball-five-frame-context-v1.md)。
 - [错误对应的视觉身份与难例分布](experiments/2026-09-13-blurball-match-competition.md)：12例缓存图和训练／验证条件分布，解释为何可靠对应与平滑路径仍不能确定球身份。
 - [多个匹配地址的独立增量](experiments/2026-09-13-blurball-candidate-addresses.md)：前16地址覆盖较高，但两条件各30轮后地址拼接未胜过分数参考；停止该配方，转向具体候选竞争。
 - [集合监督与对应增量](experiments/2026-09-13-blurball-candidate-set-supervision.md)：只改监督后训练精定位恢复，同址历史成为较强对照；全图软池化仍未获独立增益，明确其空间地址丢失。

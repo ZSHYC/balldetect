@@ -4,6 +4,32 @@ import numpy as np
 from .probe import _counts
 
 
+def temporal_windows(frames, target_indices, offsets, boundaries):
+    """从原始帧号构造指定目标的输入；返回合法窗口和被排除的目标帧索引。"""
+    offsets = tuple(offsets)
+    if not offsets or tuple(sorted(set(offsets))) != offsets or 0 not in offsets:
+        raise ValueError('时间offset需递增、无重复且含目标0')
+    target_indices = np.asarray(target_indices, dtype=np.int64)
+    lookup = {(r['match'], r['rally'], int(r['original_frame_id'])): i
+              for i, r in enumerate(frames)}
+    windows, positions = [], []
+    keep = np.zeros(len(target_indices), dtype=bool)
+    for position, target in enumerate(target_indices):
+        row = frames[target]
+        frame = int(row['original_frame_id'])
+        window = [lookup.get((row['match'], row['rally'], frame + offset), -1)
+                  for offset in offsets]
+        if min(window) >= 0:
+            windows.append(window)
+            positions.append(position)
+            keep[position] = True
+    windows = np.asarray(windows, dtype=np.int64).reshape(-1, len(offsets))
+    windows, crossing = continuous_windows(frames, windows, boundaries)
+    if len(crossing):
+        keep[np.asarray(positions)[crossing]] = False
+    return windows, target_indices[~keep]
+
+
 def continuous_windows(frames, windows, boundaries):
     """在按rally/原Frame排列的既有缓存上剔除跨已确认内部时间边界的窗口。"""
     windows = np.asarray(windows, dtype=np.int64)

@@ -13,8 +13,9 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
-from ballmotion.blurball import continuous_windows, evaluate_blurball, source_coordinates
+from ballmotion.blurball import evaluate_blurball, source_coordinates
 from ballmotion.tennis import grid_to_original
+from train_blurball_midpoint import FIVE_FRAME_OFFSETS, prepare_training_windows
 from train_tennis_heatmap import build_dino_model, write_predictions
 
 
@@ -51,8 +52,9 @@ def batch_logits(model, rgb, batch_windows, device):
     """复用批内源帧编码，按原时间槽顺序返回完整logits。"""
     unique, inverse = np.unique(batch_windows, return_inverse=True)
     features = model.encode(torch.from_numpy(rgb[unique]).to(device))
+    num_frames = batch_windows.shape[1]
     features = features[torch.from_numpy(inverse).to(device)].reshape(
-        len(batch_windows), 3 * features.shape[1], *features.shape[-2:])
+        len(batch_windows), num_frames * features.shape[1], *features.shape[-2:])
     return model.head(features)
 
 
@@ -96,13 +98,20 @@ def main(run):
     run_results = json.loads((run / 'results.json').read_text())
     metadata = json.loads((Path(config['rgb_cache']) / 'metadata.json').read_text())
     frames = metadata['frames']
-    windows, _ = continuous_windows(frames, metadata['windows'], config['continuity_boundaries'])
     # 较早history运行的配置没有temporal_input；它们均使用真实三帧。
     temporal_input = config.get('temporal_input', 'history')
-    if temporal_input == 'repeat_current':
-        windows = np.repeat(windows[:, -1:], 3, axis=1)
-    indices = np.array([i for i, window in enumerate(windows) if frames[window[-1]]['split'] == 'val'])
-    rows = [frames[windows[i, -1]] for i in indices]
+    window = config.get('window')
+    windows, all_rows, target_slot, _ = prepare_training_windows(
+        frames, metadata['windows'], config['continuity_boundaries'], window, temporal_input)
+    if config.get('target_slot', 2) != target_slot:
+        raise ValueError('训练配置的target_slot与重建窗口不一致')
+    offsets = FIVE_FRAME_OFFSETS[window] if window is not None else (-2, -1, 0)
+    input_slots = (["t"] * len(offsets) if temporal_input == 'repeat_current' else
+                   [f't{offset:+d}' if offset else 't' for offset in offsets])
+    if config.get('input_slots', input_slots) != input_slots:
+        raise ValueError('训练配置的input_slots与重建窗口不一致')
+    indices = np.flatnonzero([row['split'] == 'val' for row in all_rows])
+    rows = [all_rows[i] for i in indices]
     with (run / 'val_predictions.csv').open(newline='') as handle:
         original = list(csv.DictReader(handle))
     key = lambda r: (r['game'], r['clip'], int(r['original_frame_id']))
@@ -119,8 +128,11 @@ def main(run):
     else:
         torch.set_num_threads(4)
         device = torch.device('cuda')
+        num_frames = windows.shape[1]
+        batch_size = config['batch_size'] if window is not None else 8
         model = build_dino_model(config['weights'], upscale=8,
-                                 interaction=config.get('interaction', 'baseline')).to(device)
+                                 interaction=config.get('interaction', 'baseline'),
+                                 num_frames=num_frames).to(device)
         checkpoint = torch.load(run / 'best.pt', map_location=device, weights_only=True)
         selected_epoch = run_results['best_epoch']
         assert checkpoint['epoch'] == selected_epoch, 'Checkpoint must match saved argmax selection'
@@ -130,8 +142,8 @@ def main(run):
         centers, patches, q = [], [], []
         torch.cuda.reset_peak_memory_stats()
         with torch.inference_mode():
-            for start in range(0, len(indices), 8):
-                batch_windows = windows[indices[start:start+8]]
+            for start in range(0, len(indices), batch_size):
+                batch_windows = windows[indices[start:start+batch_size]]
                 center, patch, probability = batch_readout(model, rgb, batch_windows, device)
                 centers.append(center.cpu().numpy())
                 patches.append(patch.cpu().numpy())
@@ -151,12 +163,14 @@ def main(run):
                 'temporal_input': temporal_input,
                 'interaction': config.get('interaction', 'baseline'),
                 'checkpoint_epoch': checkpoint['epoch'], 'radius_cells': 7, 'temperature': 1,
-                'batch_size': 8, 'precision': 'float32 model/logits; float64 CPU expectation',
+                'batch_size': batch_size, 'precision': 'float32 model/logits; float64 CPU expectation',
                 'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                 'argmax_exact': True, 'max_q_difference': difference, 'output_decisions_equal': True,
                 'forward_elapsed_seconds': time.perf_counter()-started,
                 'timing_scope': 'metadata/model load + RGB/H2D/forward + local extraction/verification/cache write',
                 'peak_allocated_mib': torch.cuda.max_memory_allocated()/2**20}
+        if window is not None:
+            info.update(window=window, input_slots=input_slots, target_slot=target_slot)
         if not info['training_complete']:
             info['reference_protocol'] = info['protocol']
             info['protocol'] = ('blurball-spatial-interaction-development'
