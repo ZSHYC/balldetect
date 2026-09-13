@@ -92,6 +92,8 @@ python scripts/analyze_blurball_readout.py outputs/blurball/five_frame_context/c
 
 模型效果尚未得出。完成两臂共同验证之后，再根据位置、检测、逐比赛及救回/破坏决定物理路线，不先填预期增益。
 
+后续已完成[真实单帧预测的前后轨迹诊断](2026-09-13-blurball-predicted-context.md)：GT 支撑的几何潜力与实际预测存在明显差距，高置信低残差不能单独保证球身份。该诊断不改变本次五帧 RGB 联合训练协议，也不代替其结果。
+
 
 ## 正式启动记录
 
