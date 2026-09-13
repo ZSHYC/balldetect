@@ -58,3 +58,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall有限候选覆盖 v1](blurball-candidate-coverage-v1.md)：真实三帧与固定最佳权重下，用无GT候选的oracle覆盖约束候选搜索路线。
 - [BlurBall候选因果时序重排 v1](blurball-candidate-temporal-v1.md)：仅训练侧选择静止/常速几何强度，原q保持，明确五帧因果支持与三帧基线的差别。
 - [BlurBall原三帧候选对应 v1](blurball-candidate-correspondence-v1.md)：固定两层描述符，以候选query对历史全图格匹配，分开条件对应与无GT支持读出。
+- [BlurBall历史单帧球证据 v1](blurball-history-ball-evidence-v1.md)：原三帧内复用历史单帧预测，固定双历史支持与原排序回退，分开球身份和对应的错误。

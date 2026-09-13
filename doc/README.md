@@ -91,6 +91,7 @@
 
 ## 协议与实验
 
+- [历史球证据与硬筛损失](experiments/2026-09-13-blurball-history-ball-evidence.md)：复用单帧预测仍净破坏611个4px位置，分开历史定位、对应失败和精位置损失，停止历史top1硬筛。
 - [候选视觉对应与身份竞争](experiments/2026-09-13-blurball-candidate-correspondence.md)：原三帧中球query存在条件对应，稳定干扰物却赢得最高相似度，约束“匹配可靠即球可靠”的解释。
 - [候选的因果时序重排](experiments/2026-09-13-blurball-candidate-temporal.md)：训练侧选到零强度，低残差常速收益被高残差和不可见历史条件的损失抵消。
 - [真实输入的有限候选覆盖](experiments/2026-09-13-blurball-candidate-coverage.md)：次候选保留部分球位置，oracle上限同时暴露细定位与候选遗漏的限制。
