@@ -64,3 +64,4 @@
 - [2026-09-12：BlurBall压缩后空间交互](2026-09-12-blurball-spatial-interaction.md)：同预算移动GELU，记录真实batch验证与两组完整训练。
 - [2026-09-12：BlurBall训练I/O效率](2026-09-12-blurball-io-efficiency.md)：实际解码/重复编码与读取等待检查、CPU单批预取和数值正确性验证。
 - [2026-09-13：空间交互失败拆分](2026-09-13-blurball-spatial-failures.md)：match21的raw退步主要进入拒绝状态，完整连续段与固定正反向图例。
+- [2026-09-13：固定权重历史输入诊断](2026-09-13-blurball-history-input-probe.md)：完整推理干预未修复202个固定错误中的200个，并造成全体明显退化。

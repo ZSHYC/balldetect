@@ -41,6 +41,17 @@ def barycenters(center, patches):
                                      (mass * offset[None, :, None]).sum(axis=(1, 2))))
 
 
+def batch_readout(model, rgb, batch_windows, device):
+    """复用批内源帧编码，按原时间槽顺序返回argmax邻域和原q。"""
+    unique, inverse = np.unique(batch_windows, return_inverse=True)
+    features = model.encode(torch.from_numpy(rgb[unique]).to(device))
+    features = features[torch.from_numpy(inverse).to(device)].reshape(
+        len(batch_windows), 3 * features.shape[1], *features.shape[-2:])
+    logits = model.head(features)
+    center, patch = local_patches(logits[:, :-1].reshape(-1, 288, 512))
+    return center, patch, 1 - logits.softmax(1)[:, -1]
+
+
 def paired_groups(rows, old, new):
     target = np.array([[r['x_raw'], r['y_raw']] for r in rows])
     old_error, new_error = np.linalg.norm(old-target, axis=1), np.linalg.norm(new-target, axis=1)
@@ -110,15 +121,10 @@ def main(run):
         with torch.inference_mode():
             for start in range(0, len(indices), 8):
                 batch_windows = windows[indices[start:start+8]]
-                unique, inverse = np.unique(batch_windows, return_inverse=True)
-                features = model.encode(torch.from_numpy(rgb[unique]).to(device))
-                features = features[torch.from_numpy(inverse).to(device)].reshape(
-                    len(batch_windows), 3 * features.shape[1], *features.shape[-2:])
-                logits = model.head(features)
-                center, patch = local_patches(logits[:, :-1].reshape(-1, 288, 512))
+                center, patch, probability = batch_readout(model, rgb, batch_windows, device)
                 centers.append(center.cpu().numpy())
                 patches.append(patch.cpu().numpy())
-                q.append((1 - logits.softmax(1)[:, -1]).cpu().numpy())
+                q.append(probability.cpu().numpy())
                 if start % 800 == 0:
                     print(f'validation {start+len(batch_windows)}/{len(indices)}', flush=True)
         centers, patches, q = np.concatenate(centers), np.concatenate(patches), np.concatenate(q)
