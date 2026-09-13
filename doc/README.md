@@ -43,6 +43,8 @@
 
 ## 文献证据
 
+现代检测器专题：[RF-DETR与近期高效检测的迁移审查](literature/2026-09-13-modern-detectors-transfer.md)，覆盖RT-DETR系列、D-FINE、DEIM/v2、TinyFormer、近期YOLO与微小目标DETR，结合源码、消融和本地失败区分细节保留、候选分配与跨帧对应。
+
 新增：[球类物理先验与适用条件](literature/2026-09-13-ball-physics-priors.md)，覆盖三维重建、物理候选关联、2026联合损失与BlurBall最新相关段落。
 
 前瞻专题：[输入长度与MIMO滑窗步长](literature/2026-09-13-future-context-attribution.md)，核对TrackNetV5和BlurBall的真实时间输入，避免将 `steps=1/3` 误认作输入帧数消融。
