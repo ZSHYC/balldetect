@@ -56,3 +56,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall完整时序输入控制 v1](blurball-full-temporal-control-v1.md)：同argmax选优及共同局部重心下，完整重训repeat_current检验真实历史增量。
 - [BlurBall压缩后空间交互 v1](blurball-spatial-interaction-v1.md)：同卷积、初始化与30轮预算，只移动邻域汇合前后的GELU，区分空间交互与输出状态变化。
 - [BlurBall有限候选覆盖 v1](blurball-candidate-coverage-v1.md)：真实三帧与固定最佳权重下，用无GT候选的oracle覆盖约束候选搜索路线。
+- [BlurBall候选因果时序重排 v1](blurball-candidate-temporal-v1.md)：仅训练侧选择静止/常速几何强度，原q保持，明确五帧因果支持与三帧基线的差别。

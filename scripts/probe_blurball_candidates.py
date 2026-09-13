@@ -53,6 +53,34 @@ def coverage(rows, xy, masks, budgets=(1, 2, 4, 8, 16)):
     return result
 
 
+def extract_candidate_arrays(model, rgb, windows, rows, device, batch_size, progress_label=None):
+    """一次固定模型forward导出K16候选；候选提取不读取GT标签。"""
+    centers, local, scores, probabilities = [], [], [], []
+    for start in range(0, len(rows), batch_size):
+        batch_windows = windows[start:start + batch_size]
+        logits = batch_logits(model, rgb, batch_windows, device)
+        center, score, patch = greedy_candidates(logits[:, :-1].reshape(-1, 288, 512))
+        center = center.cpu().numpy()
+        local.append(barycenters(
+            center.reshape(-1, 2), patch.cpu().numpy().reshape(-1, 15, 15)
+        ).reshape(len(center), 16, 2))
+        centers.append(center)
+        scores.append(score.cpu().numpy())
+        probabilities.append((1 - logits.softmax(1)[:, -1]).cpu().numpy())
+        if progress_label and start % 1600 == 0:
+            print(f'{progress_label}: {start + len(center)}/{len(rows)}', flush=True)
+    centers, local, scores, q = map(np.concatenate, (centers, local, scores, probabilities))
+    dimensions = np.array([[r['width'], r['height']] for r in rows])
+    return {
+        'grid_centers': centers,
+        'original_xy': (centers + .5) * dimensions[:, None] / [512, 288] - .5,
+        'local_xy': (local + .5) * dimensions[:, None] / [512, 288] - .5,
+        'peak_logits': scores,
+        'q': q,
+        'current_frame_ids': windows[:, -1],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--same', type=Path, required=True)
@@ -81,7 +109,6 @@ def main():
     masks['fixed/match21_lost16'] = match21 & visible & (errors['same_address'] < 16) & (errors['cross_address'] >= 16)
     masks['fixed/match21_rescued16'] = match21 & visible & (errors['same_address'] >= 16) & (errors['cross_address'] < 16)
     assert masks['fixed/match21_lost16'].sum() == 202 and masks['fixed/match21_rescued16'].sum() == 74
-    dimensions = np.array([[r['width'], r['height']] for r in rows])
     rgb = np.load(ROOT / config['rgb_cache'] / 'rgb.npy', mmap_mode='r')
     args.output.mkdir(parents=True)
     result = {'protocol': 'blurball-candidate-coverage-v1', 'target_count': len(rows),
@@ -102,31 +129,18 @@ def main():
         model = build_dino_model(c['weights'], upscale=8, interaction=name).to(device)
         model.load_state_dict(checkpoint['model'])
         model.eval()
-        centers, local, scores, probabilities = [], [], [], []
         torch.cuda.reset_peak_memory_stats()
         with torch.inference_mode():
-            for start in range(0, len(rows), c['batch_size']):
-                batch_windows = windows[start:start+c['batch_size']]
-                logits = batch_logits(model, rgb, batch_windows, device)
-                center, score, patch = greedy_candidates(logits[:, :-1].reshape(-1, 288, 512))
-                center = center.cpu().numpy()
-                local.append(barycenters(center.reshape(-1, 2), patch.cpu().numpy().reshape(-1, 15, 15)).reshape(len(center), 16, 2))
-                centers.append(center)
-                scores.append(score.cpu().numpy())
-                probabilities.append((1-logits.softmax(1)[:, -1]).cpu().numpy())
-                if start % 1600 == 0:
-                    print(f'{name}: {start+len(center)}/{len(rows)}', flush=True)
-        centers, local, scores, q = map(np.concatenate, (centers, local, scores, probabilities))
-        xy = (centers+.5)*dimensions[:, None]/[512, 288]-.5
-        local_xy = (local+.5)*dimensions[:, None]/[512, 288]-.5
+            arrays = extract_candidate_arrays(
+                model, rgb, windows, rows, device, c['batch_size'], progress_label=name)
+        xy, local_xy, q = (arrays[k] for k in ('original_xy', 'local_xy', 'q'))
         assert np.array_equal(xy[:, 0], original[name]['argmax'][0]), 'first candidate argmax drift'
         np.testing.assert_allclose(local_xy[:, 0], original[name]['local_readout'][0], rtol=0, atol=1e-10)
         max_q_difference = float(np.abs(q-original[name]['argmax'][1]).max())
         assert max_q_difference <= 1e-6
         assert np.array_equal(q >= .5, original[name]['argmax'][1] >= .5)
         forward_seconds = time.perf_counter()-started
-        np.savez(args.output / f'{name}.npz', grid_centers=centers, original_xy=xy,
-                 local_xy=local_xy, peak_logits=scores, q=q, current_frame_ids=windows[:, -1])
+        np.savez(args.output / f'{name}.npz', **arrays)
         model_masks = dict(masks, original_emitted=q >= .5, original_rejected=q < .5)
         result['models'][name] = {'source_run': str(run), 'checkpoint_epoch': checkpoint['epoch'],
             'first_candidate_reproduced': True, 'max_q_difference': max_q_difference,

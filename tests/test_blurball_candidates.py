@@ -1,12 +1,37 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import torch
 
-from scripts.probe_blurball_candidates import greedy_candidates, coverage
+from scripts.probe_blurball_candidates import coverage, extract_candidate_arrays, greedy_candidates
 
 
 class CandidateTest(unittest.TestCase):
+    def test_extract_candidate_arrays_batches_and_preserves_export_contract(self):
+        windows = np.array([[0, 1, 2], [3, 4, 5]])
+        rows = [dict(width=512, height=288), dict(width=1024, height=576)]
+        logits = []
+        for x, y, presence in ((10, 20, 0.), (30, 40, 1.)):
+            value = torch.full((1, 288 * 512 + 1), -20.)
+            value[0, y * 512 + x] = 10.
+            value[0, -1] = presence
+            logits.append(value)
+
+        with patch('scripts.probe_blurball_candidates.batch_logits', side_effect=logits) as forward:
+            result = extract_candidate_arrays(object(), np.empty(0), windows, rows,
+                                              torch.device('cpu'), batch_size=1)
+
+        self.assertEqual(forward.call_count, 2)
+        np.testing.assert_array_equal(result['grid_centers'][:, 0], [[10, 20], [30, 40]])
+        np.testing.assert_array_equal(result['original_xy'][:, 0], [[10, 20], [60.5, 80.5]])
+        np.testing.assert_array_equal(result['current_frame_ids'], [2, 5])
+        self.assertEqual(result['grid_centers'].shape, (2, 16, 2))
+        self.assertEqual(result['local_xy'].shape, (2, 16, 2))
+        self.assertEqual(result['peak_logits'].shape, (2, 16))
+        np.testing.assert_allclose(
+            result['q'], [0.99995458, 0.99987662], rtol=0, atol=1e-7)
+
     def test_suppression_ties_edges_and_original_patch(self):
         spatial = torch.full((1, 32, 32), -20.)
         spatial[0, 0, 0], spatial[0, 0, 1] = 10., 9.
