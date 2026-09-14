@@ -44,3 +44,10 @@ def test_raw_rescue_remains_separate_from_emitted_rescue():
     assert paired['legacy/example']['correct_emitted']['4']['rescued'] == 0
     assert paired['all']['raw_position']['4']['broken_by_center5'] == 1
     assert paired['all']['paired_decisions']['matrix_axes'] == {'rows': 'causal5', 'columns': 'center5'}
+
+    short = module.comparison_groups(rows, before, q, after, q, masks,
+                                     before_name='center5', after_name='center3')
+    assert short['all']['center5'] == paired['all']['causal5']
+    assert short['all']['center3'] == paired['all']['center5']
+    assert short['legacy/example']['raw_position']['4']['rescued_by_center3'] == 1
+    assert short['all']['paired_decisions']['matrix_axes'] == {'rows': 'center5', 'columns': 'center3'}

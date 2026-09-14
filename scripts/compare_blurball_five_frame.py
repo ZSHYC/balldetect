@@ -16,7 +16,7 @@ from compare_blurball_temporal import (
     paired_raw,
     read_predictions,
 )
-from train_blurball_midpoint import prepare_training_windows
+from train_blurball_midpoint import WINDOW_OFFSETS, prepare_training_windows
 
 RADII = (4, 8, 16)
 
@@ -110,7 +110,8 @@ def diagnostic_groups(rows, frames, old_rows, old_xy, same_xy, candidate_xy):
                    'context_definition': 'current V1; any V1 in t-2/t-1 versus any V1 in t+1/t+2; V0 is not proof of no physical ball'}
 
 
-def comparison_groups(rows, before_xy, before_q, after_xy, after_q, extra_masks=None):
+def comparison_groups(rows, before_xy, before_q, after_xy, after_q, extra_masks=None,
+                      *, before_name='causal5', after_name='center5'):
     games = np.array([row['game'] for row in rows])
     visible = np.array([row['visibility_raw'] == 1 for row in rows])
     lengths = np.array([row['l_raw'] for row in rows], dtype=float)
@@ -134,17 +135,17 @@ def comparison_groups(rows, before_xy, before_q, after_xy, after_q, extra_masks=
         selected_rows = [rows[index] for index in ids]
         raw = paired_raw(rows, after_xy, before_xy, mask)
         raw = {radius: {
-            key.replace('by_history', 'by_center5').replace('net_history', 'net_center5'): value
+            key.replace('by_history', f'by_{after_name}').replace('net_history', f'net_{after_name}'): value
             for key, value in counts.items()
         } for radius, counts in raw.items()}
         decisions = paired_decisions(
             selected_rows, after_xy[ids], after_q[ids], before_xy[ids], before_q[ids])
-        decisions['matrix_axes'] = {'rows': 'causal5', 'columns': 'center5'}
+        decisions['matrix_axes'] = {'rows': before_name, 'columns': after_name}
         result[name] = {
             'n_targets': len(ids),
-            'causal5': evaluate_blurball(
+            before_name: evaluate_blurball(
                 selected_rows, before_xy[ids], before_q[ids], grouped=False),
-            'center5': evaluate_blurball(
+            after_name: evaluate_blurball(
                 selected_rows, after_xy[ids], after_q[ids], grouped=False),
             'raw_position': raw,
             'correct_emitted': emitted_pairs(
@@ -165,8 +166,9 @@ def load_arm(path, metadata):
         raise ValueError(f'{path} target_slot与窗口不一致')
     val_ids = np.flatnonzero([row['split'] == 'val' for row in all_rows])
     rows = [all_rows[index] for index in val_ids]
-    if len(rows) != config['val_targets'] or windows.shape[1] != 5:
-        raise ValueError(f'{path} 五帧共同目标计数不一致')
+    if (len(rows) != config['val_targets']
+            or windows.shape[1] != len(WINDOW_OFFSETS[config['window']])):
+        raise ValueError(f'{path} 上下文共同目标计数或帧数不一致')
 
     history = [json.loads(line) for line in (path/'history.jsonl').read_text().splitlines()]
     completed = max(record['epoch'] for record in history)
