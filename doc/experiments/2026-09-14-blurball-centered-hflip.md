@@ -42,3 +42,5 @@
 ```
 
 输出目录保存配置、日志、best/last和预测；顺序脚本`outputs/blurball/centered_hflip/run_center5.sh`在训练成功后执行固定局部读出与保存预测比较。启动版本、PID、时间在同目录`launch.json`，退出码为`exit_status.txt`。本次启动UTC时间2026-09-14 05:53:58，代码0674951，顺序脚本PID547348、训练子进程547351；启动后已确认进程存活和实际配置符合增强协议。以上PID仅用于本次运行追踪。
+
+启动后初始全量验证完成：新运行`history.jsonl`的epoch0各项已记录指标，与原center5的`results.json.initial_val`对应项完全一致。比较直接读取两份保存结果，没有额外forward。这支持相同初始化和验证路径的控制；尚不涉及训练后的增强收益。
