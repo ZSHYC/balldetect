@@ -88,6 +88,20 @@ def target_id(frames, index):
     return {key: row[key] for key in ('game', 'clip', 'original_frame_id')}
 
 
+def horizontal_flip_targets(rows, grid_hw):
+    """反射源像素中心后量化；直接翻转离散类别会改变量化边界的归属。"""
+    return grid_targets(
+        [[r['width'] - 1 - r['x_raw'], r['y_raw']] for r in rows],
+        [r['visibility_raw'] == 1 for r in rows], grid_hw,
+        ([r['height'] for r in rows], [r['width'] for r in rows]))
+
+
+def horizontal_flip_batch(pixels, targets, reflected_targets, flipped):
+    """原地修改预取器拥有的CPU batch；每个窗口的所有时间槽共同翻转。"""
+    pixels[flipped] = pixels[flipped].flip(-1)
+    return pixels, torch.where(flipped, reflected_targets, targets)
+
+
 def prefetched_batches(rgb, windows, order, batch_size):
     """只预取下一个CPU RGB batch；GPU计算和采样顺序仍由主线程负责。"""
     def load(ids):
@@ -136,11 +150,15 @@ def main():
     parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
     parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address'),
                         default='baseline')
+    parser.add_argument('--augmentation', choices=('hflip',), default=None,
+                        help='训练窗口以0.5概率同步水平翻转；验证不增强')
     parser.add_argument('--resume', action='store_true', help='从输出目录的last.pt恢复完整轮次状态')
     args = parser.parse_args()
     if args.window is not None and (args.interaction != 'cross_address'
                                     or args.temporal_input != 'history'):
         parser.error('上下文协议要求 --interaction cross_address --temporal-input history')
+    if args.augmentation and args.window not in ('center3', 'center5'):
+        parser.error('同步翻转对照仅使用center3或center5共同目标窗口')
     if args.resume:
         if not (args.output / 'last.pt').exists() or not (args.output / 'config.json').exists():
             raise ValueError('续训需要原config.json和完整last.pt；仅best.pt不能无缝恢复')
@@ -176,6 +194,11 @@ def main():
     targets = grid_targets([[r['x_raw'], r['y_raw']] for r in rows],
                            [r['visibility_raw'] == 1 for r in rows], GRID_HW,
                            ([r['height'] for r in rows], [r['width'] for r in rows]))
+    reflected_targets = None
+    if args.augmentation == 'hflip':
+        reflected_targets = targets.copy()
+        reflected_targets[train_idx] = horizontal_flip_targets(
+            [rows[i] for i in train_idx], GRID_HW)
 
     torch.set_num_threads(4)
     torch.manual_seed(args.seed)
@@ -196,7 +219,8 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': ('blurball-centered-length-v1' if args.window == 'center3' else
+              'protocol': ('blurball-centered-hflip-v1' if args.augmentation else
+                           'blurball-centered-length-v1' if args.window == 'center3' else
                            'blurball-five-frame-context-v1' if args.window is not None else
                            'blurball-spatial-interaction-v1' if args.interaction != 'baseline' else
                            'blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
@@ -221,8 +245,10 @@ def main():
               'presence_probability_column': 'probability of a valid visible midpoint; threshold 0.5',
               'total_parameters': sum(p.numel() for p in model.parameters()),
               'device': torch.cuda.get_device_name(), 'torch_version': str(torch.__version__),
-              'precision': 'float32; no AMP', 'augmentation': None,
+              'precision': 'float32; no AMP', 'augmentation': args.augmentation,
               'timing_scope': 'RGB mmap + H2D + online model train/evaluation; excludes RGB cache creation'}
+    if args.augmentation:
+        config['augmentation_probability'] = .5
     if args.window is None:
         config['excluded_boundary_targets'] = [
             target_id(frames, index) for index in window_info['excluded_target_indices']]
@@ -310,8 +336,13 @@ def main():
         processed = 0
         for batch_index, (ids, pixels) in enumerate(
                 prefetched_batches(rgb, windows, order, args.batch_size)):
+            batch_targets = torch.from_numpy(targets[ids])
+            if reflected_targets is not None:
+                pixels, batch_targets = horizontal_flip_batch(
+                    pixels, batch_targets, torch.from_numpy(reflected_targets[ids]),
+                    torch.rand(len(ids)) < .5)
             logits = model(pixels.to(device))
-            loss = F.cross_entropy(logits, torch.from_numpy(targets[ids]).to(device))
+            loss = F.cross_entropy(logits, batch_targets.to(device))
             if not torch.isfinite(loss):
                 raise ValueError(f'Non-finite loss at epoch {epoch}')
             optimizer.zero_grad(set_to_none=True)
