@@ -22,6 +22,10 @@
 
 原无增强权重及候选继续保留，不重训；本轮复用RGB缓存，一次前向导出候选后用保存数组统计，没有重复视频解码，也没有使用最终测试集。
 
+## 正在运行：目标/支持独立激活
+
+[同参顺序控制](../experiments/2026-09-14-blurball-temporal-activation.md)已启动12轮：原投影拆成目标和支持两部分，各自GELU后相加，后续空间头不变。参数与初始state_dict完全相同、线性极限等价、真实B4及独立复核均通过；原center5+hflip直接复用。该实验检验处理顺序，不预称为新motion表示或信息恢复。
+
 ## 后续机制与计算约束
 
 [现代检测器审查](../literature/2026-09-13-modern-detectors-transfer.md)和[参考/支持帧聚合补查](../literature/2026-09-14-reference-support-aggregation.md)限制了直接照搬RF-DETR、teacher、细节分支和时序attention的理由。当前帧路径、stage0细节、深语义、跨地址支持和输出状态是不同假设；同一特征的线性当前帧投影若加在原第一投影处，可以被原权重吸收，不能只凭“两分支”命名宣称新机制。
