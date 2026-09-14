@@ -104,7 +104,7 @@
 ## 协议与实验
 
 - [五帧最终比较与输出分解](experiments/2026-09-14-blurball-five-frame-results.md)：两臂各12轮完成；双向提高四场原位置，但输出拒绝抵消部分收益；[三帧双向长度控制](experiments/2026-09-14-blurball-centered-length.md)也已完成。
-- [目标/支持独立激活](experiments/2026-09-14-blurball-temporal-activation.md)：固定center5+hflip与参数量，直接控制第一次时间合并顺序；[协议](protocols/blurball-temporal-activation-v1.md)已锁定，运行前验证通过。
+- [目标/支持独立激活](experiments/2026-09-14-blurball-temporal-activation.md)：固定center5+hflip与参数量，直接控制第一次时间合并顺序；12轮结果为负，按[协议](protocols/blurball-temporal-activation-v1.md)停止配方。
 - [三帧双向长度控制执行](experiments/2026-09-14-blurball-centered-length.md)：完整12轮比较：三帧F1接近但原位置退步；保留center5；[同步翻转控制](experiments/2026-09-14-blurball-centered-hflip.md)也已完成，局部F1@4升至86.0234%，增强后候选诊断已记录。
 - [center5新候选覆盖](experiments/2026-09-14-blurball-centered-candidates.md)：新K16及固定q上限、源分辨率样例、旧单帧互补与拒绝回退反例，约束细节和当前帧路径的动机。
 
