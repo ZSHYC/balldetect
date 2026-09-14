@@ -109,6 +109,24 @@ RT-DETRv3说明一个有价值的研究方法：若推理结构保持不变，�
 
 RT-DETRv4的高层语义蒸馏更适合“轻量学生需要从teacher获得语义”的情形。对本项目而言，现有浅前缀可能缺少深层上下文，但这个假设应与局部细节缺失分别测试。直接同时加入深层teacher、浅层分支和新motion模块，会失去区分它们的机会。
 
+### 5.1 补查RT-DETRv4：深语义蒸馏不能直接复制到浅前缀
+
+2026-09-14补查。arXiv记录仍只有2025-10-29的v1；作者仓库已在2026-06-18宣布ECCV2026录用。下述方法和表格依据v1，源码固定为上游提交`55fefaaed7efe2a5f72d0a18fd4e05965e35c292`，不把作者公告与另行核验的正式会议版本混称。[版本记录](https://arxiv.org/abs/2510.25257)、[作者公告](https://github.com/RT-DETRs/RT-DETRv4/tree/55fefaaed7efe2a5f72d0a18fd4e05965e35c292)。
+
+**注入位置的负结果比模型名更有用。** v1 Table 3的36轮设置中，DEIM-L基线53.8 AP；只对S3/S4/S5分别蒸馏为53.7/53.7/53.8，三个backbone层共同蒸馏53.7，连同F5一起蒸馏53.8，仅AIFI后的F5蒸馏54.3。它支持特定节点选择，不能推出“每层都应匹配teacher”。同表没有提供这些位置各自的微小球严格中心误差。[论文§3、Table 3](https://arxiv.org/html/2510.25257v1#S4.T3)。
+
+**发布teacher不是全分辨率细节监督。** `DINOv3TeacherModel.forward`先对归一化图像做2×2平均池化，再进入冻结的ViT-B/16，取归一化patch tokens；展平后按平方根恢复正方形网格。按本项目512×288输入推算，池化后256×144、patch网格16×9，共144个token；该恢复逻辑会得到12×12，token数量检查通过但空间布局错误。这是读取代码后的形状推导，没有运行上游teacher或修改其实现。若采用，必须按真实二维网格恢复；不能用正方形假设，也不能把这个teacher称为额外高分辨率球证据。[teacher源码](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/rtv4/dinov3_teacher.py#L53-L75)。
+
+**特征匹配不是球身份监督。** 作者criterion将teacher图按需双线性缩放至student网格，逐token算cosine后对全部位置平均，未用球区域权重。我们推论：大面积背景也直接进入目标，全图对齐改善不能证明球与反光点的区分改善；但也不能反向断言teacher必然无用。模型端只在训练返回投影特征，推理不读取teacher。[criterion](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/rtv4/rtv4_criterion.py#L72-L106)、[模型训练分支](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/rtv4/rtv4.py#L25-L41)。
+
+**梯度比例不是可靠性，也不是梯度方向一致。** 发布训练器统计总loss反传后指定模块的梯度L1占比；它没有分别估计检测loss与蒸馏loss的方向冲突，更没有估计球对应可靠性。代码按参数名`module.encoder.encoder`累计分子；无该前缀的单进程模型会得到零分子，不能原样搬到我们的`prefix/head`结构。这里报告迁移边界，不据此否定作者多卡结果。[梯度统计及调用](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/solver/det_engine.py#L19-L36)。
+
+还需区分论文和发布调节规则：v1式(11)用目标比例除以当前比例更新权重；发布solver使用比例对应的odds比值，并限制每次倍率，后期EMA阶段重置默认值。配置中的`rho=2`按百分数解释。今后复现应选定版本，不把两套公式混写为一个实现。[solver更新](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/solver/det_solver.py#L91-L130)、[L配置](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/configs/rtv4/rtv4_hgnetv2_l_coco.yml#L17-L24)。
+
+**本项目决定。** 保留“深语义可能改善身份竞争”这个假设，暂不引入teacher/GAM。我们没有AIFI-F5节点，当前stride8浅前缀与上文获益路径不同。若后续残余错误仍指向语义不足，先测深层表征是否能区分实际真球与竞争背景，再决定直接读出还是训练蒸馏；不要同时加入stage0直达、新motion和teacher。
+
+若以后采用冻结teacher，计算成本也不能被“推理免费”遮蔽：训练器每批在线提取teacher。当前同步翻转改变teacher输入，不能直接翻转原始缓存feature来冒充翻转图像的teacher输出；预训练Transformer并无我们已验证的精确翻转等变性。仅当固定输入可复用时才缓存实际teacher结果，不预建这条数据路径。[训练期teacher调用](https://github.com/RT-DETRs/RT-DETRv4/blob/55fefaaed7efe2a5f72d0a18fd4e05965e35c292/engine/solver/det_engine.py#L57-L66)。
+
 ## 6. D-FINE：分布细化值得借鉴，分布语义不能照搬
 
 D-FINE的FDR在多个decoder层累积四条框边的离散offset分布，GO-LSD将末层定位分布用于较早层的训练监督。FDR属于推理表示；蒸馏主要属于训练。其核心消融在论文条件下从53.0 AP到FDR的53.8，再到GO-LSD的54.5；这不是球中心或运动分布结果。[13，ICLR 2025论文，§4、Table 5](https://proceedings.iclr.cc/paper_files/paper/2025/file/6cf58a87e3097e7d1f9be3e8693a93de-Paper-Conference.pdf)。
@@ -377,7 +395,7 @@ P(\text{最终正确})=P(C)P(\text{最终正确}\mid C).
 - **[9]** Zhao等，*DETRs Beat YOLOs on Real-time Object Detection*，CVPR 2024：[正式论文](https://openaccess.thecvf.com/content/CVPR2024/html/Zhao_DETRs_Beat_YOLOs_on_Real-time_Object_Detection_CVPR_2024_paper.html)。
 - **[10]** Lv等，*RT-DETRv2: Improved Baseline with Bag-of-Freebies for Real-Time Detection Transformer*，2024：[arXiv](https://arxiv.org/abs/2407.17140)。
 - **[11]** Wang等，*RT-DETRv3: Real-Time End-to-End Object Detection with Hierarchical Dense Positive Supervision*，WACV 2025：[正式论文](https://openaccess.thecvf.com/content/WACV2025/papers/Wang_RT-DETRv3_Real-Time_End-to-End_Object_Detection_with_Hierarchical_Dense_Positive_Supervision_WACV_2025_paper.pdf)。
-- **[12]** Liao等，*RT-DETRv4: Painlessly Furthering Real-Time Object Detection with Vision Foundation Models*，2025预印本：[arXiv](https://arxiv.org/abs/2510.25257)、[作者项目](https://github.com/RT-DETRs/RT-DETRv4)。
+- **[12]** Liao等，*RT-DETRv4: Painlessly Furthering Real-Time Object Detection with Vision Foundation Models*，2025 arXiv v1；作者仓库已宣布ECCV2026录用（补查见§5.1）：[arXiv](https://arxiv.org/abs/2510.25257)、[作者项目](https://github.com/RT-DETRs/RT-DETRv4)。
 - **[13]** Peng等，*D-FINE: Redefine Regression Task in DETRs as Fine-grained Distribution Refinement*，ICLR 2025：[正式论文](https://proceedings.iclr.cc/paper_files/paper/2025/file/6cf58a87e3097e7d1f9be3e8693a93de-Paper-Conference.pdf)。
 - **[14]** Huang等，*DEIM: DETR with Improved Matching for Fast Convergence*，CVPR 2025：[正式论文](https://openaccess.thecvf.com/content/CVPR2025/papers/Huang_DEIM_DETR_with_Improved_Matching_for_Fast_Convergence_CVPR_2025_paper.pdf)。
 - **[15–16]** Huang等，*Real-Time Object Detection Meets DINOv3*（DEIMv2），arXiv v4，2026-01-26：[论文](https://arxiv.org/abs/2509.20787)、[作者实现](https://github.com/Intellindust-AI-Lab/DEIMv2)。
