@@ -66,4 +66,4 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall五帧上下文 v1](blurball-five-frame-context-v1.md)：共同目标与12轮预算下比较纯历史五帧和中心五帧，明确未来输入及实际输出状态。
 - [BlurBall中心窗口长度 v1](blurball-centered-length-v1.md)：复用已完成center5，按相同目标训练center3，只改变输入长度及必要头形状，比较收益与成本。
 
-- [BlurBall中心窗口同步翻转 v1](blurball-centered-hflip-v1.md)：草案；长度选择后只增加窗口同步水平翻转，先控制训练泛化，不改变模型。
+- [BlurBall中心窗口同步翻转 v1](blurball-centered-hflip-v1.md)：已锁定center5；只增加窗口同步水平翻转，先控制训练泛化，不改变模型。

@@ -1,7 +1,7 @@
 # 同步水平翻转：先验证训练干预，再决定结构变化
 
 日期：2026-09-14。状态：实现、针对性测试与真实小批量验证通过；正式增强训练尚未启动。
-协议：[中心窗口同步翻转v1](../protocols/blurball-centered-hflip-v1.md)。基线等待三帧/五帧长度控制完成后确定，原无增强模型不重训。
+协议：[中心窗口同步翻转v1](../protocols/blurball-centered-hflip-v1.md)。基线已按[完整长度结果](2026-09-14-blurball-centered-length.md)选择center5，原无增强模型不重训。
 
 ## 为什么做这项控制
 
@@ -27,4 +27,18 @@
 
 ## 后续条件
 
-长度控制结束后，按其既定协议选择center3或center5，再锁定增强协议并启动一个12轮正式运行。结果仍为空，不宣称增强有效。若有效，后续架构研究需要固定训练配方，避免把增强收益归给motion模块；若无效，保留负结果并返回已定位的视觉/对应问题。
+长度控制已完成并选择center5，协议已锁定；启动一个12轮正式增强运行。结果仍为空，不宣称增强有效。若有效，后续架构研究需要固定训练配方，避免把增强收益归给motion模块；若无效，保留负结果并返回已定位的视觉/对应问题。
+
+## 正式运行设置
+
+采用center5（前后各两帧、目标slot2），参数1,279,169；seed0、batch4、FP32、12轮，配置与[锁定协议](../protocols/blurball-centered-hflip-v1.md)一致。启动命令：
+
+```bash
+/home/zshyc/miniforge3/envs/zshihyc/bin/python -u scripts/train_blurball_midpoint.py \
+  --rgb-cache data/cache/blurball/rgb_512x288_all_h2 \
+  --output outputs/blurball/centered_hflip/center5_seed0 \
+  --window center5 --interaction cross_address --temporal-input history \
+  --augmentation hflip --epochs 12 --batch-size 4 --seed 0
+```
+
+输出目录保存配置、日志、best/last和预测；顺序脚本`outputs/blurball/centered_hflip/run_center5.sh`在训练成功后执行固定局部读出与保存预测比较。启动版本、PID、时间在同目录`launch.json`，退出码为`exit_status.txt`。进程启动后再记录正式运行状态，不能将准备完成当作已运行。
