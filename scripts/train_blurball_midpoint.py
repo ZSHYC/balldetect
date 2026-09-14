@@ -148,15 +148,19 @@ def main():
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--window', choices=tuple(WINDOW_OFFSETS))
     parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
-    parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address'),
+    parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address',
+                                                  'target_activation'),
                         default='baseline')
     parser.add_argument('--augmentation', choices=('hflip',), default=None,
                         help='训练窗口以0.5概率同步水平翻转；验证不增强')
     parser.add_argument('--resume', action='store_true', help='从输出目录的last.pt恢复完整轮次状态')
     args = parser.parse_args()
-    if args.window is not None and (args.interaction != 'cross_address'
+    if args.window is not None and (args.interaction not in ('cross_address', 'target_activation')
                                     or args.temporal_input != 'history'):
-        parser.error('上下文协议要求 --interaction cross_address --temporal-input history')
+        parser.error('上下文协议要求cross_address或target_activation，且使用history输入')
+    if args.interaction == 'target_activation' and (
+            args.window != 'center5' or args.augmentation != 'hflip'):
+        parser.error('激活顺序控制固定 --window center5 --augmentation hflip')
     if args.augmentation and args.window not in ('center3', 'center5'):
         parser.error('同步翻转对照仅使用center3或center5共同目标窗口')
     if args.resume:
@@ -209,7 +213,7 @@ def main():
     num_frames = windows.shape[1]
     channels = 192 * num_frames
     model = build_dino_model(weights, upscale=8, interaction=args.interaction,
-                             num_frames=num_frames).to(device)
+                             num_frames=num_frames, target_slot=target_slot).to(device)
     optimizer = torch.optim.AdamW([
         {'params': model.head.parameters(), 'lr': 3e-4, 'name': 'head'},
         {'params': model.prefix.parameters(), 'lr': 1e-5, 'name': 'prefix'},
@@ -219,7 +223,8 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': ('blurball-centered-hflip-v1' if args.augmentation else
+              'protocol': ('blurball-temporal-activation-v1' if args.interaction == 'target_activation' else
+                           'blurball-centered-hflip-v1' if args.augmentation else
                            'blurball-centered-length-v1' if args.window == 'center3' else
                            'blurball-five-frame-context-v1' if args.window is not None else
                            'blurball-spatial-interaction-v1' if args.interaction != 'baseline' else

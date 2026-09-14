@@ -7,19 +7,41 @@ from torch import nn
 
 
 class SpatialInteractionReadout(nn.Module):
-    """固定卷积顺序，只移动第二个GELU以比较归一化特征地址之间的非线性。"""
-    def __init__(self, channels, hidden_channels, upscale, interaction):
+    """保留卷积参数，控制空间交互或第一处时间求和与激活的顺序。"""
+    def __init__(self, channels, hidden_channels, upscale, interaction, num_frames=1,
+                 target_slot=None):
         super().__init__()
-        if interaction not in ('same_address', 'cross_address'):
+        if interaction not in ('same_address', 'cross_address', 'target_activation'):
             raise ValueError(f'Unknown spatial interaction: {interaction}')
+        if channels % num_frames:
+            raise ValueError('逐帧通道数必须相等')
         self.interaction = interaction
+        self.num_frames = num_frames
+        self.target_slot = target_slot
+        if interaction == 'target_activation' and (
+                num_frames < 2 or target_slot is None or not 0 <= target_slot < num_frames):
+            raise ValueError('目标激活需要明确目标槽及至少一张支持帧')
         self.project = nn.Conv2d(channels, hidden_channels, 1)
         self.address = nn.Conv2d(hidden_channels, hidden_channels, 1)
         self.spatial = nn.Conv2d(hidden_channels, hidden_channels, 3, padding=1)
         self.readout = nn.Conv2d(hidden_channels, upscale ** 2, 1)
 
     def forward(self, features):
-        features = self.address(torch.nn.functional.gelu(self.project(features)))
+        if self.interaction == 'target_activation':
+            # P仍是原960→32参数；目标/支持只拆列，线性极限下两路和等于原投影。
+            c = self.project.in_channels // self.num_frames
+            start, stop = self.target_slot * c, (self.target_slot + 1) * c
+            weight, bias = self.project.weight, self.project.bias
+            target = torch.nn.functional.conv2d(
+                features[:, start:stop], weight[:, start:stop], bias / self.num_frames)
+            support = torch.nn.functional.conv2d(
+                torch.cat((features[:, :start], features[:, stop:]), dim=1),
+                torch.cat((weight[:, :start], weight[:, stop:]), dim=1),
+                bias * ((self.num_frames - 1) / self.num_frames))
+            features = torch.nn.functional.gelu(target) + torch.nn.functional.gelu(support)
+        else:
+            features = torch.nn.functional.gelu(self.project(features))
+        features = self.address(features)
         if self.interaction == 'same_address':
             features = self.spatial(torch.nn.functional.gelu(features))
         else:

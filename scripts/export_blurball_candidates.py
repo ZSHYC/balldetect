@@ -29,8 +29,8 @@ def main():
     started = time.perf_counter()
     config = json.loads((args.run / 'config.json').read_text())
     run_results = json.loads((args.run / 'results.json').read_text())
-    if config.get('interaction') != 'cross_address':
-        raise ValueError('--run必须是cross_address运行')
+    if config.get('interaction') not in ('cross_address', 'target_activation'):
+        raise ValueError('--run必须是cross_address或target_activation运行')
     if config['temporal_input'] != 'history':
         raise ValueError('--run必须使用真实上下文输入')
 
@@ -65,8 +65,8 @@ def main():
     if checkpoint['epoch'] != run_results['best_epoch']:
         raise ValueError('best.pt与运行记录中的best epoch不一致')
     model = build_dino_model(
-        config['weights'], upscale=8, interaction='cross_address',
-        num_frames=windows.shape[1]).to(device)
+        config['weights'], upscale=8, interaction=config['interaction'],
+        num_frames=windows.shape[1], target_slot=target_slot).to(device)
     model.load_state_dict(checkpoint['model'])
     model.eval()
     rgb = np.load(cache / 'rgb.npy', mmap_mode='r')
@@ -105,7 +105,7 @@ def main():
         'source_run': str(args.run.resolve()),
         'source_checkpoint': str((args.run / 'best.pt').resolve()),
         'checkpoint_epoch': checkpoint['epoch'],
-        'interaction': 'cross_address',
+        'interaction': config['interaction'],
         'input': [f't{d:+d}' if d else 't' for d in offsets],
         'input_frame_offsets': list(offsets),
         'target_slot': target_slot,

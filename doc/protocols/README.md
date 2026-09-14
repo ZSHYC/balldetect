@@ -67,3 +67,5 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall中心窗口长度 v1](blurball-centered-length-v1.md)：复用已完成center5，按相同目标训练center3，只改变输入长度及必要头形状，比较收益与成本。
 
 - [BlurBall中心窗口同步翻转 v1](blurball-centered-hflip-v1.md)：已锁定center5；只增加窗口同步水平翻转，先控制训练泛化，不改变模型。
+
+- [BlurBall目标/支持激活 v1](blurball-temporal-activation-v1.md)：原参数不变，只改变目标与支持在第一处GELU前后合并，固定center5+hflip。

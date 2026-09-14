@@ -132,7 +132,7 @@ def main(run):
         batch_size = config['batch_size'] if window is not None else 8
         model = build_dino_model(config['weights'], upscale=8,
                                  interaction=config.get('interaction', 'baseline'),
-                                 num_frames=num_frames).to(device)
+                                 num_frames=num_frames, target_slot=target_slot).to(device)
         checkpoint = torch.load(run / 'best.pt', map_location=device, weights_only=True)
         selected_epoch = run_results['best_epoch']
         assert checkpoint['epoch'] == selected_epoch, 'Checkpoint must match saved argmax selection'
