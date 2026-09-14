@@ -28,7 +28,9 @@
 | 时空自相似作为 motion 表示 | [Learning Self-Similarity in Space and Time as Generalized Motion for Video Action Recognition](https://arxiv.org/abs/2102.07092) | 正文概览；SELFY/STSS 的关系表示已不止一个位移向量 |
 | 隐式轨迹注意力 | [Keeping Your Eye on the Ball: Trajectory Attention in Video Transformers](https://arxiv.org/abs/2106.05392) | 官方摘要；Motionformer 的实验任务是动作识别，题名中的 ball 不代表已经验证本项目几像素球定位 |
 | Taylor 式视频表征 | [Taylor Videos](https://arxiv.org/abs/2402.03019) | 官方摘要；作为表示前史，不能把识别任务证据外推到像素定位 |
-| 光流引导跨帧聚合 | [FGFA](https://arxiv.org/abs/1703.10025) | 官方摘要；已有针对模糊与快速目标的特征聚合，本文必须定位到更窄的 tiny-support 问题 |
+| 光流引导跨帧聚合 | [FGFA](https://arxiv.org/abs/1703.10025) | [2026-09-14方法、消融与固定作者源码补读](2026-09-14-reference-support-aggregation.md)；聚合后生成候选，论文/发布训练图的self项和19/21帧需区分 |
+| 候选语义残差聚合 | [SELSA](https://arxiv.org/abs/1907.06390) | [方法与作者源码补读](2026-09-14-reference-support-aggregation.md)；目标表示残差已有先例，类别语义支持不等于物理对应 |
+| RoI网格到支撑全图的相似检索 | [Temporal RoI Align](https://arxiv.org/abs/2109.03495) | [方法、消融与MMTracking发布实现](2026-09-14-reference-support-aggregation.md)；全相似度先于top-K，多地址被汇聚，不等于保留多条位移假设 |
 | 检测监督下时空可变形采样 | [STSN](https://arxiv.org/abs/1803.05549) | [2026-09-12补读全文](2026-09-12-task-supervised-alignment.md)；作者代码未确认。pair-conditioned采样不需光流标签，原训练随机取前后support，推理含未来帧；因果三帧只能作明确改写的机制对照 |
 | 全局匹配与细化 | [GMFlow](https://arxiv.org/abs/2111.13680) | 摘要及方法概览；全局到局部不是新颖性本身 |
 | cost memory / motion latent | [FlowFormer](https://arxiv.org/abs/2203.16194) | 摘要及方法概览；不能把相关体压成 latent 本身当作新的 motion 表示贡献 |

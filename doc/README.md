@@ -43,6 +43,8 @@
 
 ## 文献证据
 
+融合机制补读：[目标帧保留与支撑聚合](literature/2026-09-14-reference-support-aggregation.md)，核对FGFA、SELSA与Temporal RoI Align的候选入口、目标残差、全图检索、融合和计算复用，限定下一结构的近邻差异。
+
 现代检测器专题：[RF-DETR与近期高效检测的迁移审查](literature/2026-09-13-modern-detectors-transfer.md)，覆盖RT-DETR系列、D-FINE、DEIM/v2、TinyFormer、近期YOLO与微小目标DETR，结合源码、消融和本地失败区分细节保留、候选分配与跨帧对应。
 
 新增：[球类物理先验与适用条件](literature/2026-09-13-ball-physics-priors.md)，覆盖三维重建、物理候选关联、2026联合损失与BlurBall最新相关段落。
