@@ -1,6 +1,6 @@
 # 同步水平翻转：先验证训练干预，再决定结构变化
 
-日期：2026-09-14。状态：实现、针对性测试与真实小批量验证通过；正式增强训练尚未启动。
+日期：2026-09-14。状态：正式center5增强运行已启动；12轮结果尚未产生。
 协议：[中心窗口同步翻转v1](../protocols/blurball-centered-hflip-v1.md)。基线已按[完整长度结果](2026-09-14-blurball-centered-length.md)选择center5，原无增强模型不重训。
 
 ## 为什么做这项控制
@@ -23,7 +23,7 @@
 
 新增[保存预测比较入口](../../scripts/compare_blurball_hflip.py)，复用现有`load_arm`与成对位置/输出统计，不调用模型或RGB解码。允许的干预仅为同步翻转，其他模型、数据与训练条件不同会直接报错。位移按原始身份查询上一帧，只有两端均V1才进入位移分组，不把不可定位状态解释成静止。
 
-[比较测试](../../tests/test_blurball_hflip_comparison.py)与既有成对计数测试共13项通过：覆盖center3/center5合法配对、额外帧数/模型/学习率/batch/seed/样本集合差异、错误增强概率和4/16px分组边界。正式增强结果尚不存在，未执行两组完整产物比较，也未生成模拟正式指标。
+[比较测试](../../tests/test_blurball_hflip_comparison.py)与既有成对计数测试共13项通过：覆盖center3/center5合法配对、额外帧数/模型/学习率/batch/seed/样本集合差异、错误增强概率和4/16px分组边界。正式增强结果尚不存在，未执行两组完整产物比较，也未生成模拟正式指标。实际启动配置已通过比较入口的条件核对，确认相对参考只改变增强设置及记录字段。
 
 ## 后续条件
 
@@ -41,4 +41,4 @@
   --augmentation hflip --epochs 12 --batch-size 4 --seed 0
 ```
 
-输出目录保存配置、日志、best/last和预测；顺序脚本`outputs/blurball/centered_hflip/run_center5.sh`在训练成功后执行固定局部读出与保存预测比较。启动版本、PID、时间在同目录`launch.json`，退出码为`exit_status.txt`。进程启动后再记录正式运行状态，不能将准备完成当作已运行。
+输出目录保存配置、日志、best/last和预测；顺序脚本`outputs/blurball/centered_hflip/run_center5.sh`在训练成功后执行固定局部读出与保存预测比较。启动版本、PID、时间在同目录`launch.json`，退出码为`exit_status.txt`。本次启动UTC时间2026-09-14 05:53:58，代码0674951，顺序脚本PID547348、训练子进程547351；启动后已确认进程存活和实际配置符合增强协议。以上PID仅用于本次运行追踪。
