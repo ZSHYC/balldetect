@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 from ballmotion.blurball import evaluate_blurball, source_coordinates
 from ballmotion.tennis import grid_to_original
-from train_blurball_midpoint import FIVE_FRAME_OFFSETS, prepare_training_windows
+from train_blurball_midpoint import WINDOW_OFFSETS, prepare_training_windows
 from train_tennis_heatmap import build_dino_model, write_predictions
 
 
@@ -105,7 +105,7 @@ def main(run):
         frames, metadata['windows'], config['continuity_boundaries'], window, temporal_input)
     if config.get('target_slot', 2) != target_slot:
         raise ValueError('训练配置的target_slot与重建窗口不一致')
-    offsets = FIVE_FRAME_OFFSETS[window] if window is not None else (-2, -1, 0)
+    offsets = WINDOW_OFFSETS[window] if window is not None else (-2, -1, 0)
     input_slots = (["t"] * len(offsets) if temporal_input == 'repeat_current' else
                    [f't{offset:+d}' if offset else 't' for offset in offsets])
     if config.get('input_slots', input_slots) != input_slots:

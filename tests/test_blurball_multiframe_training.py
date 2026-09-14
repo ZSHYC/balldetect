@@ -61,6 +61,30 @@ def test_five_frame_arms_share_targets_and_center_on_t():
     assert rows == centered_rows
     assert target_slot == 2
 
+    short, short_rows, short_slot, short_info = trainer.prepare_training_windows(
+        frames, cached_windows, boundaries, 'center3', 'history')
+    assert short.tolist() == [[10, 11, 12]]
+    assert short_rows == centered_rows == causal_rows
+    assert short_slot == 1
+    assert short_info['common_targets'] == centered_info['common_targets']
+
+
+def test_center3_keeps_five_frame_cohort_across_missing_frame():
+    frames = [dict(match='00', rally='001', game='match00', clip='001',
+                   original_frame_id=i, split='train') for i in range(16) if i != 8]
+    index = {r['original_frame_id']: j for j, r in enumerate(frames)}
+    cached = np.array([[index[i-2], index[i-1], index[i]] for i in range(2, 16)
+                       if all(k in index for k in (i-2, i-1, i))])
+    for window in ('causal5', 'center5', 'center3'):
+        windows, rows, slot, _ = trainer.prepare_training_windows(
+            frames, cached, [], window, 'history')
+        assert [r['original_frame_id'] for r in rows] == [4, 5, 13]
+        offsets = trainer.WINDOW_OFFSETS[window]
+        for indices, row in zip(windows, rows):
+            assert frames[indices[slot]] == row
+            assert [frames[i]['original_frame_id'] for i in indices] == [
+                row['original_frame_id'] + d for d in offsets]
+
 
 def test_default_training_windows_remain_causal_three_frame():
     frames = _frames()

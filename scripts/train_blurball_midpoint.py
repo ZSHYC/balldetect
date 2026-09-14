@@ -1,4 +1,4 @@
-"""BlurBall三帧基线及共同目标五帧上下文的DINOv3中点定位训练。"""
+"""BlurBall三帧基线及共同目标三/五帧上下文的DINOv3中点定位训练。"""
 import argparse
 import copy
 from concurrent.futures import ThreadPoolExecutor
@@ -26,6 +26,7 @@ FIVE_FRAME_OFFSETS = {
     'causal5': (-4, -3, -2, -1, 0),
     'center5': (-2, -1, 0, 1, 2),
 }
+WINDOW_OFFSETS = {**FIVE_FRAME_OFFSETS, 'center3': (-1, 0, 1)}
 
 
 def compact(metrics):
@@ -34,7 +35,7 @@ def compact(metrics):
 
 
 def prepare_training_windows(frames, cached_windows, boundaries, window, temporal_input):
-    """构造实际模型输入；五帧两臂固定使用自然窗口的共同目标集合。"""
+    """显式上下文条件共享两五帧的目标集合；center3只取中间三槽。"""
     cached_windows = np.asarray(cached_windows, dtype=np.int64)
     if window is None:
         windows, removed_positions = continuous_windows(frames, cached_windows, boundaries)
@@ -55,12 +56,12 @@ def prepare_training_windows(frames, cached_windows, boundaries, window, tempora
                 raise ValueError(f'{name}窗口未保持缓存目标顺序')
         excluded_union = np.union1d(excluded['causal5'], excluded['center5'])
         common_targets = base_targets[~np.isin(base_targets, excluded_union)]
-        offsets = FIVE_FRAME_OFFSETS[window]
+        offsets = WINDOW_OFFSETS[window]
         target_slot = offsets.index(0)
-        windows = natural[window]
+        windows = natural['center5'][:, 1:4] if window == 'center3' else natural[window]
         windows = windows[np.isin(windows[:, target_slot], common_targets)]
         if not np.array_equal(windows[:, target_slot], common_targets):
-            raise ValueError('五帧窗口没有对齐到共同目标顺序')
+            raise ValueError('上下文窗口没有对齐到共同目标顺序')
 
         def counts(targets):
             split = [frames[index]['split'] for index in targets]
@@ -131,7 +132,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--window', choices=tuple(FIVE_FRAME_OFFSETS))
+    parser.add_argument('--window', choices=tuple(WINDOW_OFFSETS))
     parser.add_argument('--temporal-input', choices=('history', 'repeat_current'), default='history')
     parser.add_argument('--interaction', choices=('baseline', 'same_address', 'cross_address'),
                         default='baseline')
@@ -139,7 +140,7 @@ def main():
     args = parser.parse_args()
     if args.window is not None and (args.interaction != 'cross_address'
                                     or args.temporal_input != 'history'):
-        parser.error('五帧context-v1协议要求 --interaction cross_address --temporal-input history')
+        parser.error('上下文协议要求 --interaction cross_address --temporal-input history')
     if args.resume:
         if not (args.output / 'last.pt').exists() or not (args.output / 'config.json').exists():
             raise ValueError('续训需要原config.json和完整last.pt；仅best.pt不能无缝恢复')
@@ -195,7 +196,8 @@ def main():
               'code_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                                                         text=True).strip(),
               'weights': str(weights), 'cache_config': metadata['config'],
-              'protocol': ('blurball-five-frame-context-v1' if args.window is not None else
+              'protocol': ('blurball-centered-length-v1' if args.window == 'center3' else
+                           'blurball-five-frame-context-v1' if args.window is not None else
                            'blurball-spatial-interaction-v1' if args.interaction != 'baseline' else
                            'blurball-full-temporal-control-v1' if args.temporal_input == 'repeat_current'
                            else 'blurball-causal-midpoint-v2'),
@@ -206,7 +208,7 @@ def main():
               'output_grid_hw': GRID_HW, 'classes': 288*512+1,
               'input_slots': (["t"] * num_frames if args.temporal_input == 'repeat_current'
                               else ([f't{offset:+d}' if offset else 't'
-                                     for offset in FIVE_FRAME_OFFSETS[args.window]]
+                                     for offset in WINDOW_OFFSETS[args.window]]
                                     if args.window is not None else ['t-2', 't-1', 't'])),
               'target_slot': target_slot,
               'train_targets': len(train_idx), 'val_targets': len(val_idx),

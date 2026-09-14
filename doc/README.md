@@ -101,6 +101,9 @@
 
 ## 协议与实验
 
+- [五帧最终比较与输出分解](experiments/2026-09-14-blurball-five-frame-results.md)：两臂各12轮完成；双向提高四场原位置，但输出拒绝抵消部分收益，进入[三帧双向长度控制](protocols/blurball-centered-length-v1.md)。
+- [三帧双向长度控制执行](experiments/2026-09-14-blurball-centered-length.md)：保留五帧共同目标，仅减少外侧两帧，验证更便宜的未来上下文基线。
+
 - [五帧因果与双向上下文](experiments/2026-09-13-blurball-five-frame-context.md)：真实窗口/目标排除GT诊断、共同目标的两臂视觉实验与未来观测归因；执行[协议v1](protocols/blurball-five-frame-context-v1.md)。
 - [真实预测的前后轨迹诊断](experiments/2026-09-13-blurball-predicted-context.md)：未来GT插值与实际单帧预测的差距，以及高置信、低残差的错误反例。
 - [错误对应的视觉身份与难例分布](experiments/2026-09-13-blurball-match-competition.md)：12例缓存图和训练／验证条件分布，解释为何可靠对应与平滑路径仍不能确定球身份。
