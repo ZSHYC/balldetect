@@ -29,7 +29,7 @@
 
 ## 研究论证
 
-本轮专题：[球类运动物理特征的可行性](research/2026-09-13-ball-physics-feasibility.md)，结合合法训练窗口统计、现有负结果与物理文献，区分曝光几何、条件先验和三维动力学；已纳入用户允许的多帧与未来输入，优先评估五帧双向候选。
+本轮专题：[球类运动物理特征的可行性](research/2026-09-13-ball-physics-feasibility.md)，结合合法训练窗口统计、现有负结果与物理文献，区分曝光几何、条件先验和三维动力学；后续五帧结果与长度控制见[当前阶段进展](progress/2026-09-14-centered-context.md)。
 
 | 文档 | 用途与阅读定位 |
 |---|---|
@@ -103,7 +103,7 @@
 
 - [五帧最终比较与输出分解](experiments/2026-09-14-blurball-five-frame-results.md)：两臂各12轮完成；双向提高四场原位置，但输出拒绝抵消部分收益，进入[三帧双向长度控制](protocols/blurball-centered-length-v1.md)。
 - [三帧双向长度控制执行](experiments/2026-09-14-blurball-centered-length.md)：保留五帧共同目标，仅减少外侧两帧，验证更便宜的未来上下文基线。
-- [center5新候选覆盖](experiments/2026-09-14-blurball-centered-candidates.md)：旧701例的候选上限不能继承；区分新K16可重排、近位置缺口、遗漏及固定q的输出上限。
+- [center5新候选覆盖](experiments/2026-09-14-blurball-centered-candidates.md)：新K16及固定q上限、源分辨率样例、旧单帧互补与拒绝回退反例，约束细节和当前帧路径的动机。
 
 - [五帧因果与双向上下文](experiments/2026-09-13-blurball-five-frame-context.md)：真实窗口/目标排除GT诊断、共同目标的两臂视觉实验与未来观测归因；执行[协议v1](protocols/blurball-five-frame-context-v1.md)。
 - [真实预测的前后轨迹诊断](experiments/2026-09-13-blurball-predicted-context.md)：未来GT插值与实际单帧预测的差距，以及高置信、低残差的错误反例。
@@ -142,6 +142,7 @@
 
 ## 阶段进展
 
+- [2026-09-14：未来上下文与残余错误](progress/2026-09-14-centered-context.md)：五帧比较和候选诊断已完成，中心三帧长度控制运行中；当前结构判断与后续比较入口。
 - [2026-09-12：BlurBall完成与局部读出解释](progress/2026-09-12-blurball-readout.md)：自然长拖影细位置偏差、固定模型读出增益与运动机制归因边界。
 
 - [2026-09-11：BlurBall自然模糊定位基线](progress/2026-09-11-blurball-baseline.md)：原生因果中点、严格4px容差、真实PTS缓存与blur条件误差。

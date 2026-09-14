@@ -64,7 +64,7 @@ conda activate zshihyc
 
 用户提供的 DINOv3 权重已整理到 `models/pretrained/dinov3/`，见 [权重说明](models/README.md)。首轮使用 ConvNeXt-Tiny，按 [上游代码说明](third_party/README.md) 准备 DINOv3；当前环境所用直接依赖见 [requirements.txt](requirements.txt)，无需重新安装已有依赖。
 
-Tennis的全量基线、历史控制与多项表示诊断已经完成，见[阶段记录](doc/progress/2026-09-10-full-baselines.md)。当前转向[BlurBall自然模糊下的因果中点定位](doc/experiments/2026-09-11-blurball-midpoint.md)，尚未确定最终motion模型。以下保留[早期Tennis单帧冻结探针](doc/protocols/tennis-spatial-probe-v1.md)的运行示例：
+Tennis的全量基线、历史控制与多项表示诊断已经完成，见[阶段记录](doc/progress/2026-09-10-full-baselines.md)。BlurBall已推进到允许未来帧的上下文比较与候选失败诊断；当前状态统一见[阶段进展](doc/README.md#阶段进展)，尚未确定最终motion模型。以下保留[早期Tennis单帧冻结探针](doc/protocols/tennis-spatial-probe-v1.md)的运行示例：
 
 ```bash
 PYTHONPATH=src python tests/test_spatial_probe.py

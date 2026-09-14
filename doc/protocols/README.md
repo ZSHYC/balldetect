@@ -63,3 +63,5 @@ train/val/test 的具体划分文件或明确分组；clip/rally 边界来自哪
 - [BlurBall候选残差读出 v2](blurball-candidate-residual-v2.md)：保持v1数据/模型/优化，仅改为可接受4px候选集合概率监督，固定last评估训练精定位。
 
 - [BlurBall候选对应地址 v1](blurball-candidate-addresses-v1.md)：相同前16匹配分数下开关二维位移，检验地址相对纯分数的增量；复用已有外观缓存。
+- [BlurBall五帧上下文 v1](blurball-five-frame-context-v1.md)：共同目标与12轮预算下比较纯历史五帧和中心五帧，明确未来输入及实际输出状态。
+- [BlurBall中心窗口长度 v1](blurball-centered-length-v1.md)：复用已完成center5，按相同目标训练center3，只改变输入长度及必要头形状，比较收益与成本。
