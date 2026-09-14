@@ -53,7 +53,8 @@ def coverage(rows, xy, masks, budgets=(1, 2, 4, 8, 16)):
     return result
 
 
-def extract_candidate_arrays(model, rgb, windows, rows, device, batch_size, progress_label=None):
+def extract_candidate_arrays(model, rgb, windows, rows, device, batch_size, progress_label=None,
+                             *, target_slot=-1):
     """一次固定模型forward导出K16候选；候选提取不读取GT标签。"""
     centers, local, scores, probabilities = [], [], [], []
     for start in range(0, len(rows), batch_size):
@@ -77,7 +78,7 @@ def extract_candidate_arrays(model, rgb, windows, rows, device, batch_size, prog
         'local_xy': (local + .5) * dimensions[:, None] / [512, 288] - .5,
         'peak_logits': scores,
         'q': q,
-        'current_frame_ids': windows[:, -1],
+        'current_frame_ids': windows[:, target_slot],
     }
 
 

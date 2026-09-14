@@ -8,6 +8,16 @@ from scripts.probe_blurball_candidates import coverage, extract_candidate_arrays
 
 
 class CandidateTest(unittest.TestCase):
+    def test_centered_export_records_target_instead_of_future_frame(self):
+        windows = np.array([[4, 5, 6, 7, 8]])
+        rows = [dict(width=512, height=288)]
+        logits = torch.zeros((1, 288*512+1))
+        with patch('scripts.probe_blurball_candidates.batch_logits', return_value=logits) as forward:
+            result = extract_candidate_arrays(object(), np.empty(0), windows, rows,
+                                              torch.device('cpu'), 1, target_slot=2)
+        np.testing.assert_array_equal(result['current_frame_ids'], [6])
+        np.testing.assert_array_equal(forward.call_args.args[2], windows)
+
     def test_extract_candidate_arrays_batches_and_preserves_export_contract(self):
         windows = np.array([[0, 1, 2], [3, 4, 5]])
         rows = [dict(width=512, height=288), dict(width=1024, height=576)]
