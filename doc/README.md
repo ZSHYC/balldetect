@@ -104,7 +104,7 @@
 ## 协议与实验
 
 - [五帧最终比较与输出分解](experiments/2026-09-14-blurball-five-frame-results.md)：两臂各12轮完成；双向提高四场原位置，但输出拒绝抵消部分收益；[三帧双向长度控制](experiments/2026-09-14-blurball-centered-length.md)也已完成。
-- [三帧双向长度控制执行](experiments/2026-09-14-blurball-centered-length.md)：完整12轮比较：三帧F1接近但原位置退步；选择center5进入[同步翻转控制](experiments/2026-09-14-blurball-centered-hflip.md)。
+- [三帧双向长度控制执行](experiments/2026-09-14-blurball-centered-length.md)：完整12轮比较：三帧F1接近但原位置退步；保留center5；[同步翻转控制](experiments/2026-09-14-blurball-centered-hflip.md)也已完成，局部F1@4升至86.0234%，增强后候选诊断已记录。
 - [center5新候选覆盖](experiments/2026-09-14-blurball-centered-candidates.md)：新K16及固定q上限、源分辨率样例、旧单帧互补与拒绝回退反例，约束细节和当前帧路径的动机。
 
 - [五帧因果与双向上下文](experiments/2026-09-13-blurball-five-frame-context.md)：真实窗口/目标排除GT诊断、共同目标的两臂视觉实验与未来观测归因；执行[协议v1](protocols/blurball-five-frame-context-v1.md)。
@@ -144,7 +144,7 @@
 
 ## 阶段进展
 
-- [2026-09-14：未来上下文与残余错误](progress/2026-09-14-centered-context.md)：五帧比较、候选诊断与中心三帧长度控制已完成；保留center5，进入单项训练增强控制。
+- [2026-09-14：未来上下文与残余错误](progress/2026-09-14-centered-context.md)：五帧、长度、翻转控制与增强后候选诊断已完成；保留center5+hflip，继续区分位置证据不足与背景竞争。
 - [2026-09-12：BlurBall完成与局部读出解释](progress/2026-09-12-blurball-readout.md)：自然长拖影细位置偏差、固定模型读出增益与运动机制归因边界。
 
 - [2026-09-11：BlurBall自然模糊定位基线](progress/2026-09-11-blurball-baseline.md)：原生因果中点、严格4px容差、真实PTS缓存与blur条件误差。
